@@ -4,44 +4,38 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import edu.uniquindio.co.tribooo.ui.theme.TriboooTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.example.demoapp.core.theme.DemoAppTheme
+import com.example.demoapp.features.home.HomeScreen
+import com.example.demoapp.features.login.LoginScreen
+import com.example.demoapp.features.register.RegisterScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            TriboooTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
+            DemoAppTheme {
+                var currentScreen by remember { mutableStateOf("home") }
+
+                when (currentScreen) {
+                    "home" -> HomeScreen(
+                        onNavigateToLogin = { currentScreen = "login" },
+                        onNavigateToRegister = { currentScreen = "register" }
+                    )
+
+                    "login" -> LoginScreen(
+                        onNavigateToHome = { currentScreen = "home" }
+                    )
+
+                    "register" -> RegisterScreen(
+                        onNavigateToHome = { currentScreen = "home" }
                     )
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    TriboooTheme {
-        Greeting("Android")
     }
 }
