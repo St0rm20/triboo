@@ -1,4 +1,4 @@
-package edu.uniquindio.co.tribooo.ui.theme
+package edu.uniquindio.co.tribooo.core.theme
 
 import androidx.compose.ui.graphics.Color
 

@@ -1,4 +1,4 @@
-package com.example.demoapp.features.home
+package edu.uniquindio.co.tribooo.features.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement

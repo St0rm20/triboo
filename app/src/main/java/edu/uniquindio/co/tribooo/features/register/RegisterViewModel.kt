@@ -1,8 +1,8 @@
-package com.example.demoapp.features.register
+package edu.uniquindio.co.tribooo.features.register
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.demoapp.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.util.RequestResult
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

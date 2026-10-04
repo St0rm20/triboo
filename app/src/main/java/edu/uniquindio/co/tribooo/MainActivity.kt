@@ -8,17 +8,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import com.example.demoapp.core.theme.DemoAppTheme
-import com.example.demoapp.features.home.HomeScreen
-import com.example.demoapp.features.login.LoginScreen
-import com.example.demoapp.features.register.RegisterScreen
+import edu.uniquindio.co.tribooo.core.theme.TriboooTheme
+import edu.uniquindio.co.tribooo.features.home.HomeScreen
+import edu.uniquindio.co.tribooo.features.login.LoginScreen
+import edu.uniquindio.co.tribooo.features.register.RegisterScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            DemoAppTheme {
+            TriboooTheme {
                 var currentScreen by remember { mutableStateOf("home") }
 
                 when (currentScreen) {

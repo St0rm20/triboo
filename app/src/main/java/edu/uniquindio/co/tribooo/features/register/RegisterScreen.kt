@@ -1,4 +1,4 @@
-package com.example.demoapp.features.register
+package edu.uniquindio.co.tribooo.features.register
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,9 +25,9 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.demoapp.core.component.ConfirmAlertDialog
-import com.example.demoapp.core.component.DropdownMenu
-import com.example.demoapp.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.component.ConfirmAlertDialog
+import edu.uniquindio.co.tribooo.core.component.DropdownMenu
+import edu.uniquindio.co.tribooo.core.util.RequestResult
 
 @Composable
 fun RegisterScreen(

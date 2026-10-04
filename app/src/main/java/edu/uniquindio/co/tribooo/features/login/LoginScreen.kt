@@ -1,4 +1,4 @@
-package com.example.demoapp.features.login
+package edu.uniquindio.co.tribooo.features.login
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,7 +27,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.demoapp.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.util.RequestResult
 
 @Composable
 fun LoginScreen(

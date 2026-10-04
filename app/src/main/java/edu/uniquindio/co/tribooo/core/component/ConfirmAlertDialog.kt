@@ -1,4 +1,4 @@
-package com.example.demoapp.core.component
+package edu.uniquindio.co.tribooo.core.component
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text

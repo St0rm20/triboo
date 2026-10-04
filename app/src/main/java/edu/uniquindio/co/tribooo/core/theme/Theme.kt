@@ -1,4 +1,4 @@
-package com.example.demoapp.core.theme
+package edu.uniquindio.co.tribooo.core.theme
 
 import android.app.Activity
 import android.os.Build
@@ -24,7 +24,7 @@ private val LightColorScheme = lightColorScheme(
 )
 
 @Composable
-fun DemoAppTheme(
+fun TriboooTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit

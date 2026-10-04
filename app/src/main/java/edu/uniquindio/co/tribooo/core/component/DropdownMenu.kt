@@ -1,4 +1,4 @@
-package com.example.demoapp.core.component
+package edu.uniquindio.co.tribooo.core.component
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth

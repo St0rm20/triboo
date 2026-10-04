@@ -1,4 +1,4 @@
-package com.example.demoapp.core.util
+package edu.uniquindio.co.tribooo.core.util
 
 sealed class RequestResult {
     data object Loading : RequestResult()
