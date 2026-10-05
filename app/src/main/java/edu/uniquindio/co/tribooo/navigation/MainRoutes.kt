@@ -13,4 +13,10 @@ sealed class MainRoutes {
     @Serializable
     data object Register : MainRoutes()
 
+    @Serializable
+    data object Feed : MainRoutes()
+
+    @Serializable
+    data object CreateEvent : MainRoutes()
+
 }
