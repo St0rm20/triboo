@@ -1,6 +1,6 @@
 package edu.uniquindio.co.tribooo.domain.model
 
-data class Guardado(
+data class Saved(
     val user: User,
     val event: Event
 )

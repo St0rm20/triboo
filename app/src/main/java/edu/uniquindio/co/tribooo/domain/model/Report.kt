@@ -2,7 +2,7 @@ package edu.uniquindio.co.tribooo.domain.model
 
 import java.time.Instant
 
-data class Reporte(
+data class Report(
     val id: String,
     val event: Event,
     val reporter: User,

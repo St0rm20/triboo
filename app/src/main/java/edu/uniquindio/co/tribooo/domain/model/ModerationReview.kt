@@ -2,7 +2,7 @@ package edu.uniquindio.co.tribooo.domain.model
 
 import java.time.Instant
 
-data class RevisionModeracion(
+data class ModerationReview(
     val id: String,
     val event: Event,
     val admin: User,

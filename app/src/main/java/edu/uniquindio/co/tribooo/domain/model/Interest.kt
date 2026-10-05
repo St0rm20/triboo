@@ -1,6 +1,6 @@
 package edu.uniquindio.co.tribooo.domain.model
 
-data class Interes(
+data class Interest(
     val user: User,
     val event: Event
 )

@@ -2,7 +2,7 @@ package edu.uniquindio.co.tribooo.domain.model
 
 import java.time.Instant
 
-data class Notificacion(
+data class Notification(
     val id: String,
     val destinationUser: User,
     val type: NotificationType,

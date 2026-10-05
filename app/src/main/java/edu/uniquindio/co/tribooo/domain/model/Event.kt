@@ -13,7 +13,7 @@ data class Event(
     val neighborhood: String,
     val location: Location,
     val cupo: Int? = null,
-    val contribution: Aporte? = null,
+    val contribution: Contribution? = null,
     val status: EventStatus = EventStatus.PENDIENTE,
     val verified: Boolean = false,
     val publicationDate: Instant = Instant.now(),
