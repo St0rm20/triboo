@@ -8,40 +8,41 @@ data class Category(
     val color: String
 ) {
     companion object {
+        // Íconos (Material Symbols) y colores tomados del prototipo
         val DEPORTES = Category(
             id = "deportes",
             key = "deportes",
             name = "Deportes",
-            icon = "sports",
-            color = "#2563EB"
+            icon = "directions_bike",
+            color = "#074A24"
         )
         val CULTURA = Category(
             id = "cultura",
             key = "cultura",
             name = "Cultura",
-            icon = "palette",
-            color = "#7C3AED"
+            icon = "theater_comedy",
+            color = "#562A55"
         )
         val ACADEMICO = Category(
             id = "academico",
             key = "academico",
             name = "Académico",
             icon = "school",
-            color = "#F59E0B"
+            color = "#29396C"
         )
         val VOLUNTARIADO = Category(
             id = "voluntariado",
             key = "voluntariado",
             name = "Voluntariado",
             icon = "volunteer_activism",
-            color = "#10B981"
+            color = "#5D3000"
         )
         val SOCIAL = Category(
             id = "social",
             key = "social",
             name = "Social",
-            icon = "groups",
-            color = "#EC4899"
+            icon = "storefront",
+            color = "#642721"
         )
 
         val defaultCategories = listOf(DEPORTES, CULTURA, ACADEMICO, VOLUNTARIADO, SOCIAL)
