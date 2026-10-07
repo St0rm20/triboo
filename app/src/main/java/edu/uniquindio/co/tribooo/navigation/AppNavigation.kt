@@ -14,6 +14,7 @@ import edu.uniquindio.co.tribooo.features.createevent.CreateEventScreen
 import edu.uniquindio.co.tribooo.features.feed.FeedScreen
 import edu.uniquindio.co.tribooo.features.home.HomeScreen
 import edu.uniquindio.co.tribooo.features.login.LoginScreen
+import edu.uniquindio.co.tribooo.features.login.PasswordRecoveryScreen
 import edu.uniquindio.co.tribooo.features.register.RegisterScreen
 
 // Clave para pasar el mensaje del snackbar de una pantalla al feed
@@ -47,6 +48,25 @@ fun AppNavigation() {
                 LoginScreen(
                     onNavigateToHome = {
                         navController.navigateToFeed()
+                    },
+                    onNavigateToRegister = {
+                        navController.navigate(MainRoutes.Register) {
+                            popUpTo(MainRoutes.Home) { inclusive = false }
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToPasswordRecovery = {
+                        navController.navigate(MainRoutes.PasswordRecovery) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+
+            composable<MainRoutes.PasswordRecovery> {
+                PasswordRecoveryScreen(
+                    onNavigateToLogin = {
+                        navController.popBackStack()
                     }
                 )
             }
@@ -55,6 +75,12 @@ fun AppNavigation() {
                 RegisterScreen(
                     onNavigateToHome = {
                         navController.navigateToFeed()
+                    },
+                    onNavigateToLogin = {
+                        navController.navigate(MainRoutes.Login) {
+                            popUpTo(MainRoutes.Home) { inclusive = false }
+                            launchSingleTop = true
+                        }
                     }
                 )
             }

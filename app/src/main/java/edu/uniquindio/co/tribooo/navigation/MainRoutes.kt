@@ -14,6 +14,9 @@ sealed class MainRoutes {
     data object Register : MainRoutes()
 
     @Serializable
+    data object PasswordRecovery : MainRoutes()
+
+    @Serializable
     data object Feed : MainRoutes()
 
     @Serializable
