@@ -79,6 +79,23 @@ object MockData {
         camaraComercio, colectivoBambuco, redAmbiental, armeniaCivica
     ) + neighbors
 
+    private fun unsplash(photoId: String) = "https://images.unsplash.com/$photoId?w=900&q=70&auto=format&fit=crop"
+
+    /** Portadas de prueba por id de evento. */
+    private val coverImages = mapOf(
+        "7" to unsplash("photo-1488646953014-85cb44e25828"),
+        "10" to unsplash("photo-1509099836639-18ba1795216d"),
+        "6" to unsplash("photo-1506905925346-21bda4d32df4"),
+        "15" to unsplash("photo-1511632765486-a01980e01a18"),
+        "1" to unsplash("photo-1517649763962-0c623066013b"),
+        "2" to unsplash("photo-1559056199-641a0ac8b55e"),
+        "3" to unsplash("photo-1531482615713-2afd69097998"),
+        "9" to unsplash("photo-1540575467063-178a50c2df87"),
+        "5" to unsplash("photo-1470229722913-7c0e2dbbafd3"),
+        "4" to unsplash("photo-1441974231531-c6227db76b6e"),
+        "8" to unsplash("photo-1522071820081-009f0129c71c")
+    )
+
     private fun event(
         id: String,
         title: String,
@@ -114,7 +131,8 @@ object MockData {
             verified = status == EventStatus.ACTIVO,
             publicationDate = startDate.minusSeconds(10L * 24 * 3600),
             organizer = organizer,
-            category = category
+            category = category,
+            imageUrl = coverImages[id]
         )
     }
 
