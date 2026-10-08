@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -78,9 +77,7 @@ fun MainBottomBar(
                     color = MaterialTheme.colorScheme.primaryContainer,
                     contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                     shadowElevation = 6.dp,
-                    modifier = Modifier
-                        .size(62.dp)
-                        .offset(y = (-16).dp)
+                    modifier = Modifier.size(58.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(Icons.Rounded.Add, contentDescription = "Crear evento", modifier = Modifier.size(29.dp))
