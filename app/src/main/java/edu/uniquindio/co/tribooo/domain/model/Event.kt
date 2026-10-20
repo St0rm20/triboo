@@ -18,5 +18,6 @@ data class Event(
     val verified: Boolean = false,
     val publicationDate: Instant = Instant.now(),
     val organizer: User,
-    val category: Category
+    val category: Category,
+    val imageUrl: String? = null
 )

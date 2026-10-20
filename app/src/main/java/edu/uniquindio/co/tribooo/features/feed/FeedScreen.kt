@@ -1,6 +1,5 @@
 package edu.uniquindio.co.tribooo.features.feed
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -43,11 +42,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,6 +52,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
 import edu.uniquindio.co.tribooo.core.component.CategoryChip
 import edu.uniquindio.co.tribooo.core.component.MainBottomBar
 import edu.uniquindio.co.tribooo.core.component.MainTab
@@ -237,13 +235,20 @@ private fun EventCard(item: FeedEventItem, onToggleAttendance: () -> Unit) {
         modifier = Modifier.fillMaxWidth()
     ) {
         Column {
-            // Portada (placeholder mientras no hay imágenes)
+            // Portada
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(132.dp)
             ) {
-                StripedPlaceholder(colors.surfaceContainerHigh, colors.surfaceContainer)
+                AsyncImage(
+                    model = event.imageUrl,
+                    contentDescription = event.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(colors.surfaceContainerHigh)
+                )
 
                 val tones = categoryColors(event.category)
                 Row(
@@ -451,25 +456,6 @@ private fun AttendButton(item: FeedEventItem, onClick: () -> Unit) {
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium
             )
-        }
-    }
-}
-
-/** Fondo a rayas diagonales usado como portada provisional. */
-@Composable
-private fun StripedPlaceholder(dark: Color, light: Color) {
-    Canvas(modifier = Modifier.fillMaxSize().clipToBounds()) {
-        drawRect(light)
-        val stripe = 9.dp.toPx()
-        var x = -size.height
-        while (x < size.width) {
-            drawLine(
-                color = dark,
-                start = Offset(x, size.height),
-                end = Offset(x + size.height, 0f),
-                strokeWidth = stripe
-            )
-            x += stripe * 2.8f
         }
     }
 }
