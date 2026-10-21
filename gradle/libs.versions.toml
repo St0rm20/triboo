@@ -15,6 +15,7 @@ coil = "2.7.0"
 hiltAndroid = "2.60.1"
 hiltNavigationCompose = "1.4.0"
 dataStore = "1.2.1"
+coreSplashscreen = "1.2.0"
 ksp = "2.3.6" # Desde KSP 2.3.0 la versión ya no va atada a la versión de Kotlin
 
 [libraries]
@@ -40,6 +41,7 @@ androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-com
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hiltAndroid" }
 data-store = { module = "androidx.datastore:datastore-preferences", version.ref = "dataStore" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 

@@ -5,42 +5,54 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import edu.uniquindio.co.tribooo.features.createevent.CreateEventScreen
-import edu.uniquindio.co.tribooo.features.feed.FeedScreen
 import edu.uniquindio.co.tribooo.features.eventdetail.EventDetailScreen
-import edu.uniquindio.co.tribooo.features.home.HomeScreen
+import edu.uniquindio.co.tribooo.features.feed.FeedScreen
 import edu.uniquindio.co.tribooo.features.login.LoginScreen
 import edu.uniquindio.co.tribooo.features.login.PasswordRecoveryScreen
+import edu.uniquindio.co.tribooo.features.onboarding.OnboardingScreen
 import edu.uniquindio.co.tribooo.features.register.RegisterScreen
+import edu.uniquindio.co.tribooo.features.splash.SplashScreen
 
 // Clave para pasar el mensaje del snackbar de una pantalla al feed
 private const val FEED_MESSAGE_KEY = "feed_message"
 
 @Composable
-fun AppNavigation() {
+fun AppNavigation(
+    appViewModel: AppViewModel = hiltViewModel()
+) {
     // Controlador que maneja la navegación entre pantallas
     val navController = rememberNavController()
+    val startDestination by appViewModel.startDestination.collectAsStateWithLifecycle()
 
     Surface(
         modifier = Modifier.fillMaxSize()
     ) {
+        // Mientras se lee la sesión guardada se muestra el splash
+        val start = startDestination
+        if (start == null) {
+            SplashScreen()
+            return@Surface
+        }
+
         NavHost(
             navController = navController,
-            startDestination = MainRoutes.Home // Primera pantalla al iniciar la app
+            startDestination = start // Feed si hay sesión guardada; guía inicial si no
         ) {
 
-            composable<MainRoutes.Home> {
-                HomeScreen(
-                    onNavigateToLogin = {
-                        navController.navigate(MainRoutes.Login)
-                    },
+            composable<MainRoutes.Onboarding> {
+                OnboardingScreen(
                     onNavigateToRegister = {
-                        navController.navigate(MainRoutes.Register)
+                        navController.replaceWith(MainRoutes.Register)
+                    },
+                    onNavigateToLogin = {
+                        navController.replaceWith(MainRoutes.Login)
                     }
                 )
             }
@@ -51,10 +63,7 @@ fun AppNavigation() {
                         navController.navigateToFeed()
                     },
                     onNavigateToRegister = {
-                        navController.navigate(MainRoutes.Register) {
-                            popUpTo(MainRoutes.Home) { inclusive = false }
-                            launchSingleTop = true
-                        }
+                        navController.replaceWith(MainRoutes.Register)
                     },
                     onNavigateToPasswordRecovery = {
                         navController.navigate(MainRoutes.PasswordRecovery) {
@@ -78,10 +87,7 @@ fun AppNavigation() {
                         navController.navigateToFeed()
                     },
                     onNavigateToLogin = {
-                        navController.navigate(MainRoutes.Login) {
-                            popUpTo(MainRoutes.Home) { inclusive = false }
-                            launchSingleTop = true
-                        }
+                        navController.replaceWith(MainRoutes.Login)
                     }
                 )
             }
@@ -96,15 +102,15 @@ fun AppNavigation() {
                     onNavigateToCreateEvent = {
                         navController.navigate(MainRoutes.CreateEvent)
                     },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
+                    },
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null
                     }
                 )
             }
-                    onNavigateToEventDetail = { eventId ->
-                        navController.navigate(MainRoutes.EventDetail(eventId))
-                    },
 
             composable<MainRoutes.CreateEvent> {
                 CreateEventScreen(
@@ -119,12 +125,6 @@ fun AppNavigation() {
                 )
             }
 
-        }
-    }
-}
-
-/** Entra al feed y elimina del historial las pantallas de bienvenida y autenticación. */
-private fun NavHostController.navigateToFeed() {
             composable<MainRoutes.EventDetail> {
                 // El id del evento llega al ViewModel por su SavedStateHandle
                 EventDetailScreen(
@@ -134,7 +134,24 @@ private fun NavHostController.navigateToFeed() {
                 )
             }
 
+        }
+    }
+}
+
+/** Entra al feed y elimina del historial la guía y las pantallas de autenticación. */
+private fun NavHostController.navigateToFeed() {
     navigate(MainRoutes.Feed) {
-        popUpTo(MainRoutes.Home) { inclusive = true }
+        popUpTo(graph.id) { inclusive = true }
+    }
+}
+
+/**
+ * Cambia entre guía, login y registro sin acumularlas en el historial:
+ * "atrás" desde cualquiera de ellas sale de la app, como en el prototipo.
+ */
+private fun NavHostController.replaceWith(route: MainRoutes) {
+    navigate(route) {
+        popUpTo(graph.id) { inclusive = true }
+        launchSingleTop = true
     }
 }

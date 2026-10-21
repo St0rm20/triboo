@@ -67,6 +67,9 @@ dependencies {
     // --- DataStore (sesión persistente) ---
     implementation(libs.data.store)
 
+    // --- Splash screen (API 12+ con compatibilidad hacia atrás) ---
+    implementation(libs.androidx.core.splashscreen)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

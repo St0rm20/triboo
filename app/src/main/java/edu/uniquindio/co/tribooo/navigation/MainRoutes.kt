@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 sealed class MainRoutes {
 
     @Serializable
-    data object Home : MainRoutes()
+    data object Onboarding : MainRoutes()
 
     @Serializable
     data object Login : MainRoutes()

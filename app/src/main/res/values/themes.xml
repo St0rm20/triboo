@@ -2,4 +2,11 @@
 <resources>
 
     <style name="Theme.Tribooo" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Splash del sistema: solo el color primario, sin ícono, para empalmar con el splash de Compose -->
+    <style name="Theme.Tribooo.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@android:color/transparent</item>
+        <item name="postSplashScreenTheme">@style/Theme.Tribooo</item>
+    </style>
 </resources>
