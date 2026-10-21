@@ -50,8 +50,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import edu.uniquindio.co.tribooo.core.component.CategoryChip
 import edu.uniquindio.co.tribooo.core.component.MainBottomBar
@@ -59,7 +59,9 @@ import edu.uniquindio.co.tribooo.core.component.MainTab
 import edu.uniquindio.co.tribooo.core.component.iconVector
 import edu.uniquindio.co.tribooo.core.theme.categoryColors
 import edu.uniquindio.co.tribooo.core.util.APP_ZONE
+import edu.uniquindio.co.tribooo.core.util.CUPO_WARNING
 import edu.uniquindio.co.tribooo.core.util.atAppZone
+import edu.uniquindio.co.tribooo.core.util.cupoLabel
 import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
 import edu.uniquindio.co.tribooo.core.util.formatThousands
 import edu.uniquindio.co.tribooo.core.util.longLabel
@@ -67,15 +69,12 @@ import edu.uniquindio.co.tribooo.core.util.monthShort
 import edu.uniquindio.co.tribooo.domain.model.Category
 import java.time.LocalDate
 
-/** Porcentaje de ocupación a partir del cual el cupo se resalta como "últimos cupos". */
-private const val CUPO_WARNING = 0.85f
-
 @Composable
 fun FeedScreen(
     onNavigateToCreateEvent: () -> Unit,
     snackbarMessage: String?,
     onSnackbarShown: () -> Unit,
-    viewModel: FeedViewModel = viewModel()
+    viewModel: FeedViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -323,7 +322,7 @@ private fun EventCard(item: FeedEventItem, onToggleAttendance: () -> Unit) {
                     InfoRow(Icons.Rounded.Place, "${event.place} · ${event.neighborhood}")
                 }
 
-                event.cupo?.let { cupo -> CupoBar(item = item, cupo = cupo) }
+                if (event.cupo != null) CupoBar(item = item)
 
                 Row(
                     modifier = Modifier
@@ -378,14 +377,10 @@ private fun InfoRow(icon: ImageVector, text: String) {
 }
 
 @Composable
-private fun CupoBar(item: FeedEventItem, cupo: Int) {
+private fun CupoBar(item: FeedEventItem) {
     val colors = MaterialTheme.colorScheme
     val tight = item.occupancy >= CUPO_WARNING
-    val label = when {
-        item.isFull -> "Cupo completo"
-        tight -> "Últimos cupos · ${cupo - item.attendeesCount} libres"
-        else -> "${item.attendeesCount} de $cupo confirmados"
-    }
+    val label = item.event.cupoLabel(item.attendeesCount)
     val accent = if (tight) colors.error else colors.primary
 
     Column(modifier = Modifier.padding(top = 12.dp)) {

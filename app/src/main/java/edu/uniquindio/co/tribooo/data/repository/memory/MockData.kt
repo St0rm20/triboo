@@ -1,35 +1,39 @@
-package edu.uniquindio.co.tribooo.data
+package edu.uniquindio.co.tribooo.data.repository.memory
 
 import edu.uniquindio.co.tribooo.core.util.APP_ZONE
 import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.model.Category
+import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.model.Contribution
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
+import edu.uniquindio.co.tribooo.domain.model.Follow
+import edu.uniquindio.co.tribooo.domain.model.ImageEvent
+import edu.uniquindio.co.tribooo.domain.model.Interest
 import edu.uniquindio.co.tribooo.domain.model.Location
+import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
+import edu.uniquindio.co.tribooo.domain.model.Saved
 import edu.uniquindio.co.tribooo.domain.model.User
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 
-/** Lugar sugerido para el selector de ubicación al crear un evento. */
-data class PlaceSuggestion(
-    val name: String,
-    val neighborhood: String,
-    val detail: String,
-    val location: Location
-)
-
 /**
- * Datos de prueba de la aplicación (mientras no exista backend).
+ * Datos de prueba de la fuente de datos en memoria (mientras no exista backend).
+ * Solo los usan los repositorios de este paquete como estado inicial.
  * Las fechas de los eventos son relativas al día actual para que el feed siempre tenga eventos próximos.
  */
-object MockData {
+internal object MockData {
 
     /** Ubicación del usuario actual (centro de Armenia). Se usa para calcular distancias. */
     val currentLocation = Location(latitude = 4.5339, longitude = -75.6811)
 
-    /** Usuario con sesión iniciada. */
-    val currentUser = User(
+    /** Ciudades disponibles en el registro. */
+    val cities = listOf("Ciudad 1", "Ciudad 2", "Ciudad 3")
+
+    /** Usuaria de prueba con eventos, comentarios y seguidos (inicia sesión con su email y "123456"). */
+    val daniela = User(
         id = "u-daniela",
         name = "Daniela Restrepo",
         email = "daniela.restrepo@triboo.co",
@@ -75,7 +79,7 @@ object MockData {
     }
 
     val users: List<User> = listOf(
-        currentUser, museoQuimbaya, senderistas, jacLosQuindos, mesaCultural, uqLabs,
+        daniela, museoQuimbaya, senderistas, jacLosQuindos, mesaCultural, uqLabs,
         camaraComercio, colectivoBambuco, redAmbiental, armeniaCivica
     ) + neighbors
 
@@ -148,7 +152,7 @@ object MockData {
             id = "10", title = "Bazar Solidario Barrio Granada", category = Category.SOCIAL,
             daysAhead = 3, start = LocalTime.of(14, 0), end = LocalTime.of(20, 0),
             place = "Salón comunal Granada", neighborhood = "Granada", location = Location(4.5271, -75.6836),
-            organizer = currentUser,
+            organizer = daniela,
             contribution = Contribution(5000.0, "Mercados para 40 familias del barrio Granada"),
             description = "Comidas típicas, ropa de segunda y juegos para niños. Lo recaudado se destina a mercados para familias del barrio."
         ),
@@ -171,7 +175,7 @@ object MockData {
             id = "1", title = "Ciclopaseo Nocturno del Quindío", category = Category.DEPORTES,
             daysAhead = 10, start = LocalTime.of(18, 0), end = LocalTime.of(20, 30),
             place = "Parque de la Vida", neighborhood = "Norte", location = Location(4.5393, -75.6717),
-            organizer = currentUser, cupo = 120,
+            organizer = daniela, cupo = 120,
             description = "Recorrido nocturno de 18 km por la Av. Bolívar y el Parque de la Vida, a ritmo tranquilo y con acompañamiento de la Secretaría de Tránsito. Trae luces delanteras y traseras, casco y agua. Hay mecánico de apoyo al final del pelotón."
         ),
         event(
@@ -222,14 +226,14 @@ object MockData {
             id = "m3", title = "Torneo de Tejo Interbarrios", category = Category.DEPORTES,
             daysAhead = 20, start = LocalTime.of(15, 0), end = LocalTime.of(21, 0),
             place = "Cancha de tejo El Bosque", neighborhood = "El Bosque", location = Location(4.5456, -75.7014),
-            organizer = currentUser, cupo = 64, status = EventStatus.PENDIENTE,
+            organizer = daniela, cupo = 64, status = EventStatus.PENDIENTE,
             description = "Torneo por parejas entre barrios de Armenia. Inscripción por equipo el mismo día."
         ),
         event(
             id = "m6", title = "Rifa de electrodomésticos", category = Category.SOCIAL,
             daysAhead = 6, start = LocalTime.of(18, 0), end = LocalTime.of(20, 0),
             place = "Salón comunal Granada", neighborhood = "Granada", location = Location(4.5417, -75.6856),
-            organizer = currentUser, status = EventStatus.RECHAZADO,
+            organizer = daniela, status = EventStatus.RECHAZADO,
             description = "Rifa de electrodomésticos entre los vecinos del barrio."
         )
     )
@@ -241,27 +245,89 @@ object MockData {
     )
 
     /**
-     * Asistencias confirmadas. Los primeros asistentes de cada evento son vecinos con nombre
-     * y el resto se completa con usuarios de relleno hasta alcanzar el conteo del prototipo.
+     * Personas de un evento: las primeras son vecinos con nombre y el resto
+     * se completa con usuarios de relleno hasta alcanzar [count].
      */
-    val attendances: List<Attendance> = events.flatMapIndexed { index, event ->
-        val count = attendeeCounts[event.id] ?: 0
+    private fun crowd(event: Event, eventIndex: Int, count: Int, tag: String): List<User> =
         (0 until count).map { n ->
-            val user = if (n < 3) {
-                neighbors[(index * 3 + n) % neighbors.size]
+            if (n < 3) {
+                neighbors[(eventIndex * 3 + n) % neighbors.size]
             } else {
                 User(
-                    id = "u-relleno-${event.id}-$n",
+                    id = "u-$tag-${event.id}-$n",
                     name = "Vecino ${n + 1}",
-                    email = "relleno-${event.id}-$n@triboo.co",
+                    email = "$tag-${event.id}-$n@triboo.co",
                     password = "123456",
                     city = "Armenia",
                     neighborhood = event.neighborhood
                 )
             }
-            Attendance(user = user, event = event)
+        }
+
+    /** Asistencias confirmadas, con el conteo del prototipo. */
+    val attendances: List<Attendance> = events.flatMapIndexed { index, event ->
+        crowd(event, index, attendeeCounts[event.id] ?: 0, "relleno").map { Attendance(user = it, event = event) }
+    }
+
+    /** Marcas de "Me interesa": en el prototipo son algo más que los asistentes. */
+    val interests: List<Interest> = events.flatMapIndexed { index, event ->
+        val going = attendeeCounts[event.id] ?: return@flatMapIndexed emptyList()
+        val count = (going * 1.6).toInt() + 24
+        crowd(event, index + 1, count, "interes").map { Interest(user = it, event = event) }
+    }
+
+    private fun eventById(id: String) = events.first { it.id == id }
+
+    /** Fotos adicionales de algunos eventos (la portada va en [Event.imageUrl]). */
+    val images: List<ImageEvent> = mapOf(
+        "1" to listOf("photo-1511632765486-a01980e01a18", "photo-1522071820081-009f0129c71c"),
+        "2" to listOf("photo-1509099836639-18ba1795216d", "photo-1470229722913-7c0e2dbbafd3"),
+        "6" to listOf("photo-1441974231531-c6227db76b6e", "photo-1488646953014-85cb44e25828")
+    ).flatMap { (eventId, photoIds) ->
+        photoIds.mapIndexed { i, photoId ->
+            ImageEvent(id = "img-$eventId-$i", event = eventById(eventId), url = unsplash(photoId), order = i + 1)
         }
     }
+
+    private fun minutesAgo(minutes: Long): Instant = Instant.now().minus(Duration.ofMinutes(minutes))
+
+    /** Comentarios de prueba (los del ciclopaseo son los del prototipo). */
+    val comments: List<Comment> = listOf(
+        Comment(
+            id = "c-1-1", event = eventById("1"), author = neighbors[1], date = minutesAgo(120),
+            text = "¿El punto de encuentro es la portería norte o la sur del parque?"
+        ),
+        Comment(
+            id = "c-1-2", event = eventById("1"), author = daniela, date = minutesAgo(60),
+            text = "Portería norte, junto a la ciclorruta. Salimos 18:15 en punto."
+        ),
+        Comment(
+            id = "c-1-3", event = eventById("1"), author = neighbors[3], date = minutesAgo(40), rating = 5,
+            text = "Perfecto, llevo botiquín y bomba de aire por si alguien pincha."
+        ),
+        Comment(
+            id = "c-2-1", event = eventById("2"), author = neighbors[5], date = minutesAgo(300), rating = 4,
+            text = "El año pasado estuvo buenísima la catación. ¿Habrá café para llevar en grano?"
+        ),
+        Comment(
+            id = "c-6-1", event = eventById("6"), author = neighbors[8], date = minutesAgo(26 * 60),
+            text = "¿Es apta para niños de 10 años?"
+        ),
+        Comment(
+            id = "c-6-2", event = eventById("6"), author = senderistas, date = minutesAgo(25 * 60),
+            text = "Sí, el recorrido es tranquilo. Que vengan con un adulto y buen calzado."
+        )
+    )
+
+    /** Organizadores que sigue el usuario actual. */
+    val follows: List<Follow> = listOf(
+        Follow(follower = daniela, followed = mesaCultural)
+    )
+
+    /** Eventos guardados por el usuario actual. */
+    val saved: List<Saved> = listOf(
+        Saved(user = daniela, event = eventById("6"))
+    )
 
     /** Lugares sugeridos en el selector de ubicación. */
     val placeSuggestions = listOf(

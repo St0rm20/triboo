@@ -2,8 +2,11 @@ package edu.uniquindio.co.tribooo.features.register
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.util.RequestResult
-import kotlinx.coroutines.delay
+import edu.uniquindio.co.tribooo.domain.usecase.auth.RegisterUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.location.GetCitiesUseCase
+import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,7 +15,7 @@ import kotlinx.coroutines.launch
 
 data class RegisterUiState(
     val name: String = "",
-    val city: String = "Ciudad 1",
+    val city: String = "",
     val address: String = "",
     val email: String = "",
     val password: String = "",
@@ -28,11 +31,16 @@ data class RegisterUiState(
     val showConfirmDialog: Boolean = false
 )
 
-class RegisterViewModel : ViewModel() {
+@HiltViewModel
+class RegisterViewModel @Inject constructor(
+    getCities: GetCitiesUseCase,
+    private val registerUseCase: RegisterUseCase
+) : ViewModel() {
 
-    val cities = listOf("Ciudad 1", "Ciudad 2", "Ciudad 3")
+    val cities: List<String> = getCities()
 
-    private val _uiState = MutableStateFlow(RegisterUiState())
+    // La primera ciudad queda seleccionada por defecto
+    private val _uiState = MutableStateFlow(RegisterUiState(city = cities.firstOrNull().orEmpty()))
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
     fun onNameChange(name: String) {
@@ -130,11 +138,24 @@ class RegisterViewModel : ViewModel() {
     }
 
     private fun register() {
+        val state = _uiState.value
+        if (state.registerResult == RequestResult.Loading) return
+
         viewModelScope.launch {
             _uiState.update { it.copy(registerResult = RequestResult.Loading) }
-            delay(2000)
-            val message = "Registro exitoso"
-            _uiState.update { it.copy(registerResult = RequestResult.Success(message)) }
+            val user = registerUseCase(
+                name = state.name,
+                city = state.city,
+                address = state.address,
+                email = state.email,
+                password = state.password
+            )
+            val result = if (user != null) {
+                RequestResult.Success("Registro exitoso")
+            } else {
+                RequestResult.Failure("Ya existe una cuenta con ese email")
+            }
+            _uiState.update { it.copy(registerResult = result) }
         }
     }
 
