@@ -1,23 +1,28 @@
 package edu.uniquindio.co.tribooo.features.createevent
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.util.APP_ZONE
 import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.formatMoney
-import edu.uniquindio.co.tribooo.data.EventRepository
-import edu.uniquindio.co.tribooo.data.MockData
-import edu.uniquindio.co.tribooo.data.PlaceSuggestion
 import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Contribution
 import edu.uniquindio.co.tribooo.domain.model.Event
-import edu.uniquindio.co.tribooo.domain.model.EventStatus
+import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
+import edu.uniquindio.co.tribooo.domain.usecase.auth.GetCurrentUserUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.event.CreateEventUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.location.GetPlaceSuggestionsUseCase
+import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
+import java.util.UUID
 
 private const val MIN_CUPO = 5
 private const val CUPO_STEP = 5
@@ -52,12 +57,17 @@ data class CreateEventUiState(
     val isRangeValid: Boolean get() = end.isAfter(start)
 }
 
-class CreateEventViewModel : ViewModel() {
+@HiltViewModel
+class CreateEventViewModel @Inject constructor(
+    getPlaceSuggestions: GetPlaceSuggestionsUseCase,
+    private val getCurrentUserUseCase: GetCurrentUserUseCase,
+    private val createEventUseCase: CreateEventUseCase
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CreateEventUiState())
     val uiState: StateFlow<CreateEventUiState> = _uiState.asStateFlow()
 
-    val placeSuggestions: List<PlaceSuggestion> = MockData.placeSuggestions
+    val placeSuggestions: List<PlaceSuggestion> = getPlaceSuggestions()
     val categories: List<Category> = Category.defaultCategories
     val contributionPresets: List<Long> = listOf(2000, 5000, 10000)
 
@@ -133,6 +143,7 @@ class CreateEventViewModel : ViewModel() {
 
     fun publish() {
         val state = _uiState.value
+        if (state.publishResult == RequestResult.Loading) return
         val titleError = if (state.title.isBlank()) "Ponle un nombre claro al evento" else null
         val contributionError = if (state.contributionEnabled && state.contributionAmount <= 0) {
             "Indica el monto del aporte o desactiva el costo"
@@ -162,31 +173,41 @@ class CreateEventViewModel : ViewModel() {
             return
         }
 
-        val event = Event(
-            id = EventRepository.newEventId(),
-            title = state.title.trim(),
-            description = state.description.trim(),
-            startDate = state.start.atZone(APP_ZONE).toInstant(),
-            endDate = state.end.atZone(APP_ZONE).toInstant(),
-            multidia = state.multiDay,
-            place = place.name,
-            neighborhood = place.neighborhood,
-            location = place.location,
-            cupo = if (state.cupoEnabled) state.cupo else null,
-            contribution = if (state.contributionEnabled) Contribution(amount = state.contributionAmount.toDouble()) else null,
-            // Todo evento nuevo pasa por moderación antes de aparecer en el feed
-            status = EventStatus.PENDIENTE,
-            organizer = MockData.currentUser,
-            category = category
-        )
-        EventRepository.addEvent(event, state.imageUris)
+        // Se marca antes de lanzar la corrutina para evitar publicar dos veces con toques seguidos
+        _uiState.update { it.copy(publishResult = RequestResult.Loading) }
+        viewModelScope.launch {
+            val organizer = getCurrentUserUseCase()
+            if (organizer == null) {
+                _uiState.update { it.copy(publishResult = RequestResult.Failure("Inicia sesión para publicar eventos.")) }
+                return@launch
+            }
 
-        val message = if (state.contributionEnabled) {
-            "Evento enviado a revisión. Moderación verificará que el aporte de ${state.contributionAmount.formatMoney()} sea benéfico."
-        } else {
-            "Evento enviado a revisión. Te avisamos al aprobarlo."
+            val event = Event(
+                id = UUID.randomUUID().toString(),
+                title = state.title.trim(),
+                description = state.description.trim(),
+                startDate = state.start.atZone(APP_ZONE).toInstant(),
+                endDate = state.end.atZone(APP_ZONE).toInstant(),
+                multidia = state.multiDay,
+                place = place.name,
+                neighborhood = place.neighborhood,
+                location = place.location,
+                cupo = if (state.cupoEnabled) state.cupo else null,
+                contribution = if (state.contributionEnabled) Contribution(amount = state.contributionAmount.toDouble()) else null,
+                organizer = organizer,
+                category = category
+            )
+
+            // El caso de uso lo envía a moderación antes de que aparezca en el feed
+            createEventUseCase(event, state.imageUris)
+
+            val message = if (state.contributionEnabled) {
+                "Evento enviado a revisión. Moderación verificará que el aporte de ${state.contributionAmount.formatMoney()} sea benéfico."
+            } else {
+                "Evento enviado a revisión. Te avisamos al aprobarlo."
+            }
+            _uiState.update { it.copy(publishResult = RequestResult.Success(message)) }
         }
-        _uiState.update { it.copy(publishResult = RequestResult.Success(message)) }
     }
 
     fun resetPublishResult() {

@@ -81,8 +81,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import edu.uniquindio.co.tribooo.core.component.CategoryChip
 import edu.uniquindio.co.tribooo.core.component.WrapRow
 import edu.uniquindio.co.tribooo.core.util.APP_ZONE
@@ -91,7 +91,7 @@ import edu.uniquindio.co.tribooo.core.util.dateTimeLabel
 import edu.uniquindio.co.tribooo.core.util.formatMoney
 import edu.uniquindio.co.tribooo.core.util.label
 import edu.uniquindio.co.tribooo.core.util.shortLabelWithYear
-import edu.uniquindio.co.tribooo.data.PlaceSuggestion
+import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -104,7 +104,7 @@ private enum class PickerTarget { START_DATE, START_TIME, END_DATE, END_TIME, PL
 fun CreateEventScreen(
     onClose: () -> Unit,
     onEventPublished: (message: String) -> Unit,
-    viewModel: CreateEventViewModel = viewModel()
+    viewModel: CreateEventViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }

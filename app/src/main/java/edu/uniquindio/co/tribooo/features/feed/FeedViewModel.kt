@@ -2,23 +2,26 @@ package edu.uniquindio.co.tribooo.features.feed
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import edu.uniquindio.co.tribooo.data.EventRepository
-import edu.uniquindio.co.tribooo.data.MockData
+import edu.uniquindio.co.tribooo.core.util.distanceKmTo
+import edu.uniquindio.co.tribooo.core.util.initials
+import edu.uniquindio.co.tribooo.core.util.isFull
+import edu.uniquindio.co.tribooo.core.util.occupancy
+import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Event
-import edu.uniquindio.co.tribooo.domain.model.EventStatus
-import edu.uniquindio.co.tribooo.domain.model.Location
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.ToggleAttendanceUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.event.ObservePublishedEventsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.location.ObserveCurrentLocationUseCase
+import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
-import kotlin.math.asin
-import kotlin.math.cos
-import kotlin.math.pow
-import kotlin.math.sin
-import kotlin.math.sqrt
+import kotlinx.coroutines.launch
 
 /** Evento listo para mostrarse en una tarjeta del feed. */
 data class FeedEventItem(
@@ -29,8 +32,8 @@ data class FeedEventItem(
     val isMine: Boolean,
     val distanceKm: Double
 ) {
-    val isFull: Boolean get() = event.cupo != null && attendeesCount >= event.cupo
-    val occupancy: Float get() = event.cupo?.let { (attendeesCount.toFloat() / it).coerceAtMost(1f) } ?: 0f
+    val isFull: Boolean get() = event.isFull(attendeesCount)
+    val occupancy: Float get() = event.occupancy(attendeesCount)
 }
 
 data class FeedUiState(
@@ -40,24 +43,35 @@ data class FeedUiState(
     val events: List<FeedEventItem> = emptyList()
 )
 
-class FeedViewModel : ViewModel() {
+/** Búsqueda y categorías elegidas (se agrupan porque `combine` admite máximo 5 flujos). */
+private data class FeedFilters(
+    val query: String = "",
+    val categories: Set<String> = emptySet()
+)
 
-    private val currentUser = MockData.currentUser
-    private val query = MutableStateFlow("")
-    private val selectedCategories = MutableStateFlow<Set<String>>(emptySet())
+@HiltViewModel
+class FeedViewModel @Inject constructor(
+    observePublishedEvents: ObservePublishedEventsUseCase,
+    observeAttendances: ObserveAttendancesUseCase,
+    observeCurrentUser: ObserveCurrentUserUseCase,
+    observeCurrentLocation: ObserveCurrentLocationUseCase,
+    private val toggleAttendanceUseCase: ToggleAttendanceUseCase
+) : ViewModel() {
+
+    private val filters = MutableStateFlow(FeedFilters())
 
     val uiState: StateFlow<FeedUiState> = combine(
-        EventRepository.events,
-        EventRepository.attendances,
-        query,
-        selectedCategories
-    ) { events, attendances, q, categories ->
+        observePublishedEvents(),
+        observeAttendances(),
+        filters,
+        observeCurrentUser(),
+        observeCurrentLocation()
+    ) { events, attendances, filters, currentUser, location ->
         val attendeesByEvent = attendances.groupBy { it.event.id }
-        val text = q.trim().lowercase()
+        val text = filters.query.trim().lowercase()
+        val categories = filters.categories
 
         val items = events
-            // Solo los eventos aprobados por moderación aparecen en el feed
-            .filter { it.status == EventStatus.ACTIVO }
             .filter { categories.isEmpty() || it.category.key in categories }
             .filter {
                 text.isEmpty() || "${it.title} ${it.place} ${it.neighborhood}".lowercase().contains(text)
@@ -67,46 +81,32 @@ class FeedViewModel : ViewModel() {
                 FeedEventItem(
                     event = event,
                     attendeesCount = attendees.size,
-                    attendeeInitials = attendees.take(3).map { initials(it.user.name) },
-                    isAttending = attendees.any { it.user.id == currentUser.id },
-                    isMine = event.organizer.id == currentUser.id,
-                    distanceKm = distanceKm(MockData.currentLocation, event.location)
+                    attendeeInitials = attendees.take(3).map { it.user.name.initials() },
+                    isAttending = attendees.any { it.user.id == currentUser?.id },
+                    isMine = event.organizer.id == currentUser?.id,
+                    distanceKm = location.distanceKmTo(event.location)
                 )
             }
             .sortedBy { it.distanceKm }
 
-        FeedUiState(query = q, selectedCategories = categories, events = items)
+        FeedUiState(query = filters.query, selectedCategories = categories, events = items)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeedUiState())
 
     fun onQueryChange(value: String) {
-        query.value = value
+        filters.update { it.copy(query = value) }
     }
 
     fun toggleCategory(key: String) {
-        selectedCategories.update { if (key in it) it - key else it + key }
+        filters.update { it.copy(categories = if (key in it.categories) it.categories - key else it.categories + key) }
     }
 
     fun clearFilters() {
-        query.value = ""
-        selectedCategories.value = emptySet()
+        filters.value = FeedFilters()
     }
 
     fun toggleAttendance(item: FeedEventItem) {
         // Sin lista de espera en el modelo: si el cupo está lleno solo se permite cancelar
         if (item.isFull && !item.isAttending) return
-        EventRepository.toggleAttendance(currentUser, item.event)
-    }
-
-    private fun initials(name: String): String =
-        name.split(" ").filter { it.isNotBlank() }.take(2).joinToString("") { it.first().uppercase() }
-
-    /** Distancia en km entre dos coordenadas (fórmula de Haversine). */
-    private fun distanceKm(from: Location, to: Location): Double {
-        val earthRadiusKm = 6371.0
-        val dLat = Math.toRadians(to.latitude - from.latitude)
-        val dLon = Math.toRadians(to.longitude - from.longitude)
-        val a = sin(dLat / 2).pow(2) +
-            cos(Math.toRadians(from.latitude)) * cos(Math.toRadians(to.latitude)) * sin(dLon / 2).pow(2)
-        return 2 * earthRadiusKm * asin(sqrt(a))
+        viewModelScope.launch { toggleAttendanceUseCase(item.event) }
     }
 }

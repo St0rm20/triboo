@@ -1,6 +1,7 @@
 package edu.uniquindio.co.tribooo.core.util
 
 import java.text.NumberFormat
+import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -44,15 +45,28 @@ fun LocalTime.label(): String = format(TIME)
 fun dateTimeLabel(date: LocalDate, time: LocalTime): String = "${date.shortLabel()} · ${time.label()}"
 
 /** "Sáb 26 sep · 18:00 – 20:30" o "Sáb 10 oct – Dom 11 oct · 08:00 – 08:00" */
-fun eventWhenLabel(start: Instant, end: Instant): String {
-    val s = start.atAppZone()
-    val e = end.atAppZone()
-    val days = if (s.toLocalDate() == e.toLocalDate()) {
-        s.toLocalDate().shortLabel()
-    } else {
-        "${s.toLocalDate().shortLabel()} – ${e.toLocalDate().shortLabel()}"
+fun eventWhenLabel(start: Instant, end: Instant): String = "${eventDaysLabel(start, end)} · ${eventHoursLabel(start, end)}"
+
+/** "Sáb 26 sep" o "Sáb 10 oct – Dom 11 oct" */
+fun eventDaysLabel(start: Instant, end: Instant): String {
+    val s = start.atAppZone().toLocalDate()
+    val e = end.atAppZone().toLocalDate()
+    return if (s == e) s.shortLabel() else "${s.shortLabel()} – ${e.shortLabel()}"
+}
+
+/** "18:00 – 20:30" */
+fun eventHoursLabel(start: Instant, end: Instant): String =
+    "${start.atAppZone().toLocalTime().label()} – ${end.atAppZone().toLocalTime().label()}"
+
+/** "ahora", "hace 40 min", "hace 2 h" o "hace 3 d" */
+fun Instant.agoLabel(now: Instant = Instant.now()): String {
+    val minutes = Duration.between(this, now).toMinutes()
+    return when {
+        minutes < 1 -> "ahora"
+        minutes < 60 -> "hace $minutes min"
+        minutes < 24 * 60 -> "hace ${minutes / 60} h"
+        else -> "hace ${minutes / (24 * 60)} d"
     }
-    return "$days · ${s.toLocalTime().label()} – ${e.toLocalTime().label()}"
 }
 
 /** "1.234" */

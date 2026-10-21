@@ -2,8 +2,10 @@ package edu.uniquindio.co.tribooo.features.login
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.util.RequestResult
-import kotlinx.coroutines.delay
+import edu.uniquindio.co.tribooo.domain.usecase.auth.LoginUseCase
+import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,7 +21,10 @@ data class LoginUiState(
     val loginResult: RequestResult? = null
 )
 
-class LoginViewModel : ViewModel() {
+@HiltViewModel
+class LoginViewModel @Inject constructor(
+    private val loginUseCase: LoginUseCase
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
@@ -72,13 +77,18 @@ class LoginViewModel : ViewModel() {
     }
 
     fun login() {
-        if (!_uiState.value.isFormValid) return
+        val state = _uiState.value
+        if (!state.isFormValid || state.loginResult == RequestResult.Loading) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(loginResult = RequestResult.Loading) }
-            delay(2000)
-            val message = "Inicio de sesión exitoso"
-            _uiState.update { it.copy(loginResult = RequestResult.Success(message)) }
+            val user = loginUseCase(email = state.email, password = state.password)
+            val result = if (user != null) {
+                RequestResult.Success("Inicio de sesión exitoso")
+            } else {
+                RequestResult.Failure("Email o contraseña incorrectos")
+            }
+            _uiState.update { it.copy(loginResult = result) }
         }
     }
 
