@@ -64,6 +64,9 @@ dependencies {
     // --- Hilt + Compose Navigation ---
     implementation(libs.androidx.hilt.navigation.compose)
 
+    // --- DataStore (sesión persistente) ---
+    implementation(libs.data.store)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
