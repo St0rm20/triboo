@@ -12,6 +12,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import edu.uniquindio.co.tribooo.features.createevent.CreateEventScreen
 import edu.uniquindio.co.tribooo.features.feed.FeedScreen
+import edu.uniquindio.co.tribooo.features.eventdetail.EventDetailScreen
 import edu.uniquindio.co.tribooo.features.home.HomeScreen
 import edu.uniquindio.co.tribooo.features.login.LoginScreen
 import edu.uniquindio.co.tribooo.features.login.PasswordRecoveryScreen
@@ -101,6 +102,9 @@ fun AppNavigation() {
                     }
                 )
             }
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
+                    },
 
             composable<MainRoutes.CreateEvent> {
                 CreateEventScreen(
@@ -121,6 +125,15 @@ fun AppNavigation() {
 
 /** Entra al feed y elimina del historial las pantallas de bienvenida y autenticación. */
 private fun NavHostController.navigateToFeed() {
+            composable<MainRoutes.EventDetail> {
+                // El id del evento llega al ViewModel por su SavedStateHandle
+                EventDetailScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    }
+                )
+            }
+
     navigate(MainRoutes.Feed) {
         popUpTo(MainRoutes.Home) { inclusive = true }
     }

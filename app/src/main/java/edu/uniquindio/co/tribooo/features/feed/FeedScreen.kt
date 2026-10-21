@@ -72,6 +72,7 @@ import java.time.LocalDate
 @Composable
 fun FeedScreen(
     onNavigateToCreateEvent: () -> Unit,
+    onNavigateToEventDetail: (eventId: String) -> Unit,
     snackbarMessage: String?,
     onSnackbarShown: () -> Unit,
     viewModel: FeedViewModel = hiltViewModel()
@@ -131,7 +132,11 @@ fun FeedScreen(
                 }
 
                 items(state.events, key = { it.event.id }) { item ->
-                    EventCard(item = item, onToggleAttendance = { viewModel.toggleAttendance(item) })
+                    EventCard(
+                        item = item,
+                        onClick = { onNavigateToEventDetail(item.event.id) },
+                        onToggleAttendance = { viewModel.toggleAttendance(item) }
+                    )
                 }
 
                 if (state.events.isEmpty()) {
@@ -222,12 +227,13 @@ private fun FeedHeader(
 }
 
 @Composable
-private fun EventCard(item: FeedEventItem, onToggleAttendance: () -> Unit) {
+private fun EventCard(item: FeedEventItem, onClick: () -> Unit, onToggleAttendance: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val event = item.event
     val start = event.startDate.atAppZone().toLocalDate()
 
     Surface(
+        onClick = onClick,
         shape = RoundedCornerShape(26.dp),
         color = colors.surfaceContainerLowest,
         shadowElevation = 1.dp,
