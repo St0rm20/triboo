@@ -160,6 +160,7 @@ fun EventDetailScreen(
     EventDetailContent(
         detail = detail,
         draft = state.draft,
+        showAttendees = state.showAttendees,
         snackbarHostState = snackbarHostState,
         onBack = onNavigateBack,
         onShare = { context.shareEvent(detail.event) },
@@ -175,13 +176,12 @@ fun EventDetailScreen(
 fun EventDetailContent(
     detail: EventDetail,
     draft: CommentDraft,
+    showAttendees: Boolean,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onShare: () -> Unit,
     onAction: (EventDetailAction) -> Unit
 ) {
-    var showAttendees by rememberSaveable { mutableStateOf(false) }
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = { DetailBottomBar(detail = detail, onAction = onAction) }
@@ -247,7 +247,7 @@ fun EventDetailContent(
                 }
 
                 item(key = "attendees") {
-                    AttendeesSection(detail = detail, onSeeAll = { showAttendees = true })
+                    AttendeesSection(detail = detail, onSeeAll = { onAction(EventDetailAction.ShowAttendees) })
                 }
 
                 item(key = "comments-header") { CommentsHeader(detail = detail) }
@@ -282,7 +282,7 @@ fun EventDetailContent(
     }
 
     if (showAttendees) {
-        AttendeesSheet(detail = detail, onDismiss = { showAttendees = false })
+        AttendeesSheet(detail = detail, onDismiss = { onAction(EventDetailAction.HideAttendees) })
     }
 }
 

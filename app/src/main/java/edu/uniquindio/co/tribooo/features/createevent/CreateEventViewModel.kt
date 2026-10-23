@@ -1,4 +1,4 @@
-package edu.uniquindio.co.tribooo.features.createevent
+    package edu.uniquindio.co.tribooo.features.createevent
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -28,6 +28,9 @@ private const val MIN_CUPO = 5
 private const val CUPO_STEP = 5
 private const val MAX_IMAGES = 5
 
+/** Selector abierto en la pantalla. Algunos encadenan al siguiente (fecha → hora). */
+enum class PickerTarget { START_DATE, START_TIME, END_DATE, END_TIME, PLACE }
+
 data class CreateEventUiState(
     val title: String = "",
     val titleError: String? = null,
@@ -47,6 +50,7 @@ data class CreateEventUiState(
     val contributionAmount: Long = 0,
     val contributionError: String? = null,
     val imageUris: List<String> = emptyList(),
+    val picker: PickerTarget? = null,
     val publishResult: RequestResult? = null
 ) {
     val start: LocalDateTime get() = startDate.atTime(startTime)
@@ -91,24 +95,38 @@ class CreateEventViewModel @Inject constructor(
         }
     }
 
-    fun onStartDateChange(date: LocalDate) {
-        _uiState.update { it.copy(startDate = date) }
+    fun openPicker(target: PickerTarget) {
+        _uiState.update { it.copy(picker = target) }
     }
 
+    fun closePicker() {
+        _uiState.update { it.copy(picker = null) }
+    }
+
+    // En eventos de varios días tras la fecha de inicio se pide también la hora
+    fun onStartDateChange(date: LocalDate) {
+        _uiState.update {
+            it.copy(startDate = date, picker = if (it.multiDay) PickerTarget.START_TIME else null)
+        }
+    }
+
+    // En eventos de un día el horario se elige como inicio → fin
     fun onStartTimeChange(time: LocalTime) {
-        _uiState.update { it.copy(startTime = time) }
+        _uiState.update {
+            it.copy(startTime = time, picker = if (it.multiDay) null else PickerTarget.END_TIME)
+        }
     }
 
     fun onEndDateChange(date: LocalDate) {
-        _uiState.update { it.copy(endDate = date) }
+        _uiState.update { it.copy(endDate = date, picker = PickerTarget.END_TIME) }
     }
 
     fun onEndTimeChange(time: LocalTime) {
-        _uiState.update { it.copy(endTime = time) }
+        _uiState.update { it.copy(endTime = time, picker = null) }
     }
 
     fun onPlaceSelected(place: PlaceSuggestion) {
-        _uiState.update { it.copy(place = place, placeError = false) }
+        _uiState.update { it.copy(place = place, placeError = false, picker = null) }
     }
 
     fun onCupoEnabledChange(enabled: Boolean) {

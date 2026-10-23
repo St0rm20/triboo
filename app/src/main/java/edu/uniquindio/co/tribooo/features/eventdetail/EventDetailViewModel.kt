@@ -103,7 +103,8 @@ data class CommentDraft(
 data class EventDetailUiState(
     val detail: EventDetail? = null,
     val draft: CommentDraft = CommentDraft(),
-    val message: String? = null
+    val message: String? = null,
+    val showAttendees: Boolean = false
 )
 
 /** Acciones que el usuario puede hacer desde el detalle. */
@@ -115,6 +116,8 @@ sealed interface EventDetailAction {
     data class CommentChange(val text: String) : EventDetailAction
     data class RatingChange(val rating: Int) : EventDetailAction
     data object SendComment : EventDetailAction
+    data object ShowAttendees : EventDetailAction
+    data object HideAttendees : EventDetailAction
 }
 
 /** Interacciones de los usuarios con eventos y personas (se agrupan porque `combine` admite máximo 5 flujos). */
@@ -256,6 +259,10 @@ class EventDetailViewModel @Inject constructor(
             }
 
             EventDetailAction.SendComment -> sendComment(event)
+
+            EventDetailAction.ShowAttendees -> localState.update { it.copy(showAttendees = true) }
+
+            EventDetailAction.HideAttendees -> localState.update { it.copy(showAttendees = false) }
         }
     }
 

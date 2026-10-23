@@ -97,9 +97,6 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
 
-/** Selector abierto en la pantalla. Algunos encadenan al siguiente (fecha → hora). */
-private enum class PickerTarget { START_DATE, START_TIME, END_DATE, END_TIME, PLACE }
-
 @Composable
 fun CreateEventScreen(
     onClose: () -> Unit,
@@ -108,7 +105,6 @@ fun CreateEventScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    var picker by rememberSaveable { mutableStateOf<PickerTarget?>(null) }
 
     val imagePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5)
@@ -160,7 +156,7 @@ fun CreateEventScreen(
             ScheduleAndPlaceCard(
                 state = state,
                 onMultiDayChange = viewModel::onMultiDayChange,
-                onOpenPicker = { picker = it }
+                onOpenPicker = viewModel::openPicker
             )
 
             CupoCard(state = state, viewModel = viewModel)
@@ -176,21 +172,15 @@ fun CreateEventScreen(
         }
     }
 
-    when (val target = picker) {
+    when (val target = state.picker) {
         PickerTarget.START_DATE, PickerTarget.END_DATE -> {
             val isStart = target == PickerTarget.START_DATE
             EventDatePickerDialog(
                 initialDate = if (isStart) state.startDate else state.endDate,
                 minDate = if (isStart) LocalDate.now(APP_ZONE) else state.startDate,
-                onDismiss = { picker = null },
+                onDismiss = viewModel::closePicker,
                 onConfirm = { date ->
                     if (isStart) viewModel.onStartDateChange(date) else viewModel.onEndDateChange(date)
-                    // En eventos de varios días se pide también la hora
-                    picker = when {
-                        isStart && state.multiDay -> PickerTarget.START_TIME
-                        !isStart -> PickerTarget.END_TIME
-                        else -> null
-                    }
                 }
             )
         }
@@ -200,11 +190,9 @@ fun CreateEventScreen(
             EventTimePickerDialog(
                 title = if (isStart) "Hora de inicio" else "Hora de fin",
                 initialTime = if (isStart) state.startTime else state.endTime,
-                onDismiss = { picker = null },
+                onDismiss = viewModel::closePicker,
                 onConfirm = { time ->
                     if (isStart) viewModel.onStartTimeChange(time) else viewModel.onEndTimeChange(time)
-                    // En eventos de un día el horario se elige como inicio → fin
-                    picker = if (isStart && !state.multiDay) PickerTarget.END_TIME else null
                 }
             )
         }
@@ -212,11 +200,8 @@ fun CreateEventScreen(
         PickerTarget.PLACE -> PlacePickerDialog(
             places = viewModel.placeSuggestions,
             selected = state.place,
-            onDismiss = { picker = null },
-            onConfirm = {
-                viewModel.onPlaceSelected(it)
-                picker = null
-            }
+            onDismiss = viewModel::closePicker,
+            onConfirm = viewModel::onPlaceSelected
         )
 
         null -> Unit
