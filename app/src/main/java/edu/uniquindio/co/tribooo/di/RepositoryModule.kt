@@ -11,6 +11,7 @@ import edu.uniquindio.co.tribooo.data.repository.memory.EventRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.InterestRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.memory.NotificationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.SavedEventRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.repository.AttendanceRepository
@@ -19,6 +20,7 @@ import edu.uniquindio.co.tribooo.domain.repository.EventRepository
 import edu.uniquindio.co.tribooo.domain.repository.FollowRepository
 import edu.uniquindio.co.tribooo.domain.repository.InterestRepository
 import edu.uniquindio.co.tribooo.domain.repository.LocationRepository
+import edu.uniquindio.co.tribooo.domain.repository.NotificationRepository
 import edu.uniquindio.co.tribooo.domain.repository.SavedEventRepository
 import edu.uniquindio.co.tribooo.domain.repository.SessionRepository
 import edu.uniquindio.co.tribooo.domain.repository.UserRepository
@@ -67,4 +69,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindLocationRepository(impl: LocationRepositoryImpl): LocationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository
 }

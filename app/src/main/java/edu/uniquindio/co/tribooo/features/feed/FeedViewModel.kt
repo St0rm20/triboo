@@ -14,6 +14,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.attendance.ToggleAttendanceUseCa
 import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObservePublishedEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.ObserveCurrentLocationUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveUnreadNotificationsCountUseCase
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,7 +41,8 @@ data class FeedUiState(
     val query: String = "",
     val selectedCategories: Set<String> = emptySet(),
     val categories: List<Category> = Category.defaultCategories,
-    val events: List<FeedEventItem> = emptyList()
+    val events: List<FeedEventItem> = emptyList(),
+    val unreadNotifications: Int = 0
 )
 
 /** Búsqueda y categorías elegidas (se agrupan porque `combine` admite máximo 5 flujos). */
@@ -55,12 +57,13 @@ class FeedViewModel @Inject constructor(
     observeAttendances: ObserveAttendancesUseCase,
     observeCurrentUser: ObserveCurrentUserUseCase,
     observeCurrentLocation: ObserveCurrentLocationUseCase,
+    observeUnreadNotifications: ObserveUnreadNotificationsCountUseCase,
     private val toggleAttendanceUseCase: ToggleAttendanceUseCase
 ) : ViewModel() {
 
     private val filters = MutableStateFlow(FeedFilters())
 
-    val uiState: StateFlow<FeedUiState> = combine(
+    private val feed = combine(
         observePublishedEvents(),
         observeAttendances(),
         filters,
@@ -90,6 +93,10 @@ class FeedViewModel @Inject constructor(
             .sortedBy { it.distanceKm }
 
         FeedUiState(query = filters.query, selectedCategories = categories, events = items)
+    }
+
+    val uiState: StateFlow<FeedUiState> = combine(feed, observeUnreadNotifications()) { feed, unread ->
+        feed.copy(unreadNotifications = unread)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeedUiState())
 
     fun onQueryChange(value: String) {

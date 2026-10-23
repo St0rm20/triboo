@@ -360,7 +360,7 @@ private fun UserLinks(
         LinkRow(Icons.Rounded.Bookmark, "Eventos guardados", stats.saved, onNavigateToSaved)
         LinkRow(Icons.Rounded.Groups, "Seguidores", stats.followers, onNavigateToFollowers)
         LinkRow(Icons.Rounded.Person, "Editar datos personales", null, onEditClick)
-        LinkRow(Icons.Rounded.Notifications, "Notificaciones", null, onNavigateToNotifications)
+        LinkRow(Icons.Rounded.Notifications, "Notificaciones", stats.unreadNotifications, onNavigateToNotifications)
     }
 }
 
@@ -376,7 +376,7 @@ private fun AdminLinks(
         LinkRow(Icons.Rounded.Shield, "Moderar publicaciones", stats.pendingReview, onNavigateToModeration)
         LinkRow(Icons.Rounded.Flag, "Reportes de la comunidad", null, onNavigateToCommunityReports)
         LinkRow(Icons.Rounded.Block, "Publicaciones rechazadas", stats.rejected, onNavigateToRejected)
-        LinkRow(Icons.Rounded.Notifications, "Notificaciones", null, onNavigateToNotifications)
+        LinkRow(Icons.Rounded.Notifications, "Notificaciones", stats.unreadNotifications, onNavigateToNotifications)
     }
 }
 

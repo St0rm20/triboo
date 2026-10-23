@@ -17,6 +17,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.ObserveCommentsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetCitiesUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveUnreadNotificationsCountUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ObserveSavedEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.UpdateProfileUseCase
@@ -41,7 +42,8 @@ data class ProfileStats(
     val pendingReview: Int = 0,
     val rejected: Int = 0,
     // Aún no existe el repositorio de moderación
-    val resolved: Int = 0
+    val resolved: Int = 0,
+    val unreadNotifications: Int = 0
 ) {
     val ratingLabel: String get() = rating?.let { String.format(Locale.US, "%.1f", it) } ?: "—"
 }
@@ -108,6 +110,7 @@ class ProfileViewModel @Inject constructor(
     observeFollows: ObserveFollowsUseCase,
     observeSavedEvents: ObserveSavedEventsUseCase,
     observeComments: ObserveCommentsUseCase,
+    observeUnreadNotifications: ObserveUnreadNotificationsCountUseCase,
     getCities: GetCitiesUseCase,
     private val updateProfileUseCase: UpdateProfileUseCase,
     private val logoutUseCase: LogoutUseCase
@@ -131,14 +134,15 @@ class ProfileViewModel @Inject constructor(
     val uiState: StateFlow<ProfileUiState> = combine(
         observeCurrentUser(),
         sources,
-        local
-    ) { user, sources, local ->
+        local,
+        observeUnreadNotifications()
+    ) { user, sources, local, unread ->
         local.copy(
             user = user,
             isAdmin = user?.role == UserRole.ADMIN,
             stats = user?.let {
                 calculateProfileStats(it, sources.events, sources.attendances, sources.follows, sources.saved, sources.comments)
-            } ?: ProfileStats()
+            }?.copy(unreadNotifications = unread) ?: ProfileStats()
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProfileUiState())
 

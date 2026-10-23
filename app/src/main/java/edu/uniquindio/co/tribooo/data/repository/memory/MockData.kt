@@ -11,6 +11,8 @@ import edu.uniquindio.co.tribooo.domain.model.Follow
 import edu.uniquindio.co.tribooo.domain.model.ImageEvent
 import edu.uniquindio.co.tribooo.domain.model.Interest
 import edu.uniquindio.co.tribooo.domain.model.Location
+import edu.uniquindio.co.tribooo.domain.model.Notification
+import edu.uniquindio.co.tribooo.domain.model.NotificationType
 import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
 import edu.uniquindio.co.tribooo.domain.model.Saved
 import edu.uniquindio.co.tribooo.domain.model.User
@@ -291,6 +293,10 @@ internal object MockData {
 
     private fun minutesAgo(minutes: Long): Instant = Instant.now().minus(Duration.ofMinutes(minutes))
 
+    /** Instante de hace [days] días a las [hour]:00 (hora de la app), para fechas como "ayer". */
+    private fun daysAgoAt(days: Long, hour: Int): Instant =
+        LocalDate.now(APP_ZONE).minusDays(days).atTime(hour, 0).atZone(APP_ZONE).toInstant()
+
     /** Comentarios de prueba (los del ciclopaseo son los del prototipo). */
     val comments: List<Comment> = listOf(
         Comment(
@@ -316,12 +322,37 @@ internal object MockData {
         Comment(
             id = "c-6-2", event = eventById("6"), author = senderistas, date = minutesAgo(25 * 60),
             text = "Sí, el recorrido es tranquilo. Que vengan con un adulto y buen calzado."
+        ),
+        Comment(
+            id = "c-10-1", event = eventById("10"), author = neighbors[9], date = minutesAgo(300),
+            text = "¿Reciben donaciones de ropa para niños?"
+        ),
+        Comment(
+            id = "c-1-4", event = eventById("1"), author = neighbors[7], date = daysAgoAt(2, 10),
+            text = "¿Se puede ir con bicicleta eléctrica?"
         )
     )
 
     /** Organizadores que sigue el usuario actual. */
     val follows: List<Follow> = listOf(
-        Follow(follower = daniela, followed = mesaCultural)
+        Follow(follower = daniela, followed = mesaCultural),
+        Follow(follower = neighbors[6], followed = daniela),
+        Follow(follower = neighbors[4], followed = daniela),
+        Follow(follower = neighbors[10], followed = daniela)
+    )
+
+    /**
+     * Notificaciones del usuario actual. En los de comentario la referencia es el id del comentario
+     * y en los de seguidor, el id de quien lo sigue.
+     */
+    val notifications: List<Notification> = listOf(
+        Notification("n-1", daniela, NotificationType.FOLLOWER, neighbors[6].id, read = false, date = minutesAgo(25)),
+        Notification("n-2", daniela, NotificationType.COMMENT, "c-1-3", read = false, date = minutesAgo(39)),
+        Notification("n-3", daniela, NotificationType.COMMENT, "c-1-1", read = false, date = minutesAgo(119)),
+        Notification("n-4", daniela, NotificationType.COMMENT, "c-10-1", read = true, date = minutesAgo(299)),
+        Notification("n-5", daniela, NotificationType.FOLLOWER, neighbors[4].id, read = true, date = daysAgoAt(1, 19)),
+        Notification("n-6", daniela, NotificationType.COMMENT, "c-1-4", read = true, date = daysAgoAt(2, 10)),
+        Notification("n-7", daniela, NotificationType.FOLLOWER, neighbors[10].id, read = true, date = daysAgoAt(4, 9))
     )
 
     /** Eventos guardados por el usuario actual. */

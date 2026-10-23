@@ -17,6 +17,7 @@ import edu.uniquindio.co.tribooo.features.eventdetail.EventDetailScreen
 import edu.uniquindio.co.tribooo.features.feed.FeedScreen
 import edu.uniquindio.co.tribooo.features.login.LoginScreen
 import edu.uniquindio.co.tribooo.features.login.PasswordRecoveryScreen
+import edu.uniquindio.co.tribooo.features.notifications.NotificationsScreen
 import edu.uniquindio.co.tribooo.features.onboarding.OnboardingScreen
 import edu.uniquindio.co.tribooo.features.profile.ProfileScreen
 import edu.uniquindio.co.tribooo.features.register.RegisterScreen
@@ -111,6 +112,11 @@ fun AppNavigation(
                     onNavigateToEventDetail = { eventId ->
                         navController.navigate(MainRoutes.EventDetail(eventId))
                     },
+                    onNavigateToNotifications = {
+                        navController.navigate(MainRoutes.Notifications) {
+                            launchSingleTop = true
+                        }
+                    },
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null
@@ -141,12 +147,39 @@ fun AppNavigation(
                     onNavigateToMyEvents = comingSoon,
                     onNavigateToSaved = comingSoon,
                     onNavigateToFollowers = comingSoon,
-                    onNavigateToNotifications = comingSoon,
+                    onNavigateToNotifications = {
+                        navController.navigate(MainRoutes.Notifications) {
+                            launchSingleTop = true
+                        }
+                    },
                     onNavigateToModeration = comingSoon,
                     onNavigateToCommunityReports = comingSoon,
                     onNavigateToRejected = comingSoon,
                     darkTheme = darkTheme ?: isSystemInDarkTheme(),
                     onDarkThemeChange = appViewModel::setDarkTheme,
+                    snackbarMessage = message,
+                    onSnackbarShown = {
+                        savedStateHandle[FEED_MESSAGE_KEY] = null
+                    }
+                )
+            }
+
+            composable<MainRoutes.Notifications> { backStackEntry ->
+                val savedStateHandle = backStackEntry.savedStateHandle
+                val message by savedStateHandle
+                    .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
+                    .collectAsStateWithLifecycle()
+
+                NotificationsScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToEventDetail = { eventId, commentId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId, commentId))
+                    },
+                    // PROVISIONAL: el perfil de otro usuario aún no existe. Quien lo implemente solo debe
+                    // reemplazar esta línea por navController.navigate(MainRoutes.X(userId)).
+                    onNavigateToUser = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null

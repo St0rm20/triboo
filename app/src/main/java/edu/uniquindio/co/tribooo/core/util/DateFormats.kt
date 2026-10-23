@@ -7,6 +7,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZonedDateTime
+import java.time.temporal.ChronoUnit
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -66,6 +67,19 @@ fun Instant.agoLabel(now: Instant = Instant.now()): String {
         minutes < 60 -> "hace $minutes min"
         minutes < 24 * 60 -> "hace ${minutes / 60} h"
         else -> "hace ${minutes / (24 * 60)} d"
+    }
+}
+
+/** "ahora", "hace 25 min", "hace 2 h", "ayer" o "hace 3 días" (por día calendario) */
+fun Instant.relativeLabel(now: Instant = Instant.now(), zone: ZoneId = APP_ZONE): String {
+    val minutes = Duration.between(this, now).toMinutes()
+    val daysAgo = ChronoUnit.DAYS.between(atZone(zone).toLocalDate(), now.atZone(zone).toLocalDate())
+    return when {
+        daysAgo >= 2 -> "hace $daysAgo días"
+        daysAgo == 1L -> "ayer"
+        minutes < 1 -> "ahora"
+        minutes < 60 -> "hace $minutes min"
+        else -> "hace ${minutes / 60} h"
     }
 }
 
