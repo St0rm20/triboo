@@ -70,6 +70,9 @@ internal fun calculateProfileStats(
     )
 }
 
+/** Máximo de caracteres de la presentación ("Sobre mí"), como en el prototipo. */
+const val MAX_BIO_LENGTH = 220
+
 data class ProfileUiState(
     val user: User? = null,
     val stats: ProfileStats = ProfileStats(),
@@ -162,7 +165,7 @@ class ProfileViewModel @Inject constructor(
 
     fun onNeighborhoodChange(value: String) = local.update { it.copy(editNeighborhood = value, neighborhoodError = null) }
 
-    fun onBioChange(value: String) = local.update { it.copy(editBio = value) }
+    fun onBioChange(value: String) = local.update { it.copy(editBio = value.take(MAX_BIO_LENGTH)) }
 
     fun onDismissEditDialog() = local.update { it.copy(showEditDialog = false) }
 
