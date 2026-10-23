@@ -20,6 +20,9 @@ sealed class MainRoutes {
     data object Feed : MainRoutes()
 
     @Serializable
+    data object Profile : MainRoutes()
+
+    @Serializable
     data object CreateEvent : MainRoutes()
 
     @Serializable

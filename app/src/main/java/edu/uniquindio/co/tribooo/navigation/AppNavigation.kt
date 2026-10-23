@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.navigation
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -17,10 +18,11 @@ import edu.uniquindio.co.tribooo.features.feed.FeedScreen
 import edu.uniquindio.co.tribooo.features.login.LoginScreen
 import edu.uniquindio.co.tribooo.features.login.PasswordRecoveryScreen
 import edu.uniquindio.co.tribooo.features.onboarding.OnboardingScreen
+import edu.uniquindio.co.tribooo.features.profile.ProfileScreen
 import edu.uniquindio.co.tribooo.features.register.RegisterScreen
 import edu.uniquindio.co.tribooo.features.splash.SplashScreen
 
-// Clave para pasar el mensaje del snackbar de una pantalla al feed
+// Clave para pasar el mensaje del snackbar de una pantalla al feed o al perfil
 private const val FEED_MESSAGE_KEY = "feed_message"
 
 @Composable
@@ -30,6 +32,7 @@ fun AppNavigation(
     // Controlador que maneja la navegación entre pantallas
     val navController = rememberNavController()
     val startDestination by appViewModel.startDestination.collectAsStateWithLifecycle()
+    val darkTheme by appViewModel.darkTheme.collectAsStateWithLifecycle()
 
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -102,9 +105,48 @@ fun AppNavigation(
                     onNavigateToCreateEvent = {
                         navController.navigate(MainRoutes.CreateEvent)
                     },
+                    onNavigateToProfile = {
+                        navController.navigateToTab(MainRoutes.Profile)
+                    },
                     onNavigateToEventDetail = { eventId ->
                         navController.navigate(MainRoutes.EventDetail(eventId))
                     },
+                    snackbarMessage = message,
+                    onSnackbarShown = {
+                        savedStateHandle[FEED_MESSAGE_KEY] = null
+                    }
+                )
+            }
+
+            composable<MainRoutes.Profile> { backStackEntry ->
+                val savedStateHandle = backStackEntry.savedStateHandle
+                val message by savedStateHandle
+                    .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
+                    .collectAsStateWithLifecycle()
+
+                // PROVISIONAL: estas pantallas aún no existen. Quien implemente cada una solo debe
+                // reemplazar su línea por navController.navigate(MainRoutes.X).
+                val comingSoon = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" }
+
+                ProfileScreen(
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToCreateEvent = {
+                        navController.navigate(MainRoutes.CreateEvent)
+                    },
+                    onNavigateToLogin = {
+                        navController.replaceWith(MainRoutes.Login)
+                    },
+                    onNavigateToMyEvents = comingSoon,
+                    onNavigateToSaved = comingSoon,
+                    onNavigateToFollowers = comingSoon,
+                    onNavigateToNotifications = comingSoon,
+                    onNavigateToModeration = comingSoon,
+                    onNavigateToCommunityReports = comingSoon,
+                    onNavigateToRejected = comingSoon,
+                    darkTheme = darkTheme ?: isSystemInDarkTheme(),
+                    onDarkThemeChange = appViewModel::setDarkTheme,
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null
@@ -135,6 +177,15 @@ fun AppNavigation(
             }
 
         }
+    }
+}
+
+/** Cambia de pestaña (Inicio/Perfil) sin apilar pantallas y conservando el estado de cada una. */
+private fun NavHostController.navigateToTab(route: MainRoutes) {
+    navigate(route) {
+        popUpTo(MainRoutes.Feed) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
     }
 }
 

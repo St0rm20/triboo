@@ -24,6 +24,14 @@ class AppViewModel @Inject constructor(
     private val _startDestination = MutableStateFlow<MainRoutes?>(null)
     val startDestination: StateFlow<MainRoutes?> = _startDestination.asStateFlow()
 
+    /** Tema elegido en Perfil (solo en memoria); null mientras se siga el del sistema. */
+    private val _darkTheme = MutableStateFlow<Boolean?>(null)
+    val darkTheme: StateFlow<Boolean?> = _darkTheme.asStateFlow()
+
+    fun setDarkTheme(enabled: Boolean) {
+        _darkTheme.value = enabled
+    }
+
     init {
         viewModelScope.launch {
             // La sesión se lee en paralelo a la animación de entrada del splash
