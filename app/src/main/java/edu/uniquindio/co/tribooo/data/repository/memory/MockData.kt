@@ -20,6 +20,7 @@ import edu.uniquindio.co.tribooo.domain.model.Report
 import edu.uniquindio.co.tribooo.domain.model.ReportReasons
 import edu.uniquindio.co.tribooo.domain.model.Saved
 import edu.uniquindio.co.tribooo.domain.model.User
+import edu.uniquindio.co.tribooo.domain.model.WaitlistEntry
 import edu.uniquindio.co.tribooo.domain.model.UserRole
 import java.time.Duration
 import java.time.Instant
@@ -338,7 +339,7 @@ internal object MockData {
     /** Número de asistentes confirmados por evento (según el prototipo). */
     private val attendeeCounts = mapOf(
         "7" to 91, "10" to 118, "6" to 63, "15" to 124, "1" to 87, "2" to 342,
-        "3" to 38, "9" to 54, "5" to 156, "4" to 24, "8" to 71, "m1" to 34, "m2" to 52
+        "3" to 40, "9" to 54, "5" to 156, "4" to 24, "8" to 71, "m1" to 34, "m2" to 52
     )
 
     /**
@@ -364,6 +365,14 @@ internal object MockData {
     /** Asistencias confirmadas, con el conteo del prototipo. */
     val attendances: List<Attendance> = events.flatMapIndexed { index, event ->
         crowd(event, index, attendeeCounts[event.id] ?: 0, "relleno").map { Attendance(user = it, event = event) }
+    }
+
+    /** Lista de espera de los eventos con el cupo lleno (el Taller de Prototipado Rápido): tres vecinos, en orden de llegada. */
+    val waitlist: List<WaitlistEntry> = eventById("3").let { full ->
+        val attendeeIds = attendances.filter { it.event.id == full.id }.map { it.user.id }.toSet()
+        neighbors.filter { it.id !in attendeeIds }.takeLast(3).mapIndexed { n, user ->
+            WaitlistEntry(user = user, event = full, joinedAt = minutesAgo(180L - n * 45))
+        }
     }
 
     /** Marcas de "Me interesa": en el prototipo son algo más que los asistentes. */

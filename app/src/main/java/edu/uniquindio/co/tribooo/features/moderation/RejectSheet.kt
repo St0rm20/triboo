@@ -16,13 +16,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -33,9 +33,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.core.component.FormInvalidNotice
+import edu.uniquindio.co.tribooo.core.component.FormTextField
+import edu.uniquindio.co.tribooo.core.component.RequiredLegend
 import edu.uniquindio.co.tribooo.core.component.WrapRow
+import edu.uniquindio.co.tribooo.core.component.formTarget
+import edu.uniquindio.co.tribooo.core.util.FormLimits
+import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.REJECTION_QUICK_REASONS
-import edu.uniquindio.co.tribooo.core.util.reasonCounterLabel
 
 /**
  * Hoja "Motivo del rechazo". Sin estado propio: el texto y su error viven en [sheet]
@@ -46,6 +51,8 @@ import edu.uniquindio.co.tribooo.core.util.reasonCounterLabel
 fun RejectSheet(
     sheet: RejectSheetState,
     onReasonChange: (String) -> Unit,
+    onReasonFocusLost: () -> Unit,
+    onReasonFocusHandled: () -> Unit,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -71,11 +78,12 @@ fun RejectSheet(
                 Text("Motivo del rechazo", fontSize = 20.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
             }
             Text(
-                "Obligatorio. El autor recibe este texto y la publicación deja de aparecer en el feed público.",
+                "El autor recibe este texto y la publicación deja de aparecer en el feed público.",
                 fontSize = 13.sp,
                 lineHeight = 19.sp,
                 color = colors.onSurfaceVariant
             )
+            RequiredLegend()
 
             Surface(shape = RoundedCornerShape(16.dp), color = colors.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(12.dp)) {
@@ -103,41 +111,39 @@ fun RejectSheet(
                 }
             }
 
-            Column {
-                OutlinedTextField(
-                    value = sheet.reason,
-                    onValueChange = onReasonChange,
-                    placeholder = { Text("Explica al autor qué debe corregir para volver a enviarlo.") },
-                    isError = sheet.error != null,
-                    minLines = 4,
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 110.dp)
-                )
-                Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 4.dp)) {
-                    Text(
-                        text = sheet.error.orEmpty(),
-                        fontSize = 12.sp,
-                        lineHeight = 16.sp,
-                        color = colors.error,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text(
-                        text = reasonCounterLabel(sheet.reason.trim().length),
-                        fontSize = 12.sp,
-                        color = colors.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                }
-            }
+            FormTextField(
+                value = sheet.reason,
+                onValueChange = onReasonChange,
+                label = "Motivo del rechazo",
+                required = true,
+                placeholder = "Explica al autor qué debe corregir para volver a enviarlo.",
+                hint = FormTexts.REJECT_REASON_HINT,
+                error = sheet.error,
+                maxLength = FormLimits.REJECT_REASON,
+                minLines = 4,
+                containerColor = Color.Transparent,
+                onFocusLost = onReasonFocusLost,
+                modifier = Modifier
+                    .heightIn(min = 110.dp)
+                    .formTarget(sheet.focusRequested, onReasonFocusHandled)
+            )
+
+            if (sheet.submitAttempted && sheet.error != null) FormInvalidNotice()
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text("Cancelar") }
                 Button(
                     onClick = onConfirm,
+                    enabled = !sheet.isSubmitting,
                     colors = ButtonDefaults.buttonColors(containerColor = colors.error, contentColor = colors.onError),
                     modifier = Modifier.weight(1.4f)
                 ) {
-                    Icon(Icons.Rounded.Block, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text("Rechazar publicación", modifier = Modifier.padding(start = 6.dp), maxLines = 1)
+                    if (sheet.isSubmitting) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = colors.onError)
+                    } else {
+                        Icon(Icons.Rounded.Block, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text("Rechazar publicación", modifier = Modifier.padding(start = 6.dp), maxLines = 1)
+                    }
                 }
             }
         }

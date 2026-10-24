@@ -9,6 +9,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
@@ -73,6 +74,8 @@ import androidx.compose.material.icons.rounded.VolunteerActivism
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -114,6 +117,12 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import edu.uniquindio.co.tribooo.core.component.AttendanceDialogs
+import edu.uniquindio.co.tribooo.core.component.FieldSupport
+import edu.uniquindio.co.tribooo.core.component.RequiredLegend
+import edu.uniquindio.co.tribooo.core.component.errorSemantics
+import edu.uniquindio.co.tribooo.core.component.formTarget
+import edu.uniquindio.co.tribooo.core.util.FormLimits
+import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
 import edu.uniquindio.co.tribooo.core.component.MapPlaceholder
 import edu.uniquindio.co.tribooo.core.component.WrapRow
@@ -132,6 +141,7 @@ import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.core.util.isCupoTight
 import edu.uniquindio.co.tribooo.core.util.kmLabel
 import edu.uniquindio.co.tribooo.core.util.occupancy
+import edu.uniquindio.co.tribooo.core.util.waitlistLabel
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
 import kotlinx.coroutines.launch
@@ -159,8 +169,11 @@ fun EventDetailScreen(
         }
     }
 
-    // El primer cuadro llega sin datos mientras se combinan los flujos del repositorio
-    val detail = state.detail ?: return
+    // Sin datos (cargando o evento inexistente) la pantalla igual ofrece volver
+    val detail = state.detail ?: run {
+        MissingEventContent(isLoading = state.isLoading, onBack = onNavigateBack)
+        return
+    }
 
     EventDetailContent(
         detail = detail,
@@ -174,6 +187,31 @@ fun EventDetailScreen(
         onNavigateToUser = onNavigateToUser,
         onAction = viewModel::onAction
     )
+}
+
+/** Pantalla mínima mientras el evento carga o si ya no está disponible; la flecha de atrás siempre funciona. */
+@Composable
+private fun MissingEventContent(isLoading: Boolean, onBack: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Scaffold(containerColor = colors.surface) { innerPadding ->
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            IconButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp, top = 4.dp)) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver", tint = colors.onSurface)
+            }
+            Column(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator()
+                } else {
+                    Text("Este evento ya no está disponible", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                    Button(onClick = onBack, modifier = Modifier.padding(top = 16.dp)) { Text("Volver") }
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -655,7 +693,8 @@ private fun OrganizerCard(detail: EventDetail, onToggleFollow: () -> Unit, onOpe
                 content = colors.onTertiaryContainer,
                 size = 46.dp,
                 shape = RoundedCornerShape(16.dp),
-                fontSize = 15.sp
+                fontSize = 15.sp,
+                photo = detail.organizerPhoto
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(organizer.name, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
@@ -731,7 +770,8 @@ private fun AttendeesSection(detail: EventDetail, onSeeAll: () -> Unit) {
                             content = fg,
                             size = 48.dp,
                             shape = RoundedCornerShape(18.dp),
-                            fontSize = 15.sp
+                            fontSize = 15.sp,
+                            photo = person.photo
                         )
                         Text(
                             person.name.firstName(),
@@ -832,7 +872,8 @@ private fun AttendeeRow(person: PersonItem, seed: Int, onClick: () -> Unit) {
             content = fg,
             size = 44.dp,
             shape = RoundedCornerShape(16.dp),
-            fontSize = 14.sp
+            fontSize = 14.sp,
+            photo = person.photo
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(person.name, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
@@ -883,7 +924,8 @@ private fun CommentCard(comment: CommentItem, onOpenProfile: () -> Unit, modifie
                 initials = comment.author.initials,
                 container = bg,
                 content = fg,
-                modifier = if (comment.author.isCurrentUser) Modifier else Modifier.clickable(onClick = onOpenProfile)
+                modifier = if (comment.author.isCurrentUser) Modifier else Modifier.clickable(onClick = onOpenProfile),
+                photo = comment.author.photo
             )
             Column(modifier = Modifier.weight(1f)) {
                 Row(
@@ -922,7 +964,6 @@ private fun CommentCard(comment: CommentItem, onOpenProfile: () -> Unit, modifie
 @Composable
 private fun CommentForm(draft: CommentDraft, onAction: (EventDetailAction) -> Unit) {
     val colors = MaterialTheme.colorScheme
-    val canSend = draft.text.isNotBlank()
 
     // Cuando el teclado termina de abrir, el campo completo (con el botón) queda visible
     val inputRequester = remember { BringIntoViewRequester() }
@@ -935,10 +976,13 @@ private fun CommentForm(draft: CommentDraft, onAction: (EventDetailAction) -> Un
     val focusManager = LocalFocusManager.current
     val send = {
         onAction(EventDetailAction.SendComment)
-        focusManager.clearFocus()
+        // Con el comentario vacío el foco debe quedarse (o volver) en el campo
+        if (draft.text.isNotBlank()) focusManager.clearFocus()
     }
 
     Column(modifier = Modifier.padding(start = ContentPadding, end = ContentPadding, top = 7.dp)) {
+        RequiredLegend(modifier = Modifier.padding(bottom = 6.dp))
+
         // Calificación opcional
         DetailCard(shape = RoundedCornerShape(20.dp)) {
             Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 8.dp)) {
@@ -999,6 +1043,7 @@ private fun CommentForm(draft: CommentDraft, onAction: (EventDetailAction) -> Un
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
                 .background(colors.surfaceContainer)
+                .then(if (draft.error != null) Modifier.border(1.dp, colors.error, RoundedCornerShape(24.dp)) else Modifier)
                 .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1014,27 +1059,39 @@ private fun CommentForm(draft: CommentDraft, onAction: (EventDetailAction) -> Un
                 modifier = Modifier
                     .weight(1f)
                     .padding(vertical = 10.dp)
+                    .errorSemantics(draft.error)
+                    .formTarget(draft.focusRequested, { onAction(EventDetailAction.CommentFocusHandled) })
                     .onFocusChanged { inputFocused = it.isFocused },
                 decorationBox = { inner ->
                     if (draft.text.isEmpty()) {
-                        Text("Escribe un comentario", fontSize = 14.sp, color = colors.onSurfaceVariant)
+                        Text("Escribe un comentario *", fontSize = 14.sp, color = colors.onSurfaceVariant)
                     }
                     inner()
                 }
             )
             Surface(
                 onClick = send,
-                enabled = canSend,
+                enabled = !draft.isSending,
                 shape = CircleShape,
-                color = if (canSend) colors.primary else colors.surfaceContainerHigh,
-                contentColor = if (canSend) colors.onPrimary else colors.onSurfaceVariant,
+                color = colors.primary,
+                contentColor = colors.onPrimary,
                 modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = "Publicar comentario", modifier = Modifier.size(19.dp))
+                    if (draft.isSending) {
+                        CircularProgressIndicator(modifier = Modifier.size(19.dp), strokeWidth = 2.dp, color = colors.onPrimary)
+                    } else {
+                        Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = "Publicar comentario", modifier = Modifier.size(19.dp))
+                    }
                 }
             }
         }
+        FieldSupport(
+            error = draft.error,
+            hint = FormTexts.COMMENT_HINT,
+            counter = draft.text.length to FormLimits.COMMENT,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp)
+        )
     }
 }
 
@@ -1076,18 +1133,21 @@ private fun DetailBottomBar(detail: EventDetail, onAction: (EventDetailAction) -
                 }
             }
 
-            val waitlist = !detail.canToggleAttendance
+            val waitlist = detail.isWaitlistMode
+            val position = detail.waitlistPosition.takeIf { waitlist }
             Surface(
                 onClick = { onAction(EventDetailAction.ToggleAttendance) },
-                enabled = !waitlist,
+                enabled = detail.canToggleAttendance,
                 shape = RoundedCornerShape(18.dp),
                 color = when {
                     detail.isAttending -> colors.errorContainer
+                    position != null -> colors.secondaryContainer
                     waitlist -> colors.surfaceContainerHigh
                     else -> colors.primary
                 },
                 contentColor = when {
                     detail.isAttending -> colors.onErrorContainer
+                    position != null -> colors.onSecondaryContainer
                     waitlist -> colors.onSurfaceVariant
                     else -> colors.onPrimary
                 },
@@ -1107,6 +1167,7 @@ private fun DetailBottomBar(detail: EventDetail, onAction: (EventDetailAction) -
                     Text(
                         text = when {
                             detail.isAttending -> "Cancelar asistencia"
+                            position != null -> waitlistLabel(position)
                             waitlist -> "Lista de espera"
                             else -> "Confirmar"
                         },

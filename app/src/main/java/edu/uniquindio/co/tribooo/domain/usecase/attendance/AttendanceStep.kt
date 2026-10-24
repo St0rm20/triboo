@@ -30,5 +30,5 @@ fun nextAttendanceStep(current: AttendanceStep): AttendanceStep? = when (current
 private fun costStep(event: Event): AttendanceStep =
     event.contribution?.let { AttendanceStep.Cost(event, it) } ?: AttendanceStep.Free(event)
 
-/** Destino declarado del aporte; null si no se indicó (el formulario de Crear evento aún no lo pide). */
+/** Destino declarado del aporte; null si no se indicó (los eventos anteriores al campo del formulario pueden no tenerlo). */
 val Contribution.declaredCause: String? get() = cause?.takeIf { it.isNotBlank() }

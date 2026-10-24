@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.core.util.FormLimits
 import edu.uniquindio.co.tribooo.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.rejectedMessage
 import edu.uniquindio.co.tribooo.core.util.resolvedMessage
 import edu.uniquindio.co.tribooo.core.util.restoredMessage
@@ -41,8 +43,16 @@ data class RejectSheetState(
     val title: String,
     val authorName: String,
     val reason: String = "",
-    val error: String? = null
-)
+    val touched: Boolean = false,
+    val submitAttempted: Boolean = false,
+    val isSubmitting: Boolean = false,
+    /** El campo debe recibir el foco tras un envío inválido. */
+    val focusRequested: Boolean = false,
+    /** Motivo por el que moderación no pudo rechazar la publicación. */
+    val failure: String? = null
+) {
+    val error: String? get() = Validators.rejectReason(reason).takeIf { touched || submitAttempted } ?: failure
+}
 
 data class ModerationUiState(
     val tab: ModerationTab = ModerationTab.PENDIENTES,
@@ -123,18 +133,31 @@ class ModerationViewModel @Inject constructor(
         }
     }
 
-    fun onReasonChange(value: String) =
-        local.update { state -> state.copy(rejectSheet = state.rejectSheet?.copy(reason = value, error = null)) }
+    fun onReasonChange(value: String) = local.update { state ->
+        state.copy(rejectSheet = state.rejectSheet?.copy(reason = value.take(FormLimits.REJECT_REASON), failure = null))
+    }
+
+    fun onReasonFocusLost() =
+        local.update { state -> state.copy(rejectSheet = state.rejectSheet?.copy(touched = true)) }
+
+    fun onReasonFocusHandled() =
+        local.update { state -> state.copy(rejectSheet = state.rejectSheet?.copy(focusRequested = false)) }
 
     fun onDismissRejectSheet() = local.update { it.copy(rejectSheet = null) }
 
     fun onConfirmReject() {
         val sheet = local.value.rejectSheet ?: return
+        if (sheet.isSubmitting) return
+        if (Validators.rejectReason(sheet.reason) != null) {
+            local.update { it.copy(rejectSheet = it.rejectSheet?.copy(submitAttempted = true, focusRequested = true)) }
+            return
+        }
+        local.update { it.copy(rejectSheet = it.rejectSheet?.copy(isSubmitting = true)) }
         viewModelScope.launch {
             when (val result = rejectEvent(sheet.eventId, sheet.reason)) {
                 // La hoja sigue abierta con el motivo del fallo
                 is RequestResult.Failure -> local.update {
-                    it.copy(rejectSheet = it.rejectSheet?.copy(error = result.errorMessage))
+                    it.copy(rejectSheet = it.rejectSheet?.copy(isSubmitting = false, failure = result.errorMessage))
                 }
                 else -> local.update {
                     it.copy(rejectSheet = null, tab = ModerationTab.RECHAZADAS, message = rejectedMessage(sheet.title))

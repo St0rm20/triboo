@@ -103,6 +103,16 @@ class EventFormStateTest {
         assertEquals(25, full.cupo)
         assertTrue(full.contributionEnabled)
         assertEquals(5000L, full.contributionAmount)
+        assertEquals("", full.contributionCause)
+    }
+
+    @Test
+    fun declaredCauseIsPreloadedWhenEditingAndDuplicating() {
+        val original = event(at(2026, 11, 5, 18), at(2026, 11, 5, 20), contribution = Contribution(5000.0, "Mercados para el barrio"))
+
+        EventFormMode.entries.forEach { mode ->
+            assertEquals("Mercados para el barrio", original.toFormState(mode, emptyList(), suggestions, now).contributionCause)
+        }
     }
 
     @Test

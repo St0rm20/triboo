@@ -157,6 +157,8 @@ fun ModerationScreen(
         RejectSheet(
             sheet = sheet,
             onReasonChange = viewModel::onReasonChange,
+            onReasonFocusLost = viewModel::onReasonFocusLost,
+            onReasonFocusHandled = viewModel::onReasonFocusHandled,
             onConfirm = viewModel::onConfirmReject,
             onDismiss = viewModel::onDismissRejectSheet
         )

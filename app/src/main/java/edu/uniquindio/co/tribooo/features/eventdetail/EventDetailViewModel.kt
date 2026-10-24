@@ -3,11 +3,17 @@ package edu.uniquindio.co.tribooo.features.eventdetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import edu.uniquindio.co.tribooo.core.util.FormLimits
+import edu.uniquindio.co.tribooo.core.util.FormTexts
+import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.distanceKmTo
 import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.core.util.isFull
+import edu.uniquindio.co.tribooo.core.util.WAITLIST_LEFT_MESSAGE
 import edu.uniquindio.co.tribooo.core.util.shortName
+import edu.uniquindio.co.tribooo.core.util.waitlistJoinedMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
@@ -16,6 +22,7 @@ import edu.uniquindio.co.tribooo.domain.model.Interest
 import edu.uniquindio.co.tribooo.domain.model.Location
 import edu.uniquindio.co.tribooo.domain.model.Saved
 import edu.uniquindio.co.tribooo.domain.model.User
+import edu.uniquindio.co.tribooo.domain.model.WaitlistEntry
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.FindScheduleConflictUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUseCase
@@ -37,6 +44,10 @@ import edu.uniquindio.co.tribooo.domain.usecase.saved.ObserveSavedEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ToggleSavedEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ToggleFollowUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.waitlist.JoinWaitlistUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.waitlist.LeaveWaitlistUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.waitlist.ObserveWaitlistUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.waitlist.waitlistPosition
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,7 +70,8 @@ data class PersonItem(
     val name: String,
     val initials: String,
     val neighborhood: String,
-    val isCurrentUser: Boolean
+    val isCurrentUser: Boolean,
+    val photo: String? = null
 )
 
 data class CommentItem(
@@ -80,6 +92,10 @@ data class EventDetail(
     /** Todos los asistentes confirmados; el usuario actual va primero si confirmó. */
     val attendees: List<PersonItem>,
     val isAttending: Boolean,
+    /** Foto del organizador; null si no tiene. */
+    val organizerPhoto: String?,
+    /** Puesto en la lista de espera, desde 1; null si el usuario no está en ella. */
+    val waitlistPosition: Int?,
     val isMine: Boolean,
     /** El usuario ya reportó el evento y moderación aún no resuelve el caso. */
     val hasReported: Boolean,
@@ -95,29 +111,47 @@ data class EventDetail(
     /** Asistentes de la fila de avatares; el resto se ve en "Ver todos". */
     val attendeesPreview: List<PersonItem> get() = attendees.take(ATTENDEES_PREVIEW)
 
-    /** Sin lista de espera en el modelo: con el cupo lleno solo se permite cancelar. */
-    val canToggleAttendance: Boolean get() = isAttending || !isFull
+    val isWaitlisted: Boolean get() = waitlistPosition != null
+
+    /** El cupo está lleno y el usuario no asiste: en vez de confirmar, se anota o sale de la lista de espera. */
+    val isWaitlistMode: Boolean get() = isFull && !isAttending
+
+    /** El botón principal hace algo: confirmar, cancelar, o anotarse o salir de la lista de espera. */
+    val canToggleAttendance: Boolean get() = !isWaitlistMode || isWaitlisted || !isMine
 
     val ratingsCount: Int get() = comments.count { it.rating != null }
 
     val averageRating: Double? get() = comments.mapNotNull { it.rating }.takeIf { it.isNotEmpty() }?.average()
 }
 
-/** Comentario que el usuario está escribiendo. */
+/** Comentario que el usuario está escribiendo; [error] aparece si intenta publicarlo vacío. */
 data class CommentDraft(
     val text: String = "",
-    val rating: Int = 0
-)
+    val rating: Int = 0,
+    val submitAttempted: Boolean = false,
+    val isSending: Boolean = false,
+    /** El campo debe recibir el foco tras un envío inválido. */
+    val focusRequested: Boolean = false
+) {
+    val error: String? get() = Validators.comment(text).takeIf { submitAttempted }
+}
 
 /** Reporte que el usuario está llenando; [error] aparece si intenta enviarlo sin motivo. */
 data class ReportDraft(
     val reason: String? = null,
     val detail: String = "",
-    val error: String? = null
+    val error: String? = null,
+    val isSending: Boolean = false,
+    /** La lista de motivos debe traerse a la vista tras un envío inválido. */
+    val focusRequested: Boolean = false
 )
 
 data class EventDetailUiState(
     val detail: EventDetail? = null,
+    /** Aún no llega la primera emisión de los repositorios; nunca se confunde con [notFound]. */
+    val isLoading: Boolean = true,
+    /** Ya llegaron los datos y el evento no existe (se eliminó o dejó de estar disponible). */
+    val notFound: Boolean = false,
     val draft: CommentDraft = CommentDraft(),
     val message: String? = null,
     val showAttendees: Boolean = false,
@@ -136,6 +170,7 @@ sealed interface EventDetailAction {
     data class CommentChange(val text: String) : EventDetailAction
     data class RatingChange(val rating: Int) : EventDetailAction
     data object SendComment : EventDetailAction
+    data object CommentFocusHandled : EventDetailAction
     data object ShowAttendees : EventDetailAction
     data object HideAttendees : EventDetailAction
     data object ShowReport : EventDetailAction
@@ -143,6 +178,7 @@ sealed interface EventDetailAction {
     data class ReportReasonChange(val reason: String) : EventDetailAction
     data class ReportDetailChange(val detail: String) : EventDetailAction
     data object SendReport : EventDetailAction
+    data object ReportFocusHandled : EventDetailAction
     data object ContinueAttendance : EventDetailAction
     data object CancelAttendance : EventDetailAction
 }
@@ -166,6 +202,7 @@ class EventDetailViewModel @Inject constructor(
     observeSavedEvents: ObserveSavedEventsUseCase,
     observeFollows: ObserveFollowsUseCase,
     observeComments: ObserveCommentsUseCase,
+    observeWaitlist: ObserveWaitlistUseCase,
     observeCurrentUser: ObserveCurrentUserUseCase,
     observeCurrentLocation: ObserveCurrentLocationUseCase,
     private val toggleAttendanceUseCase: ToggleAttendanceUseCase,
@@ -175,7 +212,9 @@ class EventDetailViewModel @Inject constructor(
     observeReportedEventIds: ObserveReportedEventIdsUseCase,
     private val addCommentUseCase: AddCommentUseCase,
     private val findScheduleConflict: FindScheduleConflictUseCase,
-    private val submitReportUseCase: SubmitReportUseCase
+    private val submitReportUseCase: SubmitReportUseCase,
+    private val joinWaitlist: JoinWaitlistUseCase,
+    private val leaveWaitlist: LeaveWaitlistUseCase
 ) : ViewModel() {
 
     // El argumento de la ruta EventDetail llega con el nombre de su propiedad
@@ -196,13 +235,16 @@ class EventDetailViewModel @Inject constructor(
     /** Quién está viendo el detalle y desde dónde. */
     private val viewer: Flow<Pair<User?, Location>> = combine(observeCurrentUser(), observeCurrentLocation(), ::Pair)
 
+    private val attendancesAndWaitlist: Flow<Pair<List<Attendance>, List<WaitlistEntry>>> =
+        combine(observeAttendances(), observeWaitlist(), ::Pair)
+
     private val detail: Flow<EventDetail?> = combine(
         observeEvents(),
-        observeAttendances(),
+        attendancesAndWaitlist,
         observeEventImages(),
         engagement,
         viewer
-    ) { events, attendances, images, engagement, (currentUser, location) ->
+    ) { events, (attendances, waitlist), images, engagement, (currentUser, location) ->
         val event = events.find { it.id == eventId } ?: return@combine null
         val attendees = attendances.filter { it.event.id == eventId }.map { it.user }
         val interested = engagement.interests.filter { it.event.id == eventId }
@@ -217,8 +259,10 @@ class EventDetailViewModel @Inject constructor(
             attendeesCount = attendees.size,
             // El usuario actual aparece primero si confirmó
             attendees = attendees.sortedByDescending { it.id == currentUser?.id }
-                .map { it.toPersonItem(name = it.name, currentUserId = currentUser?.id) },
+                .map { it.toPersonItem(name = it.name, currentUser = currentUser) },
             isAttending = isAttending,
+            organizerPhoto = if (event.organizer.id == currentUser?.id) currentUser.photo else event.organizer.photo,
+            waitlistPosition = currentUser?.let { waitlistPosition(waitlist, it.id, eventId) },
             isMine = event.organizer.id == currentUser?.id,
             hasReported = eventId in engagement.reportedEventIds,
             isSaved = engagement.saved.any { it.event.id == eventId && it.user.id == currentUser?.id },
@@ -237,7 +281,7 @@ class EventDetailViewModel @Inject constructor(
                         id = comment.id,
                         author = comment.author.toPersonItem(
                             name = comment.author.name.shortName(),
-                            currentUserId = currentUser?.id
+                            currentUser = currentUser
                         ),
                         text = comment.text,
                         date = comment.date,
@@ -248,7 +292,7 @@ class EventDetailViewModel @Inject constructor(
     }
 
     val uiState: StateFlow<EventDetailUiState> = combine(detail, localState) { detail, local ->
-        local.copy(detail = detail)
+        local.copy(detail = detail, isLoading = false, notFound = detail == null)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EventDetailUiState())
 
     fun onAction(action: EventDetailAction) {
@@ -257,11 +301,17 @@ class EventDetailViewModel @Inject constructor(
 
         when (action) {
             EventDetailAction.ToggleAttendance -> {
-                if (!detail.canToggleAttendance) return
-                if (detail.isAttending) {
-                    confirmAttendance(event, attending = true)
-                } else {
-                    requestAttendance(event)
+                when {
+                    !detail.canToggleAttendance -> Unit
+                    detail.isAttending -> confirmAttendance(event, attending = true)
+                    detail.isWaitlisted -> viewModelScope.launch {
+                        leaveWaitlist(event)
+                        showMessage(WAITLIST_LEFT_MESSAGE)
+                    }
+                    detail.isFull -> viewModelScope.launch {
+                        joinWaitlist(event)?.let { showMessage(waitlistJoinedMessage(it)) }
+                    }
+                    else -> requestAttendance(event)
                 }
             }
 
@@ -285,7 +335,11 @@ class EventDetailViewModel @Inject constructor(
             }
 
             is EventDetailAction.CommentChange -> localState.update {
-                it.copy(draft = it.draft.copy(text = action.text))
+                it.copy(draft = it.draft.copy(text = action.text.take(FormLimits.COMMENT)))
+            }
+
+            EventDetailAction.CommentFocusHandled -> localState.update {
+                it.copy(draft = it.draft.copy(focusRequested = false))
             }
 
             // Tocar de nuevo la misma estrella quita la calificación
@@ -310,6 +364,8 @@ class EventDetailViewModel @Inject constructor(
 
             is EventDetailAction.ReportDetailChange ->
                 updateReport { it.copy(detail = action.detail.take(SubmitReportUseCase.MAX_DETAIL_LENGTH)) }
+
+            EventDetailAction.ReportFocusHandled -> updateReport { it.copy(focusRequested = false) }
 
             EventDetailAction.SendReport -> sendReport(event)
 
@@ -347,17 +403,20 @@ class EventDetailViewModel @Inject constructor(
 
     private fun sendReport(event: Event) {
         val draft = localState.value.report ?: return
-        if (draft.reason == null) {
-            updateReport { it.copy(error = "Elige el motivo del reporte para poder enviarlo.") }
+        if (draft.isSending) return
+        val reason = draft.reason
+        if (reason == null) {
+            updateReport { it.copy(error = Validators.reportReason(null), focusRequested = true) }
             return
         }
+        updateReport { it.copy(isSending = true) }
         viewModelScope.launch {
-            val message = when (submitReportUseCase(event, draft.reason, draft.detail)) {
+            val message = when (submitReportUseCase(event, reason, draft.detail)) {
                 SubmitReportResult.SENT -> "Reporte enviado · moderación revisará “${event.title}”."
                 SubmitReportResult.ALREADY_REPORTED -> ALREADY_REPORTED_MESSAGE
                 SubmitReportResult.OWN_EVENT -> "No puedes reportar tu propio evento."
                 SubmitReportResult.NOT_SIGNED_IN -> "Inicia sesión para reportar eventos."
-                SubmitReportResult.INVALID_REASON -> "Elige el motivo del reporte para poder enviarlo."
+                SubmitReportResult.INVALID_REASON -> FormTexts.REPORT_REASON_REQUIRED
             }
             localState.update { it.copy(report = null, message = message) }
         }
@@ -365,15 +424,28 @@ class EventDetailViewModel @Inject constructor(
 
     private fun sendComment(event: Event) {
         val draft = localState.value.draft
+        if (draft.isSending) return
         val text = draft.text.trim()
-        if (text.isEmpty()) return
+        if (Validators.comment(text) != null) {
+            localState.update {
+                it.copy(
+                    draft = it.draft.copy(submitAttempted = true, focusRequested = true),
+                    message = FormTexts.SUBMIT_INVALID
+                )
+            }
+            return
+        }
 
         val rating = draft.rating.takeIf { it > 0 }
+        localState.update { it.copy(draft = it.draft.copy(isSending = true)) }
         viewModelScope.launch {
             val published = addCommentUseCase(event = event, text = text, rating = rating)
             localState.update {
                 when {
-                    !published -> it.copy(message = "No se pudo publicar el comentario.")
+                    !published -> it.copy(
+                        draft = it.draft.copy(isSending = false),
+                        message = "No se pudo publicar el comentario."
+                    )
                     rating != null -> it.copy(draft = CommentDraft(), message = "Comentario publicado con $rating ★.")
                     else -> it.copy(draft = CommentDraft(), message = "Comentario publicado.")
                 }
@@ -385,11 +457,16 @@ class EventDetailViewModel @Inject constructor(
         localState.update { it.copy(message = message) }
     }
 
-    private fun User.toPersonItem(name: String, currentUserId: String?) = PersonItem(
-        id = id,
-        name = if (id == currentUserId) "Tú" else name,
-        initials = this.name.initials(),
-        neighborhood = neighborhood,
-        isCurrentUser = id == currentUserId
-    )
+    /** El usuario actual se toma de [currentUser] para que su foto recién cambiada se vea en lo ya publicado. */
+    private fun User.toPersonItem(name: String, currentUser: User?): PersonItem {
+        val isCurrentUser = id == currentUser?.id
+        return PersonItem(
+            id = id,
+            name = if (isCurrentUser) "Tú" else name,
+            initials = this.name.initials(),
+            neighborhood = neighborhood,
+            isCurrentUser = isCurrentUser,
+            photo = if (isCurrentUser) currentUser?.photo else photo
+        )
+    }
 }

@@ -39,12 +39,12 @@ import androidx.compose.material.icons.rounded.TaskAlt
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -68,9 +68,14 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import edu.uniquindio.co.tribooo.core.component.ConfirmAlertDialog
 import edu.uniquindio.co.tribooo.core.component.EventThumbnail
+import edu.uniquindio.co.tribooo.core.component.FormTextField
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
+import edu.uniquindio.co.tribooo.core.component.RequiredLegend
 import edu.uniquindio.co.tribooo.core.component.avatarColors
+import edu.uniquindio.co.tribooo.core.component.formTarget
 import edu.uniquindio.co.tribooo.core.component.iconVector
+import edu.uniquindio.co.tribooo.core.util.FormLimits
+import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.theme.categoryColors
 import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
 import edu.uniquindio.co.tribooo.core.util.finishedFooter
@@ -185,9 +190,14 @@ fun EventStatusScreen(
                                 review = review,
                                 isEditing = state.editingReviewId == review.comment.id,
                                 draft = state.replyDraft,
+                                error = state.replyError,
+                                isPublishing = state.isPublishingReply,
+                                focusRequested = state.replyFocusRequested,
                                 onOpenProfile = { onNavigateToUser(review.authorId) },
                                 onReplyClick = { viewModel.onReplyClick(review) },
                                 onDraftChange = viewModel::onReplyDraftChange,
+                                onFocusLost = viewModel::onReplyFocusLost,
+                                onFocusHandled = viewModel::onReplyFocusHandled,
                                 onCancel = viewModel::onReplyCancel,
                                 onPublish = { viewModel.onReplyPublish(review) },
                                 onDelete = { viewModel.onReplyDelete(review) }
@@ -417,9 +427,14 @@ private fun ReviewCard(
     review: ReviewItem,
     isEditing: Boolean,
     draft: String,
+    error: String?,
+    isPublishing: Boolean,
+    focusRequested: Boolean,
     onOpenProfile: () -> Unit,
     onReplyClick: () -> Unit,
     onDraftChange: (String) -> Unit,
+    onFocusLost: () -> Unit,
+    onFocusHandled: () -> Unit,
     onCancel: () -> Unit,
     onPublish: () -> Unit,
     onDelete: () -> Unit
@@ -500,13 +515,22 @@ private fun ReviewCard(
             }
 
             if (isEditing) {
-                OutlinedTextField(
+                RequiredLegend(modifier = Modifier.padding(top = 10.dp))
+                FormTextField(
                     value = draft,
                     onValueChange = onDraftChange,
-                    placeholder = { Text("Responde como organizador del evento…") },
+                    label = "Tu respuesta",
+                    required = true,
+                    placeholder = "Responde como organizador del evento…",
+                    hint = FormTexts.REPLY_HINT,
+                    error = error,
+                    maxLength = FormLimits.REPLY,
                     minLines = 3,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth().padding(top = 10.dp)
+                    containerColor = Color.Transparent,
+                    onFocusLost = onFocusLost,
+                    modifier = Modifier
+                        .padding(top = 6.dp)
+                        .formTarget(focusRequested, onFocusHandled)
                 )
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
@@ -519,9 +543,13 @@ private fun ReviewCard(
                         }
                     }
                     TextButton(onClick = onCancel) { Text("Cancelar") }
-                    Button(onClick = onPublish) {
-                        Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text("Publicar", modifier = Modifier.padding(start = 6.dp))
+                    Button(onClick = onPublish, enabled = !isPublishing) {
+                        if (isPublishing) {
+                            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = colors.onPrimary)
+                        } else {
+                            Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text("Publicar", modifier = Modifier.padding(start = 6.dp))
+                        }
                     }
                 }
             } else {

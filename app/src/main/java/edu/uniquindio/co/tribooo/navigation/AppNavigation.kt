@@ -8,6 +8,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -331,11 +333,11 @@ fun AppNavigation(
                 )
             }
 
-            composable<MainRoutes.EventDetail> {
+            composable<MainRoutes.EventDetail> { backStackEntry ->
                 // El id del evento llega al ViewModel por su SavedStateHandle
                 EventDetailScreen(
                     onNavigateBack = {
-                        navController.popBackStack()
+                        navController.safePopBackStack(backStackEntry)
                     },
                     onNavigateToUser = { userId ->
                         navController.navigate(MainRoutes.UserProfile(userId)) {
@@ -469,6 +471,18 @@ private fun NavHostController.navigateToTab(route: MainRoutes) {
         launchSingleTop = true
         restoreState = true
     }
+}
+
+/** Solo la pantalla visible y activa puede salir: durante la animación de salida un segundo toque no debe sacar otra entrada. */
+internal fun canPop(entryState: Lifecycle.State): Boolean = entryState == Lifecycle.State.RESUMED
+
+/**
+ * Sale de [entry] una sola vez aunque lleguen varios toques seguidos; si no queda pantalla anterior
+ * (la pila quedaría vacía y el NavHost sin dibujar nada) va al feed.
+ */
+private fun NavHostController.safePopBackStack(entry: NavBackStackEntry) {
+    if (!canPop(entry.lifecycle.currentState)) return
+    if (previousBackStackEntry == null) navigateToFeed() else popBackStack()
 }
 
 /** Entra al feed y elimina del historial la guía y las pantallas de autenticación. */

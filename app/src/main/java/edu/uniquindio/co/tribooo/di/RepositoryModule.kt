@@ -17,6 +17,7 @@ import edu.uniquindio.co.tribooo.data.repository.memory.NotificationRepositoryIm
 import edu.uniquindio.co.tribooo.data.repository.memory.ReportRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.SavedEventRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.memory.WaitlistRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.repository.AttendanceRepository
 import edu.uniquindio.co.tribooo.domain.repository.CommentRepository
 import edu.uniquindio.co.tribooo.domain.repository.EventFilterRepository
@@ -30,6 +31,7 @@ import edu.uniquindio.co.tribooo.domain.repository.ReportRepository
 import edu.uniquindio.co.tribooo.domain.repository.SavedEventRepository
 import edu.uniquindio.co.tribooo.domain.repository.SessionRepository
 import edu.uniquindio.co.tribooo.domain.repository.UserRepository
+import edu.uniquindio.co.tribooo.domain.repository.WaitlistRepository
 import jakarta.inject.Singleton
 
 /**
@@ -91,4 +93,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindEventFilterRepository(impl: EventFilterRepositoryImpl): EventFilterRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindWaitlistRepository(impl: WaitlistRepositoryImpl): WaitlistRepository
 }

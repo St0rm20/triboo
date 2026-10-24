@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.component.FeedEventItem
 import edu.uniquindio.co.tribooo.core.component.toCardItems
+import edu.uniquindio.co.tribooo.core.util.WAITLIST_LEFT_MESSAGE
+import edu.uniquindio.co.tribooo.core.util.waitlistJoinedMessage
 import edu.uniquindio.co.tribooo.core.util.MapProjection
 import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Event
@@ -22,6 +24,9 @@ import edu.uniquindio.co.tribooo.domain.usecase.filters.FilterEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.filters.ObserveEventFiltersUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.filters.UpdateEventFiltersUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.ObserveCurrentLocationUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.waitlist.JoinWaitlistUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.waitlist.LeaveWaitlistUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.waitlist.ObserveWaitlistUseCase
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -44,7 +49,8 @@ data class ExploreUiState(
     val categories: List<Category> = Category.defaultCategories,
     val showFilters: Boolean = false,
     /** Diálogo que el usuario debe aceptar antes de confirmar su asistencia. */
-    val attendanceStep: AttendanceStep? = null
+    val attendanceStep: AttendanceStep? = null,
+    val message: String? = null
 )
 
 /** Parte del estado que vive solo en esta pantalla. */
@@ -52,7 +58,8 @@ internal data class ExploreLocal(
     val view: ExploreView = ExploreView.MAP,
     val selectedId: String? = null,
     val showFilters: Boolean = false,
-    val attendanceStep: AttendanceStep? = null
+    val attendanceStep: AttendanceStep? = null,
+    val message: String? = null
 )
 
 /** Eventos filtrados con sus pines, tal como salen de los repositorios. */
@@ -76,29 +83,34 @@ class ExploreViewModel @Inject constructor(
     observeCurrentUser: ObserveCurrentUserUseCase,
     observeCurrentLocation: ObserveCurrentLocationUseCase,
     observeFilters: ObserveEventFiltersUseCase,
+    observeWaitlist: ObserveWaitlistUseCase,
     private val filterEvents: FilterEventsUseCase,
     private val updateFilters: UpdateEventFiltersUseCase,
     private val clearFiltersUseCase: ClearEventFiltersUseCase,
     private val toggleAttendanceUseCase: ToggleAttendanceUseCase,
-    private val findScheduleConflict: FindScheduleConflictUseCase
+    private val findScheduleConflict: FindScheduleConflictUseCase,
+    private val joinWaitlist: JoinWaitlistUseCase,
+    private val leaveWaitlist: LeaveWaitlistUseCase
 ) : ViewModel() {
 
     private val local = MutableStateFlow(ExploreLocal())
 
+    private val attendancesAndWaitlist = combine(observeAttendances(), observeWaitlist(), ::Pair)
+
     private val content = combine(
         observePublishedEvents(),
-        observeAttendances(),
+        attendancesAndWaitlist,
         observeFilters(),
         observeCurrentUser(),
         observeCurrentLocation()
-    ) { published, attendances, filters, user, location ->
+    ) { published, (attendances, waitlist), filters, user, location ->
         val attendeesByEvent = attendances.groupingBy { it.event.id }.eachCount()
         val filtered = filterEvents(published, attendeesByEvent, location, filters)
         // El mapa se ajusta a todos los publicados para que los pines no se muevan al filtrar
         val projection = MapProjection(published.map { it.location })
 
         ExploreContent(
-            events = toCardItems(filtered, attendances, user?.id, location),
+            events = toCardItems(filtered, attendances, waitlist, user?.id, location),
             pins = filtered.map { MapPin(it.id, it.category, projection.project(it.location)) },
             filters = filters
         )
@@ -112,7 +124,8 @@ class ExploreViewModel @Inject constructor(
             selected = resolveSelected(content.events, local.selectedId),
             filters = content.filters,
             showFilters = local.showFilters,
-            attendanceStep = local.attendanceStep
+            attendanceStep = local.attendanceStep,
+            message = local.message
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExploreUiState())
 
@@ -138,17 +151,25 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun toggleAttendance(item: FeedEventItem) {
-        // Sin lista de espera en el modelo: si el cupo está lleno solo se permite cancelar
-        if (item.isFull && !item.isAttending) return
-        if (item.isAttending) {
-            confirmAttendance(item.event)
-            return
-        }
-        viewModelScope.launch {
-            val step = startAttendanceFlow(item.event, findScheduleConflict(item.event))
-            local.update { it.copy(attendanceStep = step) }
+        when {
+            item.isAttending -> confirmAttendance(item.event)
+            item.isWaitlisted -> viewModelScope.launch {
+                leaveWaitlist(item.event)
+                local.update { it.copy(message = WAITLIST_LEFT_MESSAGE) }
+            }
+            item.isFull -> viewModelScope.launch {
+                joinWaitlist(item.event)?.let { position ->
+                    local.update { it.copy(message = waitlistJoinedMessage(position)) }
+                }
+            }
+            else -> viewModelScope.launch {
+                val step = startAttendanceFlow(item.event, findScheduleConflict(item.event))
+                local.update { it.copy(attendanceStep = step) }
+            }
         }
     }
+
+    fun onMessageShown() = local.update { it.copy(message = null) }
 
     /** El usuario aceptó el diálogo actual: pasa al siguiente o, si era el último, confirma la asistencia. */
     fun onAttendanceContinue() {

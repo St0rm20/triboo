@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.core.util.FormLimits
+import edu.uniquindio.co.tribooo.core.util.FormTexts
+import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.averageRating
 import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.core.util.ratingOrDash
@@ -65,12 +68,19 @@ data class EventStatusUiState(
     // Estado propio de la pantalla (editor de respuesta, confirmación y mensajes)
     val editingReviewId: String? = null,
     val replyDraft: String = "",
+    val replyTouched: Boolean = false,
+    val replySubmitAttempted: Boolean = false,
+    val isPublishingReply: Boolean = false,
+    /** El editor de la respuesta debe recibir el foco tras un envío inválido. */
+    val replyFocusRequested: Boolean = false,
     val showRemoveDialog: Boolean = false,
     val message: String? = null,
     /** Mensaje para Mis eventos cuando el evento se eliminó y la pantalla debe cerrarse. */
     val exitMessage: String? = null
 ) {
     val status: EventStatus? get() = event?.status
+
+    val replyError: String? get() = Validators.reply(replyDraft).takeIf { replyTouched || replySubmitAttempted }
 }
 
 /** Datos de los repositorios que alimentan la pantalla (se agrupan porque `combine` admite máximo 5 flujos). */
@@ -158,6 +168,10 @@ class EventStatusViewModel @Inject constructor(
         buildEventStatusState(eventId, currentUser, sources).copy(
             editingReviewId = local.editingReviewId,
             replyDraft = local.replyDraft,
+            replyTouched = local.replyTouched,
+            replySubmitAttempted = local.replySubmitAttempted,
+            isPublishingReply = local.isPublishingReply,
+            replyFocusRequested = local.replyFocusRequested,
             showRemoveDialog = local.showRemoveDialog,
             message = local.message,
             exitMessage = local.exitMessage
@@ -168,26 +182,50 @@ class EventStatusViewModel @Inject constructor(
 
     /** Abre el editor de esa reseña (solo uno a la vez) con la respuesta actual como borrador. */
     fun onReplyClick(review: ReviewItem) {
-        local.update { it.copy(editingReviewId = review.comment.id, replyDraft = review.reply?.text.orEmpty()) }
+        local.update {
+            it.copy(
+                editingReviewId = review.comment.id,
+                replyDraft = review.reply?.text.orEmpty(),
+                replyTouched = false,
+                replySubmitAttempted = false
+            )
+        }
     }
 
-    fun onReplyDraftChange(value: String) = local.update { it.copy(replyDraft = value) }
+    fun onReplyDraftChange(value: String) = local.update { it.copy(replyDraft = value.take(FormLimits.REPLY)) }
 
-    fun onReplyCancel() = local.update { it.copy(editingReviewId = null, replyDraft = "") }
+    fun onReplyFocusLost() = local.update { it.copy(replyTouched = true) }
+
+    fun onReplyFocusHandled() = local.update { it.copy(replyFocusRequested = false) }
+
+    fun onReplyCancel() = local.update {
+        it.copy(editingReviewId = null, replyDraft = "", replyTouched = false, replySubmitAttempted = false)
+    }
 
     fun onReplyPublish(review: ReviewItem) {
-        val draft = local.value.replyDraft
-        if (draft.isBlank()) {
-            showMessage("Escribe una respuesta antes de publicarla.")
+        val state = local.value
+        if (state.isPublishingReply) return
+        if (Validators.reply(state.replyDraft) != null) {
+            local.update {
+                it.copy(replySubmitAttempted = true, replyFocusRequested = true, message = FormTexts.SUBMIT_INVALID)
+            }
             return
         }
+        local.update { it.copy(isPublishingReply = true) }
         viewModelScope.launch {
-            val published = replyToReviewUseCase(review.comment, draft)
+            val published = replyToReviewUseCase(review.comment, state.replyDraft)
             local.update {
                 if (published) {
-                    it.copy(editingReviewId = null, replyDraft = "", message = "Respuesta publicada como organizador.")
+                    it.copy(
+                        editingReviewId = null,
+                        replyDraft = "",
+                        replyTouched = false,
+                        replySubmitAttempted = false,
+                        isPublishingReply = false,
+                        message = "Respuesta publicada como organizador."
+                    )
                 } else {
-                    it.copy(message = "No se pudo publicar la respuesta.")
+                    it.copy(isPublishingReply = false, message = "No se pudo publicar la respuesta.")
                 }
             }
         }
@@ -197,7 +235,15 @@ class EventStatusViewModel @Inject constructor(
         val reply = review.reply ?: return
         viewModelScope.launch {
             deleteReplyUseCase(reply.id)
-            local.update { it.copy(editingReviewId = null, replyDraft = "", message = "Respuesta eliminada.") }
+            local.update {
+                it.copy(
+                    editingReviewId = null,
+                    replyDraft = "",
+                    replyTouched = false,
+                    replySubmitAttempted = false,
+                    message = "Respuesta eliminada."
+                )
+            }
         }
     }
 

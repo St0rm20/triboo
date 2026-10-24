@@ -7,14 +7,15 @@ import jakarta.inject.Inject
 class UpdateProfileUseCase @Inject constructor(
     private val userRepository: UserRepository
 ) {
-    /** Actualiza los datos personales editables del perfil; la biografía vacía se guarda como null. */
-    suspend operator fun invoke(user: User, name: String, city: String, neighborhood: String, bio: String) {
+    /** Actualiza los datos personales editables del perfil; la biografía vacía se guarda como null y [photo] null quita la foto. */
+    suspend operator fun invoke(user: User, name: String, city: String, neighborhood: String, bio: String, photo: String?) {
         userRepository.update(
             user.copy(
                 name = name.trim(),
                 city = city,
                 neighborhood = neighborhood.trim(),
-                bio = bio.trim().ifEmpty { null }
+                bio = bio.trim().ifEmpty { null },
+                photo = photo
             )
         )
     }

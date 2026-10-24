@@ -12,14 +12,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.SubcomposeAsyncImage
 import kotlin.math.absoluteValue
 
-/** Avatar con las iniciales de la persona sobre un fondo de color. */
+/**
+ * Avatar con las iniciales de la persona sobre un fondo de color. Si hay [photo] se muestra la imagen
+ * (recortada al centro); mientras carga o si falla, quedan las iniciales.
+ */
 @Composable
 fun InitialsAvatar(
     initials: String,
@@ -28,16 +33,30 @@ fun InitialsAvatar(
     modifier: Modifier = Modifier,
     size: Dp = 34.dp,
     shape: Shape = RoundedCornerShape(12.dp),
-    fontSize: TextUnit = 12.sp
+    fontSize: TextUnit = 12.sp,
+    photo: String? = null
 ) {
-    Box(
-        modifier = modifier
-            .size(size)
-            .clip(shape)
-            .background(container),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(initials, fontSize = fontSize, fontWeight = FontWeight.Medium, color = content)
+    val avatarModifier = modifier
+        .size(size)
+        .clip(shape)
+        .background(container)
+    val initialsContent: @Composable () -> Unit = {
+        Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
+            Text(initials, fontSize = fontSize, fontWeight = FontWeight.Medium, color = content)
+        }
+    }
+
+    if (photo == null) {
+        Box(modifier = avatarModifier, contentAlignment = Alignment.Center) { initialsContent() }
+    } else {
+        SubcomposeAsyncImage(
+            model = photo,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = avatarModifier,
+            loading = { initialsContent() },
+            error = { initialsContent() }
+        )
     }
 }
 

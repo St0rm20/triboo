@@ -29,7 +29,7 @@ class ExploreStateTest {
     fun cardItemsKeepOrderAndCarryAttendanceAndDistance() {
         val near = event("cerca", 4.501, cupo = 1)
         val far = event("lejos", 4.6)
-        val items = toCardItems(listOf(near, far), listOf(Attendance(me, near), Attendance(other, near)), "me", here)
+        val items = toCardItems(listOf(near, far), listOf(Attendance(me, near), Attendance(other, near)), emptyList(), "me", here)
 
         assertEquals(listOf("cerca", "lejos"), items.map { it.event.id })
         assertEquals(2, items[0].attendeesCount)
@@ -41,21 +41,21 @@ class ExploreStateTest {
 
     @Test
     fun selectionStartsOnTheClosestEvent() {
-        val items = toCardItems(listOf(event("cerca", 4.501), event("lejos", 4.6)), emptyList(), "me", here)
+        val items = toCardItems(listOf(event("cerca", 4.501), event("lejos", 4.6)), emptyList(), emptyList(), "me", here)
 
         assertEquals("cerca", resolveSelected(items, null)?.event?.id)
     }
 
     @Test
     fun selectionFollowsTheChosenEventWhileItPassesTheFilters() {
-        val items = toCardItems(listOf(event("cerca", 4.501), event("lejos", 4.6)), emptyList(), "me", here)
+        val items = toCardItems(listOf(event("cerca", 4.501), event("lejos", 4.6)), emptyList(), emptyList(), "me", here)
 
         assertEquals("lejos", resolveSelected(items, "lejos")?.event?.id)
     }
 
     @Test
     fun selectionFallsBackToTheFirstWhenTheEventLeavesTheFilter() {
-        val remaining = toCardItems(listOf(event("cerca", 4.501)), emptyList(), "me", here)
+        val remaining = toCardItems(listOf(event("cerca", 4.501)), emptyList(), emptyList(), "me", here)
 
         assertEquals("cerca", resolveSelected(remaining, "lejos")?.event?.id)
         assertNull(resolveSelected(emptyList(), "lejos"))

@@ -20,12 +20,12 @@ import androidx.compose.material.icons.rounded.Report
 import androidx.compose.material.icons.rounded.Sell
 import androidx.compose.material.icons.rounded.WrongLocation
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -35,11 +35,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.core.component.FormErrorText
+import edu.uniquindio.co.tribooo.core.component.FormInvalidNotice
+import edu.uniquindio.co.tribooo.core.component.FormTextField
+import edu.uniquindio.co.tribooo.core.component.RequiredLegend
+import edu.uniquindio.co.tribooo.core.component.formTarget
+import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.ReportReasons
 import edu.uniquindio.co.tribooo.domain.usecase.report.SubmitReportUseCase
@@ -92,8 +99,17 @@ fun ReportEventSheet(
                 Text("Organiza ${event.organizer.name}", fontSize = 12.sp, color = colors.onSurfaceVariant)
             }
 
-            Text("Motivo del reporte", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.onSurfaceVariant)
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            RequiredLegend()
+
+            Text("Motivo del reporte *", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.onSurfaceVariant)
+            Column(
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.formTarget(
+                    draft.focusRequested,
+                    { onAction(EventDetailAction.ReportFocusHandled) },
+                    takesFocus = false
+                )
+            ) {
                 ReportReasons.all.forEach { reason ->
                     ReasonOption(
                         reason = reason,
@@ -102,18 +118,20 @@ fun ReportEventSheet(
                     )
                 }
             }
-            draft.error?.let { Text(it, fontSize = 12.sp, color = colors.error) }
+            draft.error?.let { FormErrorText(it) }
 
-            OutlinedTextField(
+            FormTextField(
                 value = draft.detail,
                 onValueChange = { onAction(EventDetailAction.ReportDetailChange(it)) },
-                label = { Text("Detalle · opcional") },
-                placeholder = { Text("Cuéntale a moderación qué viste: fechas, contactos, enlaces sospechosos.") },
-                supportingText = { Text("${draft.detail.length}/${SubmitReportUseCase.MAX_DETAIL_LENGTH}") },
+                label = "Detalle · opcional",
+                placeholder = "Cuéntale a moderación qué viste: fechas, contactos, enlaces sospechosos.",
+                hint = FormTexts.REPORT_DETAIL_HINT,
+                maxLength = SubmitReportUseCase.MAX_DETAIL_LENGTH,
                 minLines = 3,
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.fillMaxWidth()
+                containerColor = Color.Transparent
             )
+
+            if (draft.error != null) FormInvalidNotice()
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -123,10 +141,15 @@ fun ReportEventSheet(
                 TextButton(onClick = close) { Text("Cancelar") }
                 Button(
                     onClick = { onAction(EventDetailAction.SendReport) },
+                    enabled = !draft.isSending,
                     colors = ButtonDefaults.buttonColors(containerColor = colors.error, contentColor = colors.onError)
                 ) {
-                    Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Text("Enviar reporte", modifier = Modifier.padding(start = 8.dp))
+                    if (draft.isSending) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = colors.onError)
+                    } else {
+                        Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text("Enviar reporte", modifier = Modifier.padding(start = 8.dp))
+                    }
                 }
             }
         }

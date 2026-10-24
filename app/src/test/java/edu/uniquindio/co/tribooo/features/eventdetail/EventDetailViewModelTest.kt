@@ -33,6 +33,7 @@ import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -65,6 +66,7 @@ class EventDetailViewModelTest {
             observeSavedEvents = ObserveSavedEventsUseCase(savedEvents),
             observeFollows = ObserveFollowsUseCase(FollowRepositoryImpl()),
             observeComments = ObserveCommentsUseCase(CommentRepositoryImpl()),
+            observeWaitlist = world.observeWaitlist,
             observeCurrentUser = world.observeCurrentUser,
             observeCurrentLocation = ObserveCurrentLocationUseCase(LocationRepositoryImpl()),
             toggleAttendanceUseCase = world.toggleAttendance,
@@ -74,7 +76,9 @@ class EventDetailViewModelTest {
             observeReportedEventIds = ObserveReportedEventIdsUseCase(world.reports, world.observeCurrentUser),
             addCommentUseCase = AddCommentUseCase(CommentRepositoryImpl(), world.getCurrentUser),
             findScheduleConflict = world.findScheduleConflict,
-            submitReportUseCase = SubmitReportUseCase(world.reports, world.getCurrentUser)
+            submitReportUseCase = SubmitReportUseCase(world.reports, world.getCurrentUser),
+            joinWaitlist = world.joinWaitlist,
+            leaveWaitlist = world.leaveWaitlist
         )
     }
 
@@ -227,5 +231,69 @@ class EventDetailViewModelTest {
         assertNull(stepOf(vm))
         assertEquals(setOf("a"), world.attendingIds())
         assertEquals("Cancelaste tu asistencia.", vm.uiState.value.message)
+    }
+
+    @Test
+    fun fullEventLetsTheUserJoinAndLeaveTheWaitlist() = runTest {
+        val full = world.publish("full", 10, 12, cupo = 1).also { world.fill(it, 1) }
+        val vm = started(viewModel("full"))
+        assertTrue(vm.uiState.value.detail!!.isWaitlistMode)
+        assertTrue(vm.uiState.value.detail!!.canToggleAttendance)
+
+        vm.onAction(EventDetailAction.ToggleAttendance)
+        assertNull(vm.uiState.value.attendanceStep)
+        assertEquals(1, vm.uiState.value.detail!!.waitlistPosition)
+        assertEquals("Te anotamos en la lista de espera · puesto 1.", vm.uiState.value.message)
+
+        vm.onAction(EventDetailAction.ToggleAttendance)
+        assertNull(vm.uiState.value.detail!!.waitlistPosition)
+        assertEquals("Saliste de la lista de espera.", vm.uiState.value.message)
+        assertEquals(1, world.attendances.attendances.value.count { it.event.id == full.id })
+    }
+
+    @Test
+    fun attendingAFullEventStillOffersCancel() = runTest {
+        world.publish("a", 10, 12, cupo = 2).also { world.fill(it, 1); world.confirm(it) }
+        val vm = started(viewModel("a"))
+
+        assertFalse(vm.uiState.value.detail!!.isWaitlistMode)
+        vm.onAction(EventDetailAction.ToggleAttendance)
+
+        assertEquals(emptySet<String>(), world.attendingIds())
+    }
+
+    @Test
+    fun ownFullEventHasNoWaitlistButton() = runTest {
+        world.publish("mine", 10, 12, organizer = world.me, cupo = 1).also { world.fill(it, 1) }
+        val vm = started(viewModel("mine"))
+
+        assertFalse(vm.uiState.value.detail!!.canToggleAttendance)
+    }
+
+    @Test
+    fun existingEventLoadsItsData() = runTest {
+        world.publish("e1", 10, 12)
+        val vm = started(viewModel("e1"))
+
+        assertNotNull(vm.uiState.value.detail)
+        assertFalse(vm.uiState.value.isLoading)
+        assertFalse(vm.uiState.value.notFound)
+    }
+
+    @Test
+    fun missingEventIsNotFoundOnceTheDataArrives() = runTest {
+        val vm = started(viewModel("nope"))
+
+        assertNull(vm.uiState.value.detail)
+        assertFalse(vm.uiState.value.isLoading)
+        assertTrue(vm.uiState.value.notFound)
+    }
+
+    @Test
+    fun beforeTheFirstEmissionItIsLoadingAndNeverNotFound() = runTest {
+        val vm = viewModel("nope")
+
+        assertTrue(vm.uiState.value.isLoading)
+        assertFalse(vm.uiState.value.notFound)
     }
 }
