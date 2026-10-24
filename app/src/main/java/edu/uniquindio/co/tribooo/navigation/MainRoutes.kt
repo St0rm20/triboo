@@ -40,4 +40,7 @@ sealed class MainRoutes {
     @Serializable
     data object Followers : MainRoutes()
 
+    @Serializable
+    data class UserProfile(val userId: String) : MainRoutes()
+
 }

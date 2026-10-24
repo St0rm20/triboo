@@ -141,6 +141,7 @@ private val HeroHeight = 224.dp
 @Composable
 fun EventDetailScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToUser: (userId: String) -> Unit,
     viewModel: EventDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -164,6 +165,7 @@ fun EventDetailScreen(
         snackbarHostState = snackbarHostState,
         onBack = onNavigateBack,
         onShare = { context.shareEvent(detail.event) },
+        onNavigateToUser = onNavigateToUser,
         onAction = viewModel::onAction
     )
 }
@@ -180,6 +182,7 @@ fun EventDetailContent(
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onShare: () -> Unit,
+    onNavigateToUser: (userId: String) -> Unit,
     onAction: (EventDetailAction) -> Unit
 ) {
     Scaffold(
@@ -220,7 +223,13 @@ fun EventDetailContent(
                 }
 
                 item(key = "organizer") {
-                    OrganizerCard(detail = detail, onToggleFollow = { onAction(EventDetailAction.ToggleFollow) })
+                    OrganizerCard(
+                        detail = detail,
+                        onToggleFollow = { onAction(EventDetailAction.ToggleFollow) },
+                        onOpenProfile = {
+                            if (!detail.isMine) onNavigateToUser(detail.event.organizer.id)
+                        }
+                    )
                 }
 
                 item(key = "about") {
@@ -255,6 +264,9 @@ fun EventDetailContent(
                 items(detail.comments, key = { it.id }) { comment ->
                     CommentCard(
                         comment = comment,
+                        onOpenProfile = {
+                            if (!comment.author.isCurrentUser) onNavigateToUser(comment.author.id)
+                        },
                         modifier = Modifier.padding(horizontal = ContentPadding, vertical = 5.dp)
                     )
                 }
@@ -282,7 +294,15 @@ fun EventDetailContent(
     }
 
     if (showAttendees) {
-        AttendeesSheet(detail = detail, onDismiss = { onAction(EventDetailAction.HideAttendees) })
+        AttendeesSheet(
+            detail = detail,
+            onDismiss = { onAction(EventDetailAction.HideAttendees) },
+            onOpenProfile = { userId ->
+                // Se cierra la hoja para que no quede abierta al volver
+                onAction(EventDetailAction.HideAttendees)
+                onNavigateToUser(userId)
+            }
+        )
     }
 }
 
@@ -586,14 +606,16 @@ private fun CupoCard(detail: EventDetail) {
 }
 
 @Composable
-private fun OrganizerCard(detail: EventDetail, onToggleFollow: () -> Unit) {
+private fun OrganizerCard(detail: EventDetail, onToggleFollow: () -> Unit, onOpenProfile: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val organizer = detail.event.organizer
     val eventsLabel = if (detail.organizerEventsCount == 1) "1 evento" else "${detail.organizerEventsCount} eventos"
 
     DetailCard(modifier = Modifier.padding(start = ContentPadding, end = ContentPadding, top = 12.dp)) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier
+                .then(if (detail.isMine) Modifier else Modifier.clickable(onClick = onOpenProfile))
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -699,7 +721,7 @@ private fun AttendeesSection(detail: EventDetail, onSeeAll: () -> Unit) {
 /** Hoja con la lista completa de asistentes confirmados. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AttendeesSheet(detail: EventDetail, onDismiss: () -> Unit) {
+private fun AttendeesSheet(detail: EventDetail, onDismiss: () -> Unit, onOpenProfile: (userId: String) -> Unit) {
     val colors = MaterialTheme.colorScheme
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -753,14 +775,14 @@ private fun AttendeesSheet(detail: EventDetail, onDismiss: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             itemsIndexed(detail.attendees, key = { _, person -> person.id }) { index, person ->
-                AttendeeRow(person = person, seed = index)
+                AttendeeRow(person = person, seed = index, onClick = { onOpenProfile(person.id) })
             }
         }
     }
 }
 
 @Composable
-private fun AttendeeRow(person: PersonItem, seed: Int) {
+private fun AttendeeRow(person: PersonItem, seed: Int, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val (bg, fg) = avatarColors(seed)
 
@@ -769,6 +791,7 @@ private fun AttendeeRow(person: PersonItem, seed: Int) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(colors.surfaceContainerLow)
+            .then(if (person.isCurrentUser) Modifier else Modifier.clickable(onClick = onClick))
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -817,7 +840,7 @@ private fun CommentsHeader(detail: EventDetail) {
 }
 
 @Composable
-private fun CommentCard(comment: CommentItem, modifier: Modifier = Modifier) {
+private fun CommentCard(comment: CommentItem, onOpenProfile: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MaterialTheme.colorScheme
     val (bg, fg) = avatarColors(comment.author.id.hashCode())
 
@@ -826,9 +849,18 @@ private fun CommentCard(comment: CommentItem, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(horizontal = 15.dp, vertical = 13.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            InitialsAvatar(initials = comment.author.initials, container = bg, content = fg)
+            InitialsAvatar(
+                initials = comment.author.initials,
+                container = bg,
+                content = fg,
+                modifier = if (comment.author.isCurrentUser) Modifier else Modifier.clickable(onClick = onOpenProfile)
+            )
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = if (comment.author.isCurrentUser) Modifier else Modifier.clickable(onClick = onOpenProfile),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(comment.author.name, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
                     Text(comment.date.agoLabel(), fontSize = 11.sp, color = colors.onSurfaceVariant)
                     comment.rating?.let { rating ->

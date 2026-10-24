@@ -32,7 +32,12 @@ internal object MockData {
     val currentLocation = Location(latitude = 4.5339, longitude = -75.6811)
 
     /** Ciudades disponibles en el registro. */
-    val cities = listOf("Ciudad 1", "Ciudad 2", "Ciudad 3")
+    val cities = listOf(
+        "Armenia", "Barranquilla", "Bogotá", "Bucaramanga", "Buenavista", "Calarcá", "Cali", "Cartagena",
+        "Circasia", "Córdoba", "Cúcuta", "Filandia", "Génova", "Ibagué", "La Tebaida", "Manizales",
+        "Medellín", "Montenegro", "Montería", "Neiva", "Pasto", "Pereira", "Pijao", "Popayán",
+        "Quimbaya", "Salento", "Santa Marta", "Tunja", "Valledupar", "Villavicencio"
+    )
 
     /** Usuaria de prueba con eventos, comentarios y seguidos (inicia sesión con su email y "123456"). */
     val daniela = User(
@@ -45,24 +50,52 @@ internal object MockData {
         bio = "Organizo ciclopaseos y bazares en el barrio."
     )
 
-    private fun organizer(id: String, name: String, neighborhood: String) = User(
+    private fun organizer(id: String, name: String, neighborhood: String, bio: String) = User(
         id = id,
         name = name,
         email = "$id@triboo.co",
         password = "123456",
         city = "Armenia",
-        neighborhood = neighborhood
+        neighborhood = neighborhood,
+        bio = bio
     )
 
-    private val museoQuimbaya = organizer("u-museo", "Museo Quimbaya", "Av. Bolívar")
-    private val senderistas = organizer("u-senderistas", "Senderistas Armenia", "Norte")
-    private val jacLosQuindos = organizer("u-jac-quindos", "Junta de Acción Comunal Los Quindos", "Los Quindos")
-    private val mesaCultural = organizer("u-mesa-cultural", "Mesa Cultural Armenia", "Centro")
-    private val uqLabs = organizer("u-uqlabs", "Semillero UQ Labs", "Universidad")
-    private val camaraComercio = organizer("u-camara", "Cámara de Comercio", "Centro")
-    private val colectivoBambuco = organizer("u-bambuco", "Colectivo Bambuco", "Centro")
-    private val redAmbiental = organizer("u-red-ambiental", "Red Ambiental Quindío", "La Florida")
-    private val armeniaCivica = organizer("u-armenia-civica", "Armenia Cívica", "Norte")
+    private val museoQuimbaya = organizer(
+        "u-museo", "Museo Quimbaya", "Av. Bolívar",
+        "Guardamos y contamos la historia del Quindío con exposiciones, talleres y visitas guiadas abiertas a toda la comunidad."
+    )
+    private val senderistas = organizer(
+        "u-senderistas", "Senderistas Armenia", "Norte",
+        "Grupo de vecinos que camina los senderos del Quindío cada semana. Caminatas seguras, con guía y para todos los niveles."
+    )
+    private val jacLosQuindos = organizer(
+        "u-jac-quindos", "Junta de Acción Comunal Los Quindos", "Los Quindos",
+        "Trabajamos por el barrio con bingos, bazares y jornadas comunitarias para mejorar nuestro salón comunal."
+    )
+    private val mesaCultural = organizer(
+        "u-mesa-cultural", "Mesa Cultural Armenia", "Centro",
+        "Colectivo que reúne a artistas, caficultores y gestores culturales para mantener vivas las ferias y fiestas de la ciudad."
+    )
+    private val uqLabs = organizer(
+        "u-uqlabs", "Semillero UQ Labs", "Universidad",
+        "Semillero de estudiantes y profesores que lleva la innovación y el prototipado a los problemas reales de los barrios."
+    )
+    private val camaraComercio = organizer(
+        "u-camara", "Cámara de Comercio", "Centro",
+        "Acompañamos a los empresarios y emprendedores del Quindío con charlas, ferias y espacios de formación."
+    )
+    private val colectivoBambuco = organizer(
+        "u-bambuco", "Colectivo Bambuco", "Centro",
+        "Músicos que defienden el bambuco y la música andina con conciertos y una escuela abierta para nuevas generaciones."
+    )
+    private val redAmbiental = organizer(
+        "u-red-ambiental", "Red Ambiental Quindío", "La Florida",
+        "Voluntarios que cuidan las quebradas y los parques de la ciudad con jornadas de limpieza y siembra."
+    )
+    private val armeniaCivica = organizer(
+        "u-armenia-civica", "Armenia Cívica", "Norte",
+        "Comunidad de ciudadanos, programadores y funcionarios que usa datos abiertos para resolver retos de la ciudad."
+    )
 
     /** Vecinos con nombre, usados como primeros asistentes (avatares del feed). */
     private val neighbors = listOf(

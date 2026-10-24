@@ -25,6 +25,7 @@ import edu.uniquindio.co.tribooo.features.profile.ProfileScreen
 import edu.uniquindio.co.tribooo.features.register.RegisterScreen
 import edu.uniquindio.co.tribooo.features.saved.SavedEventsScreen
 import edu.uniquindio.co.tribooo.features.splash.SplashScreen
+import edu.uniquindio.co.tribooo.features.userprofile.UserProfileScreen
 
 // Clave para pasar el mensaje del snackbar de una pantalla al feed o al perfil
 private const val FEED_MESSAGE_KEY = "feed_message"
@@ -192,9 +193,11 @@ fun AppNavigation(
                     onNavigateToEventDetail = { eventId, commentId ->
                         navController.navigate(MainRoutes.EventDetail(eventId, commentId))
                     },
-                    // PROVISIONAL: el perfil de otro usuario aún no existe. Quien lo implemente solo debe
-                    // reemplazar esta línea por navController.navigate(MainRoutes.X(userId)).
-                    onNavigateToUser = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    },
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null
@@ -249,9 +252,11 @@ fun AppNavigation(
                     onNavigateBack = {
                         navController.popBackStack()
                     },
-                    // PROVISIONAL: el perfil de otro usuario aún no existe. Quien lo implemente solo debe
-                    // reemplazar esta línea por navController.navigate(MainRoutes.X(userId)).
-                    onNavigateToUser = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    },
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null
@@ -277,6 +282,23 @@ fun AppNavigation(
                 EventDetailScreen(
                     onNavigateBack = {
                         navController.popBackStack()
+                    },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+
+            composable<MainRoutes.UserProfile> {
+                // El id del usuario llega al ViewModel por su SavedStateHandle
+                UserProfileScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
                     }
                 )
             }

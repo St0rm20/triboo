@@ -119,6 +119,7 @@ fun RegisterScreen(
                 DropdownMenu(
                     label = "Ciudad",
                     options = viewModel.cities,
+                    selectedOption = state.city,
                     onOptionSelected = viewModel::onCityChange,
                     modifier = Modifier.fillMaxWidth(),
                     leadingIcon = Icons.Rounded.LocationCity
