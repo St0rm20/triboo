@@ -69,6 +69,7 @@ import java.util.Locale
 @Composable
 fun ProfileScreen(
     onNavigateToFeed: () -> Unit,
+    onNavigateToExplore: () -> Unit,
     onNavigateToAgenda: () -> Unit,
     onNavigateToCreateEvent: () -> Unit,
     onNavigateToLogin: () -> Unit,
@@ -94,10 +95,11 @@ fun ProfileScreen(
             MainBottomBar(
                 selected = MainTab.PROFILE,
                 onCreateClick = if (state.isAdmin) onNavigateToModeration else onNavigateToCreateEvent,
-                enabledTabs = setOf(MainTab.FEED, MainTab.AGENDA, MainTab.PROFILE),
+                enabledTabs = setOf(MainTab.FEED, MainTab.EXPLORE, MainTab.AGENDA, MainTab.PROFILE),
                 onTabSelected = { tab ->
                     when (tab) {
                         MainTab.FEED -> onNavigateToFeed()
+                        MainTab.EXPLORE -> onNavigateToExplore()
                         MainTab.AGENDA -> onNavigateToAgenda()
                         else -> Unit
                     }

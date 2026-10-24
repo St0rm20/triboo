@@ -83,6 +83,8 @@ import edu.uniquindio.co.tribooo.domain.usecase.moderation.ModerationCounts
 @Composable
 fun ModerationScreen(
     onNavigateToFeed: () -> Unit,
+    onNavigateToExplore: () -> Unit,
+    onNavigateToAgenda: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToUser: (userId: String) -> Unit,
     viewModel: ModerationViewModel = hiltViewModel()
@@ -99,12 +101,13 @@ fun ModerationScreen(
                 selected = null,
                 // El martillo lleva a la cola de pendientes
                 onCreateClick = { viewModel.onTabSelected(ModerationTab.PENDIENTES) },
-                enabledTabs = setOf(MainTab.FEED, MainTab.PROFILE),
+                enabledTabs = setOf(MainTab.FEED, MainTab.EXPLORE, MainTab.AGENDA, MainTab.PROFILE),
                 onTabSelected = { tab ->
                     when (tab) {
                         MainTab.FEED -> onNavigateToFeed()
+                        MainTab.EXPLORE -> onNavigateToExplore()
+                        MainTab.AGENDA -> onNavigateToAgenda()
                         MainTab.PROFILE -> onNavigateToProfile()
-                        else -> Unit
                     }
                 },
                 isAdmin = state.isAdmin,

@@ -7,6 +7,7 @@ import dagger.hilt.components.SingletonComponent
 import edu.uniquindio.co.tribooo.data.repository.local.SessionRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.AttendanceRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.memory.EventFilterRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.EventRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.InterestRepositoryImpl
@@ -18,6 +19,7 @@ import edu.uniquindio.co.tribooo.data.repository.memory.SavedEventRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.repository.AttendanceRepository
 import edu.uniquindio.co.tribooo.domain.repository.CommentRepository
+import edu.uniquindio.co.tribooo.domain.repository.EventFilterRepository
 import edu.uniquindio.co.tribooo.domain.repository.EventRepository
 import edu.uniquindio.co.tribooo.domain.repository.FollowRepository
 import edu.uniquindio.co.tribooo.domain.repository.InterestRepository
@@ -85,4 +87,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindReportRepository(impl: ReportRepositoryImpl): ReportRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindEventFilterRepository(impl: EventFilterRepositoryImpl): EventFilterRepository
 }

@@ -23,6 +23,9 @@ sealed class MainRoutes {
     data object Profile : MainRoutes()
 
     @Serializable
+    data object Explore : MainRoutes()
+
+    @Serializable
     data object Agenda : MainRoutes()
 
     @Serializable

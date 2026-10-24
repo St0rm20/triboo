@@ -16,6 +16,7 @@ import edu.uniquindio.co.tribooo.domain.model.ModerationTab
 import edu.uniquindio.co.tribooo.features.agenda.AgendaScreen
 import edu.uniquindio.co.tribooo.features.createevent.CreateEventScreen
 import edu.uniquindio.co.tribooo.features.eventdetail.EventDetailScreen
+import edu.uniquindio.co.tribooo.features.explore.ExploreScreen
 import edu.uniquindio.co.tribooo.features.feed.FeedScreen
 import edu.uniquindio.co.tribooo.features.eventstatus.EventStatusScreen
 import edu.uniquindio.co.tribooo.features.followers.FollowersScreen
@@ -119,6 +120,9 @@ fun AppNavigation(
                             launchSingleTop = true
                         }
                     },
+                    onNavigateToExplore = {
+                        navController.navigateToTab(MainRoutes.Explore)
+                    },
                     onNavigateToAgenda = {
                         navController.navigateToTab(MainRoutes.Agenda)
                     },
@@ -149,6 +153,9 @@ fun AppNavigation(
                 ProfileScreen(
                     onNavigateToFeed = {
                         navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToExplore = {
+                        navController.navigateToTab(MainRoutes.Explore)
                     },
                     onNavigateToAgenda = {
                         navController.navigateToTab(MainRoutes.Agenda)
@@ -349,11 +356,35 @@ fun AppNavigation(
                 )
             }
 
+            composable<MainRoutes.Explore> {
+                ExploreScreen(
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToAgenda = {
+                        navController.navigateToTab(MainRoutes.Agenda)
+                    },
+                    onNavigateToProfile = {
+                        navController.navigateToTab(MainRoutes.Profile)
+                    },
+                    onNavigateToCreateEvent = {
+                        navController.navigate(MainRoutes.CreateEvent)
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
+                    }
+                )
+            }
+
             composable<MainRoutes.Agenda> {
                 AgendaScreen(
                     onNavigateToFeed = {
                         navController.navigateToTab(MainRoutes.Feed)
                     },
+                    onNavigateToExplore = {
+                        navController.navigateToTab(MainRoutes.Explore)
+                    },
+
                     onNavigateToProfile = {
                         navController.navigateToTab(MainRoutes.Profile)
                     },
@@ -371,6 +402,12 @@ fun AppNavigation(
                 ModerationScreen(
                     onNavigateToFeed = {
                         navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToExplore = {
+                        navController.navigateToTab(MainRoutes.Explore)
+                    },
+                    onNavigateToAgenda = {
+                        navController.navigateToTab(MainRoutes.Agenda)
                     },
                     onNavigateToProfile = {
                         navController.navigateToTab(MainRoutes.Profile)

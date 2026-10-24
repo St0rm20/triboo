@@ -50,6 +50,7 @@ import java.time.LocalDate
 @Composable
 fun AgendaScreen(
     onNavigateToFeed: () -> Unit,
+    onNavigateToExplore: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToCreateEvent: () -> Unit,
     onNavigateToEventDetail: (eventId: String) -> Unit,
@@ -64,10 +65,11 @@ fun AgendaScreen(
             MainBottomBar(
                 selected = MainTab.AGENDA,
                 onCreateClick = onNavigateToCreateEvent,
-                enabledTabs = setOf(MainTab.FEED, MainTab.AGENDA, MainTab.PROFILE),
+                enabledTabs = setOf(MainTab.FEED, MainTab.EXPLORE, MainTab.AGENDA, MainTab.PROFILE),
                 onTabSelected = { tab ->
                     when (tab) {
                         MainTab.FEED -> onNavigateToFeed()
+                        MainTab.EXPLORE -> onNavigateToExplore()
                         MainTab.PROFILE -> onNavigateToProfile()
                         else -> Unit
                     }
