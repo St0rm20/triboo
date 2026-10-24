@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.navigation
 
+import edu.uniquindio.co.tribooo.features.createevent.EventFormMode
 import kotlinx.serialization.Serializable
 
 sealed class MainRoutes {
@@ -30,6 +31,10 @@ sealed class MainRoutes {
 
     @Serializable
     data object CreateEvent : MainRoutes()
+
+    /** Crear evento sobre uno existente: editarlo, reenviarlo tras un rechazo o duplicarlo. */
+    @Serializable
+    data class EditEvent(val eventId: String, val mode: EventFormMode) : MainRoutes()
 
     @Serializable
     data class EventDetail(val eventId: String, val commentId: String? = null) : MainRoutes()

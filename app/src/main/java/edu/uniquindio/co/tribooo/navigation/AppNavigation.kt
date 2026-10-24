@@ -12,9 +12,11 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
 import edu.uniquindio.co.tribooo.domain.model.ModerationTab
 import edu.uniquindio.co.tribooo.features.agenda.AgendaScreen
 import edu.uniquindio.co.tribooo.features.createevent.CreateEventScreen
+import edu.uniquindio.co.tribooo.features.createevent.EventFormMode
 import edu.uniquindio.co.tribooo.features.eventdetail.EventDetailScreen
 import edu.uniquindio.co.tribooo.features.explore.ExploreScreen
 import edu.uniquindio.co.tribooo.features.feed.FeedScreen
@@ -309,6 +311,29 @@ fun AppNavigation(
                 )
             }
 
+            composable<MainRoutes.EditEvent> { backStackEntry ->
+                val mode = backStackEntry.toRoute<MainRoutes.EditEvent>().mode
+
+                // El id y el modo llegan al ViewModel por su SavedStateHandle
+                CreateEventScreen(
+                    onClose = {
+                        navController.popBackStack()
+                    },
+                    onEventPublished = { message ->
+                        if (mode == EventFormMode.EDIT) {
+                            // El detalle por estado se actualiza solo y muestra la confirmación al volver
+                            navController.previousBackStackEntry?.savedStateHandle?.set(FEED_MESSAGE_KEY, message)
+                            navController.popBackStack()
+                        } else {
+                            // Reenviar y duplicar terminan en Mis eventos
+                            runCatching { navController.getBackStackEntry(MainRoutes.MyEvents) }
+                                .getOrNull()?.savedStateHandle?.set(FEED_MESSAGE_KEY, message)
+                            navController.popBackStack(MainRoutes.MyEvents, inclusive = false)
+                        }
+                    }
+                )
+            }
+
             composable<MainRoutes.EventDetail> {
                 // El id del evento llega al ViewModel por su SavedStateHandle
                 EventDetailScreen(
@@ -344,11 +369,15 @@ fun AppNavigation(
                         navController.previousBackStackEntry?.savedStateHandle?.set(FEED_MESSAGE_KEY, message)
                         navController.popBackStack()
                     },
-                    // PROVISIONAL: reenviar, editar y duplicar necesitan que Crear evento acepte datos previos.
-                    // Quien lo implemente solo debe reemplazar cada línea por navController.navigate(MainRoutes.X(eventId)).
-                    onResubmitEvent = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
-                    onEditEvent = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
-                    onDuplicateEvent = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
+                    onResubmitEvent = { eventId ->
+                        navController.navigate(MainRoutes.EditEvent(eventId, EventFormMode.RESUBMIT))
+                    },
+                    onEditEvent = { eventId ->
+                        navController.navigate(MainRoutes.EditEvent(eventId, EventFormMode.EDIT))
+                    },
+                    onDuplicateEvent = { eventId ->
+                        navController.navigate(MainRoutes.EditEvent(eventId, EventFormMode.DUPLICATE))
+                    },
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null

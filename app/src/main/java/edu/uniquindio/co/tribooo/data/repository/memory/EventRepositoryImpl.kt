@@ -34,9 +34,19 @@ class EventRepositoryImpl @Inject constructor() : EventRepository {
         return _events.value.firstOrNull { it.id == id }
     }
 
-    override suspend fun update(event: Event) {
-        _events.update { current -> current.map { if (it.id == event.id) event else it } }
-        _images.update { current -> current.map { if (it.event.id == event.id) it.copy(event = event) else it } }
+    override suspend fun update(event: Event, imageUrls: List<String>?) {
+        if (_events.value.none { it.id == event.id }) return
+        val stored = if (imageUrls == null) event else event.copy(imageUrl = imageUrls.firstOrNull())
+        _events.update { current -> current.map { if (it.id == stored.id) stored else it } }
+        _images.update { current ->
+            if (imageUrls == null) {
+                current.map { if (it.event.id == stored.id) it.copy(event = stored) else it }
+            } else {
+                current.filterNot { it.event.id == stored.id } + imageUrls.drop(1).mapIndexed { index, url ->
+                    ImageEvent(id = UUID.randomUUID().toString(), event = stored, url = url, order = index)
+                }
+            }
+        }
     }
 
     override suspend fun delete(eventId: String) {

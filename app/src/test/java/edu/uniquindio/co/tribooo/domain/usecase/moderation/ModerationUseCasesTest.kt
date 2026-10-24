@@ -43,7 +43,7 @@ class ModerationUseCasesTest {
         override val images: StateFlow<List<ImageEvent>> = MutableStateFlow(emptyList())
         override suspend fun save(event: Event, imageUrls: List<String>) = _events.update { it + event }
         override suspend fun findById(id: String): Event? = _events.value.firstOrNull { it.id == id }
-        override suspend fun update(event: Event) = _events.update { list -> list.map { if (it.id == event.id) event else it } }
+        override suspend fun update(event: Event, imageUrls: List<String>?) = _events.update { list -> list.map { if (it.id == event.id) event else it } }
         override suspend fun delete(eventId: String) = _events.update { list -> list.filterNot { it.id == eventId } }
     }
 

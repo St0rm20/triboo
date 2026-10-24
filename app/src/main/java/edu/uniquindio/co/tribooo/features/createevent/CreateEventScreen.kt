@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.VolunteerActivism
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -78,6 +79,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -113,9 +115,13 @@ fun CreateEventScreen(
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            CreateEventTopBar(onClose = onClose, onPublish = viewModel::publish)
+            CreateEventTopBar(mode = state.mode, onClose = onClose, onPublish = viewModel::publish)
         }
     ) { innerPadding ->
+        if (state.isLoading || state.loadError != null) {
+            LoadStatus(error = state.loadError, onClose = onClose, modifier = Modifier.padding(innerPadding))
+            return@Scaffold
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -225,7 +231,31 @@ fun CreateEventScreen(
 }
 
 @Composable
-private fun CreateEventTopBar(onClose: () -> Unit, onPublish: () -> Unit) {
+private fun LoadStatus(error: String?, onClose: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
+    ) {
+        if (error == null) {
+            CircularProgressIndicator()
+        } else {
+            Text(error, textAlign = TextAlign.Center)
+            Button(onClick = onClose) { Text("Cerrar") }
+        }
+    }
+}
+
+@Composable
+private fun CreateEventTopBar(mode: EventFormMode?, onClose: () -> Unit, onPublish: () -> Unit) {
+    val (title, action) = when (mode) {
+        null -> "Crear evento" to "Publicar"
+        EventFormMode.EDIT -> "Editar evento" to "Guardar"
+        EventFormMode.RESUBMIT -> "Reenviar evento" to "Reenviar"
+        EventFormMode.DUPLICATE -> "Duplicar evento" to "Publicar"
+    }
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Row(
             modifier = Modifier
@@ -238,9 +268,9 @@ private fun CreateEventTopBar(onClose: () -> Unit, onPublish: () -> Unit) {
             IconButton(onClick = onClose) {
                 Icon(Icons.Rounded.Close, contentDescription = "Cerrar")
             }
-            Text("Crear evento", fontSize = 20.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Text(title, fontSize = 20.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
             Button(onClick = onPublish, shape = RoundedCornerShape(14.dp), modifier = Modifier.height(40.dp)) {
-                Text("Publicar")
+                Text(action)
             }
         }
     }
