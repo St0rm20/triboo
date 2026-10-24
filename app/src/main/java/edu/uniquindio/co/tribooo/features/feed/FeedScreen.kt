@@ -75,6 +75,7 @@ import java.time.LocalDate
 @Composable
 fun FeedScreen(
     onNavigateToCreateEvent: () -> Unit,
+    onNavigateToModeration: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToEventDetail: (eventId: String) -> Unit,
     onNavigateToNotifications: () -> Unit,
@@ -90,9 +91,11 @@ fun FeedScreen(
         bottomBar = {
             MainBottomBar(
                 selected = MainTab.FEED,
-                onCreateClick = onNavigateToCreateEvent,
+                onCreateClick = if (state.isAdmin) onNavigateToModeration else onNavigateToCreateEvent,
                 enabledTabs = setOf(MainTab.FEED, MainTab.PROFILE),
-                onTabSelected = { tab -> if (tab == MainTab.PROFILE) onNavigateToProfile() }
+                onTabSelected = { tab -> if (tab == MainTab.PROFILE) onNavigateToProfile() },
+                isAdmin = state.isAdmin,
+                moderationBadge = state.pendingModeration
             )
         }
     ) { innerPadding ->

@@ -14,6 +14,9 @@ interface EventRepository {
     suspend fun save(event: Event, imageUrls: List<String> = emptyList())
     suspend fun findById(id: String): Event?
 
+    /** Reemplaza el evento que tiene el mismo id (no hace nada si no existe). */
+    suspend fun update(event: Event)
+
     /** Elimina el evento y sus imágenes. */
     suspend fun delete(eventId: String)
 }

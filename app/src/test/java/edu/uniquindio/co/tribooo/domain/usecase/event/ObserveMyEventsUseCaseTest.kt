@@ -29,6 +29,7 @@ class ObserveMyEventsUseCaseTest {
         override val images: StateFlow<List<ImageEvent>> = MutableStateFlow(emptyList())
         override suspend fun save(event: Event, imageUrls: List<String>) = Unit
         override suspend fun findById(id: String): Event? = events.value.firstOrNull { it.id == id }
+        override suspend fun update(event: Event) = Unit
         override suspend fun delete(eventId: String) = Unit
     }
 

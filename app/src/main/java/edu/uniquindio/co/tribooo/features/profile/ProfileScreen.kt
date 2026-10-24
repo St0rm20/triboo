@@ -92,9 +92,11 @@ fun ProfileScreen(
         bottomBar = {
             MainBottomBar(
                 selected = MainTab.PROFILE,
-                onCreateClick = onNavigateToCreateEvent,
+                onCreateClick = if (state.isAdmin) onNavigateToModeration else onNavigateToCreateEvent,
                 enabledTabs = setOf(MainTab.FEED, MainTab.PROFILE),
-                onTabSelected = { tab -> if (tab == MainTab.FEED) onNavigateToFeed() }
+                onTabSelected = { tab -> if (tab == MainTab.FEED) onNavigateToFeed() },
+                isAdmin = state.isAdmin,
+                moderationBadge = state.stats.pendingReview
             )
         }
     ) { innerPadding ->
@@ -374,7 +376,7 @@ private fun AdminLinks(
 ) {
     LinksCard {
         LinkRow(Icons.Rounded.Shield, "Moderar publicaciones", stats.pendingReview, onNavigateToModeration)
-        LinkRow(Icons.Rounded.Flag, "Reportes de la comunidad", null, onNavigateToCommunityReports)
+        LinkRow(Icons.Rounded.Flag, "Reportes de la comunidad", stats.reports, onNavigateToCommunityReports)
         LinkRow(Icons.Rounded.Block, "Publicaciones rechazadas", stats.rejected, onNavigateToRejected)
         LinkRow(Icons.Rounded.Notifications, "Notificaciones", stats.unreadNotifications, onNavigateToNotifications)
     }

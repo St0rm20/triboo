@@ -34,6 +34,11 @@ class EventRepositoryImpl @Inject constructor() : EventRepository {
         return _events.value.firstOrNull { it.id == id }
     }
 
+    override suspend fun update(event: Event) {
+        _events.update { current -> current.map { if (it.id == event.id) event else it } }
+        _images.update { current -> current.map { if (it.event.id == event.id) it.copy(event = event) else it } }
+    }
+
     override suspend fun delete(eventId: String) {
         _events.update { current -> current.filterNot { it.id == eventId } }
         _images.update { current -> current.filterNot { it.event.id == eventId } }

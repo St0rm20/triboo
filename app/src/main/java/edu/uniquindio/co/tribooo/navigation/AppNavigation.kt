@@ -12,6 +12,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import edu.uniquindio.co.tribooo.domain.model.ModerationTab
 import edu.uniquindio.co.tribooo.features.createevent.CreateEventScreen
 import edu.uniquindio.co.tribooo.features.eventdetail.EventDetailScreen
 import edu.uniquindio.co.tribooo.features.feed.FeedScreen
@@ -19,6 +20,7 @@ import edu.uniquindio.co.tribooo.features.eventstatus.EventStatusScreen
 import edu.uniquindio.co.tribooo.features.followers.FollowersScreen
 import edu.uniquindio.co.tribooo.features.login.LoginScreen
 import edu.uniquindio.co.tribooo.features.login.PasswordRecoveryScreen
+import edu.uniquindio.co.tribooo.features.moderation.ModerationScreen
 import edu.uniquindio.co.tribooo.features.myevents.MyEventsScreen
 import edu.uniquindio.co.tribooo.features.notifications.NotificationsScreen
 import edu.uniquindio.co.tribooo.features.onboarding.OnboardingScreen
@@ -111,6 +113,11 @@ fun AppNavigation(
                     onNavigateToCreateEvent = {
                         navController.navigate(MainRoutes.CreateEvent)
                     },
+                    onNavigateToModeration = {
+                        navController.navigate(MainRoutes.Moderation(ModerationTab.PENDIENTES.name)) {
+                            launchSingleTop = true
+                        }
+                    },
                     onNavigateToProfile = {
                         navController.navigateToTab(MainRoutes.Profile)
                     },
@@ -134,10 +141,6 @@ fun AppNavigation(
                 val message by savedStateHandle
                     .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
                     .collectAsStateWithLifecycle()
-
-                // PROVISIONAL: estas pantallas aún no existen. Quien implemente cada una solo debe
-                // reemplazar su línea por navController.navigate(MainRoutes.X).
-                val comingSoon = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" }
 
                 ProfileScreen(
                     onNavigateToFeed = {
@@ -169,9 +172,21 @@ fun AppNavigation(
                             launchSingleTop = true
                         }
                     },
-                    onNavigateToModeration = comingSoon,
-                    onNavigateToCommunityReports = comingSoon,
-                    onNavigateToRejected = comingSoon,
+                    onNavigateToModeration = {
+                        navController.navigate(MainRoutes.Moderation(ModerationTab.PENDIENTES.name)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToCommunityReports = {
+                        navController.navigate(MainRoutes.Moderation(ModerationTab.REPORTES.name)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToRejected = {
+                        navController.navigate(MainRoutes.Moderation(ModerationTab.RECHAZADAS.name)) {
+                            launchSingleTop = true
+                        }
+                    },
                     darkTheme = darkTheme ?: isSystemInDarkTheme(),
                     onDarkThemeChange = appViewModel::setDarkTheme,
                     snackbarMessage = message,
@@ -323,6 +338,23 @@ fun AppNavigation(
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null
+                    }
+                )
+            }
+
+            composable<MainRoutes.Moderation> {
+                // La pestaña inicial llega al ViewModel por su SavedStateHandle
+                ModerationScreen(
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToProfile = {
+                        navController.navigateToTab(MainRoutes.Profile)
+                    },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
                     }
                 )
             }

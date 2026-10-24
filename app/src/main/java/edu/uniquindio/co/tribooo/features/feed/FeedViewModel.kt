@@ -8,12 +8,14 @@ import edu.uniquindio.co.tribooo.core.util.isFull
 import edu.uniquindio.co.tribooo.core.util.occupancy
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.domain.model.Category
+import edu.uniquindio.co.tribooo.domain.model.UserRole
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ToggleAttendanceUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObservePublishedEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.ObserveCurrentLocationUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.moderation.ObserveModerationCountsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveUnreadNotificationsCountUseCase
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,7 +44,10 @@ data class FeedUiState(
     val selectedCategories: Set<String> = emptySet(),
     val categories: List<Category> = Category.defaultCategories,
     val events: List<FeedEventItem> = emptyList(),
-    val unreadNotifications: Int = 0
+    val unreadNotifications: Int = 0,
+    /** El administrador ve el martillo de moderación en vez de "+". */
+    val isAdmin: Boolean = false,
+    val pendingModeration: Int = 0
 )
 
 /** Búsqueda y categorías elegidas (se agrupan porque `combine` admite máximo 5 flujos). */
@@ -58,6 +63,7 @@ class FeedViewModel @Inject constructor(
     observeCurrentUser: ObserveCurrentUserUseCase,
     observeCurrentLocation: ObserveCurrentLocationUseCase,
     observeUnreadNotifications: ObserveUnreadNotificationsCountUseCase,
+    observeModerationCounts: ObserveModerationCountsUseCase,
     private val toggleAttendanceUseCase: ToggleAttendanceUseCase
 ) : ViewModel() {
 
@@ -95,8 +101,15 @@ class FeedViewModel @Inject constructor(
         FeedUiState(query = filters.query, selectedCategories = categories, events = items)
     }
 
-    val uiState: StateFlow<FeedUiState> = combine(feed, observeUnreadNotifications()) { feed, unread ->
-        feed.copy(unreadNotifications = unread)
+    val uiState: StateFlow<FeedUiState> = combine(
+        feed, observeUnreadNotifications(), observeCurrentUser(), observeModerationCounts()
+    ) { feed, unread, user, moderation ->
+        val isAdmin = user?.role == UserRole.ADMIN
+        feed.copy(
+            unreadNotifications = unread,
+            isAdmin = isAdmin,
+            pendingModeration = if (isAdmin) moderation.pending else 0
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeedUiState())
 
     fun onQueryChange(value: String) {

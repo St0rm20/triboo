@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,10 +20,12 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Gavel
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -51,13 +54,18 @@ enum class MainTab(
 /**
  * Barra inferior del prototipo: dos pestañas a cada lado y botón central para crear evento.
  * Las pestañas que no están en [enabledTabs] (aún sin pantalla) se muestran deshabilitadas.
+ * [selected] es null cuando la pantalla no pertenece a ninguna pestaña. Para el administrador
+ * ([isAdmin]) el botón central es un martillo con la insignia [moderationBadge] (si es mayor que 0);
+ * [onCreateClick] es siempre la acción central.
  */
 @Composable
 fun MainBottomBar(
-    selected: MainTab,
+    selected: MainTab?,
     onCreateClick: () -> Unit,
     enabledTabs: Set<MainTab>,
-    onTabSelected: (MainTab) -> Unit
+    onTabSelected: (MainTab) -> Unit,
+    isAdmin: Boolean = false,
+    moderationBadge: Int = 0
 ) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Row(
@@ -80,8 +88,19 @@ fun MainBottomBar(
                     modifier = Modifier.size(58.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.Add, contentDescription = "Crear evento", modifier = Modifier.size(29.dp))
+                        Icon(
+                            imageVector = if (isAdmin) Icons.Rounded.Gavel else Icons.Rounded.Add,
+                            contentDescription = if (isAdmin) "Moderación" else "Crear evento",
+                            modifier = Modifier.size(29.dp)
+                        )
                     }
+                }
+                if (isAdmin && moderationBadge > 0) {
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                        modifier = Modifier.align(Alignment.TopEnd).offset(x = (-6).dp, y = 8.dp)
+                    ) { Text(moderationBadge.toString()) }
                 }
             }
             TabItem(MainTab.AGENDA, selected, enabledTabs, onTabSelected)
@@ -93,7 +112,7 @@ fun MainBottomBar(
 @Composable
 private fun RowScope.TabItem(
     tab: MainTab,
-    selected: MainTab,
+    selected: MainTab?,
     enabledTabs: Set<MainTab>,
     onTabSelected: (MainTab) -> Unit
 ) {

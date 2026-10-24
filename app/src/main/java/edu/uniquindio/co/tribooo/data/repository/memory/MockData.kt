@@ -16,6 +16,8 @@ import edu.uniquindio.co.tribooo.domain.model.ModerationReview
 import edu.uniquindio.co.tribooo.domain.model.Notification
 import edu.uniquindio.co.tribooo.domain.model.NotificationType
 import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
+import edu.uniquindio.co.tribooo.domain.model.Report
+import edu.uniquindio.co.tribooo.domain.model.ReportReasons
 import edu.uniquindio.co.tribooo.domain.model.Saved
 import edu.uniquindio.co.tribooo.domain.model.User
 import edu.uniquindio.co.tribooo.domain.model.UserRole
@@ -299,7 +301,38 @@ internal object MockData {
             place = "Salón comunal Granada", neighborhood = "Granada", location = Location(4.5271, -75.6836),
             organizer = daniela, status = EventStatus.FINALIZADO,
             description = "Muestra de productos y servicios de emprendedores del barrio, con entrada libre."
-        )
+        ),
+        // Eventos de otros organizadores que esperan moderación (del más antiguo al más nuevo)
+        event(
+            id = "p1", title = "Club de Lectura Latinoamericana", category = Category.CULTURA,
+            daysAhead = 9, start = LocalTime.of(18, 30), end = LocalTime.of(20, 0),
+            place = "Biblioteca del Quindío", neighborhood = "Centro", location = Location(4.5352, -75.6760),
+            organizer = neighbors[3], cupo = 25, status = EventStatus.PENDIENTE,
+            description = "Encuentro quincenal para conversar sobre una novela latinoamericana. Este mes leemos \"Pedro Páramo\" de Juan Rulfo; no hace falta haberla terminado para participar."
+        ).copy(publicationDate = minutesAgo(26 * 60)),
+        event(
+            id = "p2", title = "Torneo de Microfútbol Barrio Laureles", category = Category.DEPORTES,
+            daysAhead = 12, start = LocalTime.of(8, 0), end = LocalTime.of(17, 0),
+            place = "Cancha múltiple Laureles", neighborhood = "Laureles", location = Location(4.5207, -75.6921),
+            organizer = neighbors[8], cupo = 96, status = EventStatus.PENDIENTE,
+            description = "Torneo de microfútbol por equipos de 6 jugadores, categoría libre. Inscripción gratuita en la cancha desde las 7:00 y premiación con trofeos para los tres primeros puestos."
+        ).copy(publicationDate = minutesAgo(9 * 60)),
+        event(
+            id = "p3", title = "Rifa y bazar navideño con boletas", category = Category.SOCIAL,
+            daysAhead = 22, start = LocalTime.of(15, 0), end = LocalTime.of(21, 0),
+            place = "Salón comunal La Patria", neighborhood = "La Patria", location = Location(4.5148, -75.6712),
+            organizer = neighbors[7], status = EventStatus.PENDIENTE,
+            contribution = Contribution(20000.0, "Ganancia personal de los organizadores"),
+            description = "Bazar con comidas y manualidades y gran rifa de una moto y un televisor. Las boletas cuestan $20.000 y se venden por adelantado; lo recaudado es para los organizadores."
+        ).copy(publicationDate = minutesAgo(3 * 60)),
+        event(
+            id = "p4", title = "Curso intensivo de inversión cripto", category = Category.ACADEMICO,
+            daysAhead = 5, start = LocalTime.of(9, 0), end = LocalTime.of(13, 0),
+            place = "Hotel Portal del Quindío", neighborhood = "Norte", location = Location(4.5512, -75.6598),
+            organizer = neighbors[12], cupo = 50, status = EventStatus.PENDIENTE,
+            contribution = Contribution(150000.0, "Membresía del grupo de inversión"),
+            description = "Aprende a duplicar tu dinero en 30 días con nuestras señales de trading. Rentabilidad garantizada del 40% mensual; al final del curso podrás comprar la membresía VIP con cupos limitados."
+        ).copy(publicationDate = minutesAgo(40))
     )
 
     /** Número de asistentes confirmados por evento (según el prototipo). */
@@ -429,7 +462,7 @@ internal object MockData {
         )
     )
 
-    /** Revisiones de moderación: el rechazo del evento "m6". */
+    /** Revisiones de moderación: el rechazo del evento "m6" y el caso resuelto del "9". */
     val moderationReviews: List<ModerationReview> = listOf(
         ModerationReview(
             id = "mr-m6",
@@ -440,7 +473,33 @@ internal object MockData {
                 "si las boletas tienen costo ni a qué fin benéfico se destinan. La plataforma solo permite " +
                 "sorteos sin costo o con fines benéficos declarados. El resto de la propuesta cumple las normas.",
             date = daysAgoAt(3, 15)
+        ),
+        ModerationReview(
+            id = "mr-9",
+            event = eventById("9"),
+            admin = moderador,
+            action = ModerationAction.RESOLVER,
+            date = daysAgoAt(5, 16)
         )
+    )
+
+    /** Reportes de vecinos: dos eventos activos con casos abiertos y uno ya resuelto. */
+    val reports: List<Report> = listOf(
+        // Salón comunal no disponible y contacto que no responde (evento "15")
+        Report("r-15-1", eventById("15"), neighbors[1], ReportReasons.NO_LONGER_EXISTS,
+            "Fui al salón comunal y me dijeron que ese día está ocupado por otro evento.", date = minutesAgo(40)),
+        Report("r-15-2", eventById("15"), neighbors[5], ReportReasons.WRONG_PLACE_OR_CONTACT,
+            "El número de contacto no responde desde hace días.", date = minutesAgo(6 * 60)),
+        Report("r-15-3", eventById("15"), neighbors[9], ReportReasons.WRONG_PLACE_OR_CONTACT, date = daysAgoAt(1, 20)),
+        Report("r-15-4", eventById("15"), neighbors[11], ReportReasons.NO_LONGER_EXISTS,
+            "La junta comunal dice que el bingo se aplazó.", date = daysAgoAt(2, 11)),
+        // Reventa de entradas (evento "5")
+        Report("r-5-1", eventById("5"), neighbors[13], ReportReasons.CHARGES_OR_ADS,
+            "Alguien en redes está vendiendo entradas a $40.000 y el concierto es de aporte voluntario.", date = minutesAgo(90)),
+        Report("r-5-2", eventById("5"), neighbors[14], ReportReasons.CHARGES_OR_ADS, date = minutesAgo(5 * 60)),
+        // Caso ya cerrado por moderación (evento "9")
+        Report("r-9-1", eventById("9"), neighbors[2], ReportReasons.NO_LONGER_EXISTS,
+            "Decía que cambió de salón, pero sigue siendo en la Cámara de Comercio.", date = daysAgoAt(6, 10), resolved = true)
     )
 
     /** Organizadores que sigue el usuario actual. */

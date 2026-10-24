@@ -46,4 +46,8 @@ sealed class MainRoutes {
     @Serializable
     data class EventStatus(val eventId: String) : MainRoutes()
 
+    /** [tab] es el nombre de un valor de `ModerationTab`. */
+    @Serializable
+    data class Moderation(val tab: String = "PENDIENTES") : MainRoutes()
+
 }
