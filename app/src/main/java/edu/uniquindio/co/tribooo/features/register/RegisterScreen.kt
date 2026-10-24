@@ -54,7 +54,6 @@ import edu.uniquindio.co.tribooo.core.util.RequestResult
 
 @Composable
 fun RegisterScreen(
-    onNavigateToHome: () -> Unit,
     onNavigateToLogin: () -> Unit,
     viewModel: RegisterViewModel = hiltViewModel()
 ) {
@@ -281,9 +280,9 @@ fun RegisterScreen(
     LaunchedEffect(state.registerResult) {
         when (val result = state.registerResult) {
             is RequestResult.Success -> {
-                snackbarHostState.showSnackbar(result.message)
-                viewModel.resetRegisterResult()
-                onNavigateToHome()
+                // La cuenta queda creada: se limpia el formulario y se entra por Login
+                viewModel.resetForm()
+                onNavigateToLogin()
             }
 
             is RequestResult.Failure -> {

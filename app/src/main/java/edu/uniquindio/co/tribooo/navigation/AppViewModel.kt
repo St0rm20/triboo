@@ -5,15 +5,17 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.domain.usecase.auth.GetCurrentUserUseCase
 import jakarta.inject.Inject
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
-// Leer la sesión toma milisegundos; sin este mínimo el splash solo parpadearía
-private const val MIN_SPLASH_MILLIS = 1_200L
+// Leer la sesión toma milisegundos; este mínimo deja ver la animación de entrada del logo (~600 ms)
+private const val MIN_SPLASH_MILLIS = 700L
 
 @HiltViewModel
 class AppViewModel @Inject constructor(
@@ -36,7 +38,8 @@ class AppViewModel @Inject constructor(
         viewModelScope.launch {
             // La sesión se lee en paralelo a la animación de entrada del splash
             val minSplash = async { delay(MIN_SPLASH_MILLIS) }
-            val user = getCurrentUser()
+            // Fuera del hilo principal: la sesión y los repositorios en memoria no deben retrasar el primer cuadro
+            val user = withContext(Dispatchers.Default) { getCurrentUser() }
             minSplash.await()
 
             // Solo se decide una vez: después la navegación la manejan login, registro y logout
