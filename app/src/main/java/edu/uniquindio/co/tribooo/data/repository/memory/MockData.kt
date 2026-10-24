@@ -237,13 +237,28 @@ internal object MockData {
             place = "Salón comunal Granada", neighborhood = "Granada", location = Location(4.5417, -75.6856),
             organizer = daniela, status = EventStatus.RECHAZADO,
             description = "Rifa de electrodomésticos entre los vecinos del barrio."
+        ),
+        // Eventos del usuario actual que ya terminaron
+        event(
+            id = "m1", title = "Bicicletada Familiar del Barrio Granada", category = Category.DEPORTES,
+            daysAhead = -45, start = LocalTime.of(8, 0), end = LocalTime.of(11, 30),
+            place = "Parque Granada", neighborhood = "Granada", location = Location(4.5268, -75.6829),
+            organizer = daniela, cupo = 60, status = EventStatus.FINALIZADO,
+            description = "Recorrido tranquilo por las calles del barrio, pensado para ir en familia y con niños."
+        ),
+        event(
+            id = "m2", title = "Feria de Emprendedores Granada", category = Category.SOCIAL,
+            daysAhead = -90, start = LocalTime.of(10, 0), end = LocalTime.of(16, 0),
+            place = "Salón comunal Granada", neighborhood = "Granada", location = Location(4.5271, -75.6836),
+            organizer = daniela, status = EventStatus.FINALIZADO,
+            description = "Muestra de productos y servicios de emprendedores del barrio, con entrada libre."
         )
     )
 
     /** Número de asistentes confirmados por evento (según el prototipo). */
     private val attendeeCounts = mapOf(
         "7" to 91, "10" to 118, "6" to 63, "15" to 124, "1" to 87, "2" to 342,
-        "3" to 38, "9" to 54, "5" to 156, "4" to 24, "8" to 71
+        "3" to 38, "9" to 54, "5" to 156, "4" to 24, "8" to 71, "m1" to 34, "m2" to 52
     )
 
     /**
@@ -330,6 +345,27 @@ internal object MockData {
         Comment(
             id = "c-1-4", event = eventById("1"), author = neighbors[7], date = daysAgoAt(2, 10),
             text = "¿Se puede ir con bicicleta eléctrica?"
+        ),
+        // Reseñas de los eventos finalizados
+        Comment(
+            id = "c-m1-1", event = eventById("m1"), author = neighbors[0], date = daysAgoAt(44, 9), rating = 5,
+            text = "Muy bien organizada, los niños disfrutaron todo el recorrido."
+        ),
+        Comment(
+            id = "c-m1-2", event = eventById("m1"), author = neighbors[2], date = daysAgoAt(44, 15), rating = 5,
+            text = "Ruta segura y buen acompañamiento. Repetimos cuando quieran."
+        ),
+        Comment(
+            id = "c-m1-3", event = eventById("m1"), author = neighbors[5], date = daysAgoAt(43, 10), rating = 4,
+            text = "Excelente ambiente, solo faltó más agua en el punto final."
+        ),
+        Comment(
+            id = "c-m2-1", event = eventById("m2"), author = neighbors[8], date = daysAgoAt(89, 17), rating = 5,
+            text = "Encontré productos buenísimos de gente del barrio."
+        ),
+        Comment(
+            id = "c-m2-2", event = eventById("m2"), author = neighbors[11], date = daysAgoAt(89, 18), rating = 4,
+            text = "Buena feria, ojalá hubiera más puestos de comida."
         )
     )
 

@@ -31,4 +31,7 @@ sealed class MainRoutes {
     @Serializable
     data object Notifications : MainRoutes()
 
+    @Serializable
+    data object MyEvents : MainRoutes()
+
 }

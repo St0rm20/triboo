@@ -36,6 +36,9 @@ fun LocalDate.shortLabel(): String = "${DAYS[dayOfWeek.value - 1]} $dayOfMonth $
 /** "Sáb 26 sep 2026" */
 fun LocalDate.shortLabelWithYear(): String = "${shortLabel()} $year"
 
+/** "18 jul 2026" */
+fun LocalDate.dayMonthYearLabel(): String = "$dayOfMonth ${MONTHS[monthValue - 1]} $year"
+
 /** "sep" */
 fun LocalDate.monthShort(): String = MONTHS[monthValue - 1]
 
