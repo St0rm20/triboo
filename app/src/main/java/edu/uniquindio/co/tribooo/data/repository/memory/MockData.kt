@@ -541,6 +541,15 @@ internal object MockData {
     val placeSuggestions = listOf(
         PlaceSuggestion("Parque de la Vida", "Norte", "Av. Bolívar · portería norte", Location(4.5446, -75.6658)),
         PlaceSuggestion("Biblioteca del Quindío", "Centro", "Cra 14 #23-15 · sala comunal", Location(4.5352, -75.6760)),
-        PlaceSuggestion("Cancha La Fachada", "La Fachada", "Barrio La Fachada · entrada principal", Location(4.5180, -75.6890))
+        PlaceSuggestion("Cancha La Fachada", "La Fachada", "Barrio La Fachada · entrada principal", Location(4.5180, -75.6890)),
+        PlaceSuggestion("Plaza de Bolívar", "Centro", "Carrera 14 con calle 20", Location(4.5339, -75.6811)),
+        PlaceSuggestion("Parque Sucre", "Centro", "Calle 21 con carrera 16", Location(4.5367, -75.6735)),
+        PlaceSuggestion("Parque de los Fundadores", "Centro", "Carrera 14 con calle 15", Location(4.5316, -75.6787)),
+        PlaceSuggestion("Parque La Libertad", "La Libertad", "Calle 2 Norte con carrera 19", Location(4.5290, -75.6897)),
+        PlaceSuggestion("Parque Los Arrieros", "Los Arrieros", "Avenida Centenario", Location(4.5252, -75.6826)),
+        PlaceSuggestion("Centro Cultural Metropolitano de Convenciones", "Norte", "Avenida Bolívar", Location(4.5421, -75.6736)),
+        PlaceSuggestion("Estadio Centenario", "Centenario", "Avenida Centenario · entrada principal", Location(4.5478, -75.6705)),
+        PlaceSuggestion("Universidad del Quindío", "La Ciudadela", "Carrera 15 con calle 12 Norte", Location(4.5528, -75.6578)),
+        PlaceSuggestion("Museo del Oro Quimbaya", "Av. Bolívar", "Avenida Bolívar con calle 40 Norte", Location(4.5504, -75.6672))
     )
 }

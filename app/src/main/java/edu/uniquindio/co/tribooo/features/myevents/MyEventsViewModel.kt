@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.util.averageRating
+import edu.uniquindio.co.tribooo.core.util.latestRejectionDate
 import edu.uniquindio.co.tribooo.core.util.myEventFooter
 import edu.uniquindio.co.tribooo.core.util.myEventSummary
 import edu.uniquindio.co.tribooo.core.util.myEventsLabel
@@ -11,9 +12,11 @@ import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
+import edu.uniquindio.co.tribooo.domain.model.ModerationReview
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.ObserveCommentsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveMyEventsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.moderation.ObserveModerationReviewsUseCase
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -51,6 +54,7 @@ internal fun buildMyEventItems(
     tab: MyEventsTab,
     attendances: List<Attendance>,
     comments: List<Comment>,
+    reviews: List<ModerationReview>,
     now: Instant = Instant.now()
 ): List<MyEventItem> {
     val attendeesByEvent = attendances.groupBy { it.event.id }
@@ -66,7 +70,11 @@ internal fun buildMyEventItems(
                     attendees = attendeesByEvent[event.id].orEmpty().size,
                     rating = averageRating(event.id, comments)
                 ),
-                footer = myEventFooter(event, now)
+                footer = myEventFooter(
+                    event,
+                    now,
+                    rejectedAt = if (event.status == EventStatus.RECHAZADO) latestRejectionDate(event.id, reviews) else null
+                )
             )
         }
 }
@@ -75,7 +83,8 @@ internal fun buildMyEventItems(
 class MyEventsViewModel @Inject constructor(
     observeMyEvents: ObserveMyEventsUseCase,
     observeAttendances: ObserveAttendancesUseCase,
-    observeComments: ObserveCommentsUseCase
+    observeComments: ObserveCommentsUseCase,
+    observeModerationReviews: ObserveModerationReviewsUseCase
 ) : ViewModel() {
 
     private val selectedTab = MutableStateFlow(MyEventsTab.ACTIVOS)
@@ -84,11 +93,12 @@ class MyEventsViewModel @Inject constructor(
         observeMyEvents(),
         observeAttendances(),
         observeComments(),
+        observeModerationReviews(),
         selectedTab
-    ) { events, attendances, comments, tab ->
+    ) { events, attendances, comments, reviews, tab ->
         MyEventsUiState(
             selectedTab = tab,
-            events = buildMyEventItems(events, tab, attendances, comments)
+            events = buildMyEventItems(events, tab, attendances, comments, reviews)
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MyEventsUiState())
 

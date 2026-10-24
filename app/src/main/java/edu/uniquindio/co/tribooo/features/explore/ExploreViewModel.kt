@@ -7,9 +7,14 @@ import edu.uniquindio.co.tribooo.core.component.FeedEventItem
 import edu.uniquindio.co.tribooo.core.component.toCardItems
 import edu.uniquindio.co.tribooo.core.util.MapProjection
 import edu.uniquindio.co.tribooo.domain.model.Category
+import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.EventFilters
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.FindScheduleConflictUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ToggleAttendanceUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.nextAttendanceStep
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.startAttendanceFlow
 import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObservePublishedEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.filters.ClearEventFiltersUseCase
@@ -37,14 +42,17 @@ data class ExploreUiState(
     val selected: FeedEventItem? = null,
     val filters: EventFilters = EventFilters(),
     val categories: List<Category> = Category.defaultCategories,
-    val showFilters: Boolean = false
+    val showFilters: Boolean = false,
+    /** Diálogo que el usuario debe aceptar antes de confirmar su asistencia. */
+    val attendanceStep: AttendanceStep? = null
 )
 
 /** Parte del estado que vive solo en esta pantalla. */
 internal data class ExploreLocal(
     val view: ExploreView = ExploreView.MAP,
     val selectedId: String? = null,
-    val showFilters: Boolean = false
+    val showFilters: Boolean = false,
+    val attendanceStep: AttendanceStep? = null
 )
 
 /** Eventos filtrados con sus pines, tal como salen de los repositorios. */
@@ -71,7 +79,8 @@ class ExploreViewModel @Inject constructor(
     private val filterEvents: FilterEventsUseCase,
     private val updateFilters: UpdateEventFiltersUseCase,
     private val clearFiltersUseCase: ClearEventFiltersUseCase,
-    private val toggleAttendanceUseCase: ToggleAttendanceUseCase
+    private val toggleAttendanceUseCase: ToggleAttendanceUseCase,
+    private val findScheduleConflict: FindScheduleConflictUseCase
 ) : ViewModel() {
 
     private val local = MutableStateFlow(ExploreLocal())
@@ -102,7 +111,8 @@ class ExploreViewModel @Inject constructor(
             pins = content.pins,
             selected = resolveSelected(content.events, local.selectedId),
             filters = content.filters,
-            showFilters = local.showFilters
+            showFilters = local.showFilters,
+            attendanceStep = local.attendanceStep
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExploreUiState())
 
@@ -130,6 +140,28 @@ class ExploreViewModel @Inject constructor(
     fun toggleAttendance(item: FeedEventItem) {
         // Sin lista de espera en el modelo: si el cupo está lleno solo se permite cancelar
         if (item.isFull && !item.isAttending) return
-        viewModelScope.launch { toggleAttendanceUseCase(item.event) }
+        if (item.isAttending) {
+            confirmAttendance(item.event)
+            return
+        }
+        viewModelScope.launch {
+            val step = startAttendanceFlow(item.event, findScheduleConflict(item.event))
+            local.update { it.copy(attendanceStep = step) }
+        }
+    }
+
+    /** El usuario aceptó el diálogo actual: pasa al siguiente o, si era el último, confirma la asistencia. */
+    fun onAttendanceContinue() {
+        val step = local.value.attendanceStep ?: return
+        val next = nextAttendanceStep(step)
+        local.update { it.copy(attendanceStep = next) }
+        if (next == null) confirmAttendance(step.event)
+    }
+
+    /** "Cancelar" o "No confirmar": cierra el diálogo sin cambiar la asistencia. */
+    fun onAttendanceCancel() = local.update { it.copy(attendanceStep = null) }
+
+    private fun confirmAttendance(event: Event) {
+        viewModelScope.launch { toggleAttendanceUseCase(event) }
     }
 }

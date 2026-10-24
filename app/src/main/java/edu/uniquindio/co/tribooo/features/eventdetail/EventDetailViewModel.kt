@@ -3,7 +3,6 @@ package edu.uniquindio.co.tribooo.features.eventdetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.navigation.toRoute
 import edu.uniquindio.co.tribooo.core.util.distanceKmTo
 import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.core.util.isFull
@@ -17,8 +16,12 @@ import edu.uniquindio.co.tribooo.domain.model.Interest
 import edu.uniquindio.co.tribooo.domain.model.Location
 import edu.uniquindio.co.tribooo.domain.model.Saved
 import edu.uniquindio.co.tribooo.domain.model.User
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.FindScheduleConflictUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ToggleAttendanceUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.nextAttendanceStep
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.startAttendanceFlow
 import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.AddCommentUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.ObserveCommentsUseCase
@@ -27,11 +30,13 @@ import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.interest.ObserveInterestsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.interest.ToggleInterestUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.ObserveCurrentLocationUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.report.ObserveReportedEventIdsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.report.SubmitReportResult
+import edu.uniquindio.co.tribooo.domain.usecase.report.SubmitReportUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ObserveSavedEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ToggleSavedEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ToggleFollowUseCase
-import edu.uniquindio.co.tribooo.navigation.MainRoutes
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +47,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
+
+private const val ALREADY_REPORTED_MESSAGE = "Ya reportaste este evento · moderación está revisando el caso."
 
 /** Cuántos asistentes se muestran en la fila de avatares. */
 private const val ATTENDEES_PREVIEW = 12
@@ -74,6 +81,8 @@ data class EventDetail(
     val attendees: List<PersonItem>,
     val isAttending: Boolean,
     val isMine: Boolean,
+    /** El usuario ya reportó el evento y moderación aún no resuelve el caso. */
+    val hasReported: Boolean,
     val isSaved: Boolean,
     val interestCount: Int,
     val isInterested: Boolean,
@@ -100,11 +109,22 @@ data class CommentDraft(
     val rating: Int = 0
 )
 
+/** Reporte que el usuario está llenando; [error] aparece si intenta enviarlo sin motivo. */
+data class ReportDraft(
+    val reason: String? = null,
+    val detail: String = "",
+    val error: String? = null
+)
+
 data class EventDetailUiState(
     val detail: EventDetail? = null,
     val draft: CommentDraft = CommentDraft(),
     val message: String? = null,
-    val showAttendees: Boolean = false
+    val showAttendees: Boolean = false,
+    /** Null si la hoja de reporte está cerrada. */
+    val report: ReportDraft? = null,
+    /** Diálogo que el usuario debe aceptar antes de confirmar su asistencia. */
+    val attendanceStep: AttendanceStep? = null
 )
 
 /** Acciones que el usuario puede hacer desde el detalle. */
@@ -118,6 +138,13 @@ sealed interface EventDetailAction {
     data object SendComment : EventDetailAction
     data object ShowAttendees : EventDetailAction
     data object HideAttendees : EventDetailAction
+    data object ShowReport : EventDetailAction
+    data object HideReport : EventDetailAction
+    data class ReportReasonChange(val reason: String) : EventDetailAction
+    data class ReportDetailChange(val detail: String) : EventDetailAction
+    data object SendReport : EventDetailAction
+    data object ContinueAttendance : EventDetailAction
+    data object CancelAttendance : EventDetailAction
 }
 
 /** Interacciones de los usuarios con eventos y personas (se agrupan porque `combine` admite máximo 5 flujos). */
@@ -125,7 +152,8 @@ private data class Engagement(
     val interests: List<Interest>,
     val saved: List<Saved>,
     val follows: List<Follow>,
-    val comments: List<Comment>
+    val comments: List<Comment>,
+    val reportedEventIds: Set<String>
 )
 
 @HiltViewModel
@@ -144,10 +172,14 @@ class EventDetailViewModel @Inject constructor(
     private val toggleInterestUseCase: ToggleInterestUseCase,
     private val toggleSavedEventUseCase: ToggleSavedEventUseCase,
     private val toggleFollowUseCase: ToggleFollowUseCase,
-    private val addCommentUseCase: AddCommentUseCase
+    observeReportedEventIds: ObserveReportedEventIdsUseCase,
+    private val addCommentUseCase: AddCommentUseCase,
+    private val findScheduleConflict: FindScheduleConflictUseCase,
+    private val submitReportUseCase: SubmitReportUseCase
 ) : ViewModel() {
 
-    private val eventId = savedStateHandle.toRoute<MainRoutes.EventDetail>().eventId
+    // El argumento de la ruta EventDetail llega con el nombre de su propiedad
+    private val eventId: String = checkNotNull(savedStateHandle["eventId"])
 
     /** Estado propio de la pantalla (borrador del comentario y mensajes). */
     private val localState = MutableStateFlow(EventDetailUiState())
@@ -157,6 +189,7 @@ class EventDetailViewModel @Inject constructor(
         observeSavedEvents(),
         observeFollows(),
         observeComments(),
+        observeReportedEventIds(),
         ::Engagement
     )
 
@@ -187,6 +220,7 @@ class EventDetailViewModel @Inject constructor(
                 .map { it.toPersonItem(name = it.name, currentUserId = currentUser?.id) },
             isAttending = isAttending,
             isMine = event.organizer.id == currentUser?.id,
+            hasReported = eventId in engagement.reportedEventIds,
             isSaved = engagement.saved.any { it.event.id == eventId && it.user.id == currentUser?.id },
             interestCount = interested.size,
             isInterested = interested.any { it.user.id == currentUser?.id },
@@ -224,10 +258,11 @@ class EventDetailViewModel @Inject constructor(
         when (action) {
             EventDetailAction.ToggleAttendance -> {
                 if (!detail.canToggleAttendance) return
-                viewModelScope.launch { toggleAttendanceUseCase(event) }
-                showMessage(
-                    if (detail.isAttending) "Cancelaste tu asistencia." else "¡Listo! Tu lugar está reservado."
-                )
+                if (detail.isAttending) {
+                    confirmAttendance(event, attending = true)
+                } else {
+                    requestAttendance(event)
+                }
             }
 
             EventDetailAction.ToggleInterest -> viewModelScope.launch { toggleInterestUseCase(event) }
@@ -263,11 +298,69 @@ class EventDetailViewModel @Inject constructor(
             EventDetailAction.ShowAttendees -> localState.update { it.copy(showAttendees = true) }
 
             EventDetailAction.HideAttendees -> localState.update { it.copy(showAttendees = false) }
+
+            EventDetailAction.ShowReport -> {
+                if (detail.isMine) return
+                if (detail.hasReported) showMessage(ALREADY_REPORTED_MESSAGE) else localState.update { it.copy(report = ReportDraft()) }
+            }
+
+            EventDetailAction.HideReport -> localState.update { it.copy(report = null) }
+
+            is EventDetailAction.ReportReasonChange -> updateReport { it.copy(reason = action.reason, error = null) }
+
+            is EventDetailAction.ReportDetailChange ->
+                updateReport { it.copy(detail = action.detail.take(SubmitReportUseCase.MAX_DETAIL_LENGTH)) }
+
+            EventDetailAction.SendReport -> sendReport(event)
+
+            EventDetailAction.ContinueAttendance -> {
+                val step = localState.value.attendanceStep ?: return
+                val next = nextAttendanceStep(step)
+                localState.update { it.copy(attendanceStep = next) }
+                if (next == null) confirmAttendance(step.event, attending = false)
+            }
+
+            EventDetailAction.CancelAttendance -> localState.update { it.copy(attendanceStep = null) }
         }
     }
 
     fun onMessageShown() {
         localState.update { it.copy(message = null) }
+    }
+
+    /** Confirmar asistencia: antes pide aceptar el aviso de choque, si lo hay, y el del aporte o la entrada libre. */
+    private fun requestAttendance(event: Event) {
+        viewModelScope.launch {
+            val step = startAttendanceFlow(event, findScheduleConflict(event))
+            localState.update { it.copy(attendanceStep = step) }
+        }
+    }
+
+    private fun confirmAttendance(event: Event, attending: Boolean) {
+        viewModelScope.launch { toggleAttendanceUseCase(event) }
+        showMessage(if (attending) "Cancelaste tu asistencia." else "¡Listo! Tu lugar está reservado.")
+    }
+
+    private fun updateReport(transform: (ReportDraft) -> ReportDraft) {
+        localState.update { state -> state.report?.let { state.copy(report = transform(it)) } ?: state }
+    }
+
+    private fun sendReport(event: Event) {
+        val draft = localState.value.report ?: return
+        if (draft.reason == null) {
+            updateReport { it.copy(error = "Elige el motivo del reporte para poder enviarlo.") }
+            return
+        }
+        viewModelScope.launch {
+            val message = when (submitReportUseCase(event, draft.reason, draft.detail)) {
+                SubmitReportResult.SENT -> "Reporte enviado · moderación revisará “${event.title}”."
+                SubmitReportResult.ALREADY_REPORTED -> ALREADY_REPORTED_MESSAGE
+                SubmitReportResult.OWN_EVENT -> "No puedes reportar tu propio evento."
+                SubmitReportResult.NOT_SIGNED_IN -> "Inicia sesión para reportar eventos."
+                SubmitReportResult.INVALID_REASON -> "Elige el motivo del reporte para poder enviarlo."
+            }
+            localState.update { it.copy(report = null, message = message) }
+        }
     }
 
     private fun sendComment(event: Event) {

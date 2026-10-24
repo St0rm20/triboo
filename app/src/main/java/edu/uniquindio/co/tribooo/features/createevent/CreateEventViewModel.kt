@@ -19,6 +19,8 @@ import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventImagesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ResubmitEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.UpdateEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetPlaceSuggestionsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.location.ResolvePlaceUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.location.filterPlaceSuggestions
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -83,6 +85,7 @@ class CreateEventViewModel @Inject constructor(
     private val getEventUseCase: GetEventUseCase,
     private val updateEventUseCase: UpdateEventUseCase,
     private val resubmitEventUseCase: ResubmitEventUseCase,
+    private val resolvePlaceUseCase: ResolvePlaceUseCase,
     observeEventImages: ObserveEventImagesUseCase,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
@@ -173,8 +176,15 @@ class CreateEventViewModel @Inject constructor(
         _uiState.update { it.copy(endTime = time, picker = null) }
     }
 
-    fun onPlaceSelected(place: PlaceSuggestion) {
-        _uiState.update { it.copy(place = place, placeError = false, picker = null) }
+    /** Lugares conocidos que contienen [query] en su nombre o barrio. */
+    fun suggestionsFor(query: String): List<PlaceSuggestion> = filterPlaceSuggestions(placeSuggestions, query)
+
+    /** Fija el lugar escrito; un nombre vacío no cambia nada. */
+    fun onPlaceConfirmed(name: String, neighborhood: String) {
+        viewModelScope.launch {
+            val place = resolvePlaceUseCase(name, neighborhood) ?: return@launch
+            _uiState.update { it.copy(place = place, placeError = false, picker = null) }
+        }
     }
 
     fun onCupoEnabledChange(enabled: Boolean) {

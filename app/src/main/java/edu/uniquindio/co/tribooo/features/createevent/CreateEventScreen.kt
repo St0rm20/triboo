@@ -94,6 +94,8 @@ import edu.uniquindio.co.tribooo.core.util.formatMoney
 import edu.uniquindio.co.tribooo.core.util.label
 import edu.uniquindio.co.tribooo.core.util.shortLabelWithYear
 import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
+import edu.uniquindio.co.tribooo.domain.usecase.location.MAX_NEIGHBORHOOD_LENGTH
+import edu.uniquindio.co.tribooo.domain.usecase.location.MAX_PLACE_NAME_LENGTH
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -204,10 +206,10 @@ fun CreateEventScreen(
         }
 
         PickerTarget.PLACE -> PlacePickerDialog(
-            places = viewModel.placeSuggestions,
             selected = state.place,
+            suggestionsFor = viewModel::suggestionsFor,
             onDismiss = viewModel::closePicker,
-            onConfirm = viewModel::onPlaceSelected
+            onConfirm = viewModel::onPlaceConfirmed
         )
 
         null -> Unit
@@ -724,31 +726,58 @@ private fun EventTimePickerDialog(
 
 @Composable
 private fun PlacePickerDialog(
-    places: List<PlaceSuggestion>,
     selected: PlaceSuggestion?,
+    suggestionsFor: (query: String) -> List<PlaceSuggestion>,
     onDismiss: () -> Unit,
-    onConfirm: (PlaceSuggestion) -> Unit
+    onConfirm: (name: String, neighborhood: String) -> Unit
 ) {
-    var current by remember { mutableStateOf(selected) }
+    var name by remember { mutableStateOf(selected?.name.orEmpty()) }
+    var neighborhood by remember { mutableStateOf(selected?.neighborhood.orEmpty()) }
+    var nameTouched by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
+    val nameMissing = name.isBlank()
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Ubicación del evento") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "Elige el punto de encuentro. Los asistentes verán esta ubicación.",
+                    "Escribe el punto de encuentro. Los asistentes verán esta ubicación.",
                     fontSize = 13.sp,
                     color = colors.onSurfaceVariant
                 )
-                places.forEach { place ->
-                    val isSelected = current?.name == place.name
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = {
+                        name = it.take(MAX_PLACE_NAME_LENGTH)
+                        nameTouched = true
+                    },
+                    label = { Text("Nombre del lugar") },
+                    isError = nameTouched && nameMissing,
+                    supportingText = { if (nameTouched && nameMissing) Text("Escribe el nombre del lugar") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = neighborhood,
+                    onValueChange = { neighborhood = it.take(MAX_NEIGHBORHOOD_LENGTH) },
+                    label = { Text("Barrio o sector") },
+                    supportingText = { Text("Si lo dejas vacío se usa tu ciudad") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                suggestionsFor(name).forEach { place ->
                     Surface(
-                        onClick = { current = place },
+                        onClick = {
+                            name = place.name
+                            neighborhood = place.neighborhood
+                        },
                         shape = RoundedCornerShape(16.dp),
-                        color = if (isSelected) colors.secondaryContainer else Color.Transparent,
-                        border = BorderStroke(1.dp, if (isSelected) colors.primary else colors.outlineVariant),
+                        color = Color.Transparent,
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -767,8 +796,8 @@ private fun PlacePickerDialog(
             }
         },
         confirmButton = {
-            TextButton(enabled = current != null, onClick = { current?.let(onConfirm) }) {
-                Text("Usar esta ubicación")
+            TextButton(enabled = !nameMissing, onClick = { onConfirm(name, neighborhood) }) {
+                Text("Usar este lugar")
             }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }

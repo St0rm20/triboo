@@ -98,9 +98,6 @@ fun AppNavigation(
 
             composable<MainRoutes.Register> {
                 RegisterScreen(
-                    onNavigateToHome = {
-                        navController.navigateToFeed()
-                    },
                     onNavigateToLogin = {
                         navController.replaceWith(MainRoutes.Login)
                     }

@@ -3,6 +3,8 @@ package edu.uniquindio.co.tribooo.core.util
 import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
+import edu.uniquindio.co.tribooo.domain.model.ModerationAction
+import edu.uniquindio.co.tribooo.domain.model.ModerationReview
 import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -34,16 +36,20 @@ fun myEventSummary(event: Event, attendees: Int, rating: Double?): String = when
     EventStatus.RECHAZADO -> "No se publicó en el feed"
 }
 
+/** Fecha de la revisión más reciente que rechazó el evento; null si moderación no registró ninguna. */
+fun latestRejectionDate(eventId: String, reviews: List<ModerationReview>): Instant? =
+    reviews.filter { it.event.id == eventId && it.action == ModerationAction.RECHAZAR }.maxOfOrNull { it.date }
+
 /**
  * Texto de contexto temporal del pie de la tarjeta: "publicado hace 3 días", "Enviado hace 2 h",
- * "Finalizado el 18 jul 2026" o "Rechazado el 5 oct 2026".
+ * "Finalizado el 18 jul 2026" o "Rechazado el 5 oct 2026". [rejectedAt] es la fecha de la revisión que rechazó
+ * el evento; sin ella se usa la de publicación.
  */
-fun myEventFooter(event: Event, now: Instant = Instant.now()): String = when (event.status) {
+fun myEventFooter(event: Event, now: Instant = Instant.now(), rejectedAt: Instant? = null): String = when (event.status) {
     EventStatus.ACTIVO -> "publicado ${daysAgoLabel(event.publicationDate, now)}"
     EventStatus.PENDIENTE -> "Enviado ${hoursOrDaysAgoLabel(event.publicationDate, now)}"
     EventStatus.FINALIZADO -> "Finalizado el ${event.endDate.atAppZone().toLocalDate().dayMonthYearLabel()}"
-    // Aún no hay repositorio de moderación: se usa la fecha de publicación
-    EventStatus.RECHAZADO -> "Rechazado el ${event.publicationDate.atAppZone().toLocalDate().dayMonthYearLabel()}"
+    EventStatus.RECHAZADO -> "Rechazado el ${(rejectedAt ?: event.publicationDate).atAppZone().toLocalDate().dayMonthYearLabel()}"
 }
 
 /** "hoy", "hace 1 día" o "hace 3 días" (por día calendario). */

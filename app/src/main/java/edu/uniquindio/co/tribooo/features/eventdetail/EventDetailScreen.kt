@@ -50,6 +50,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.Category
@@ -63,6 +64,7 @@ import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
@@ -111,6 +113,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import edu.uniquindio.co.tribooo.core.component.AttendanceDialogs
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
 import edu.uniquindio.co.tribooo.core.component.MapPlaceholder
 import edu.uniquindio.co.tribooo.core.component.WrapRow
@@ -130,6 +133,7 @@ import edu.uniquindio.co.tribooo.core.util.isCupoTight
 import edu.uniquindio.co.tribooo.core.util.kmLabel
 import edu.uniquindio.co.tribooo.core.util.occupancy
 import edu.uniquindio.co.tribooo.domain.model.Event
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -162,6 +166,8 @@ fun EventDetailScreen(
         detail = detail,
         draft = state.draft,
         showAttendees = state.showAttendees,
+        report = state.report,
+        attendanceStep = state.attendanceStep,
         snackbarHostState = snackbarHostState,
         onBack = onNavigateBack,
         onShare = { context.shareEvent(detail.event) },
@@ -179,6 +185,8 @@ fun EventDetailContent(
     detail: EventDetail,
     draft: CommentDraft,
     showAttendees: Boolean,
+    report: ReportDraft?,
+    attendanceStep: AttendanceStep?,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onShare: () -> Unit,
@@ -210,7 +218,8 @@ fun EventDetailContent(
                         detail = detail,
                         onBack = onBack,
                         onToggleSaved = { onAction(EventDetailAction.ToggleSaved) },
-                        onShare = onShare
+                        onShare = onShare,
+                        onReport = { onAction(EventDetailAction.ShowReport) }
                     )
                 }
 
@@ -293,6 +302,16 @@ fun EventDetailContent(
         }
     }
 
+    if (report != null) {
+        ReportEventSheet(event = detail.event, draft = report, onAction = onAction)
+    }
+
+    AttendanceDialogs(
+        step = attendanceStep,
+        onCancel = { onAction(EventDetailAction.CancelAttendance) },
+        onContinue = { onAction(EventDetailAction.ContinueAttendance) }
+    )
+
     if (showAttendees) {
         AttendeesSheet(
             detail = detail,
@@ -311,7 +330,8 @@ private fun HeroCover(
     detail: EventDetail,
     onBack: () -> Unit,
     onToggleSaved: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    onReport: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
     val cover = detail.event.imageUrl
@@ -367,6 +387,16 @@ private fun HeroCover(
                 contentDescription = "Compartir evento",
                 onClick = onShare
             )
+            // El organizador no puede reportar su propio evento
+            if (!detail.isMine) {
+                FloatingCircleButton(
+                    icon = if (detail.hasReported) Icons.Rounded.Flag else Icons.Outlined.Flag,
+                    contentDescription = if (detail.hasReported) "Ya reportaste este evento" else "Reportar evento",
+                    onClick = onReport,
+                    container = if (detail.hasReported) colors.errorContainer else colors.surfaceContainerLowest,
+                    content = if (detail.hasReported) colors.onErrorContainer else colors.onSurface
+                )
+            }
         }
 
         // Borde redondeado de la hoja de contenido que se monta sobre la portada

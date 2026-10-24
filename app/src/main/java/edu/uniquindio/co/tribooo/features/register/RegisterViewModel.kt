@@ -159,6 +159,11 @@ class RegisterViewModel @Inject constructor(
         }
     }
 
+    /** Deja el formulario como recién abierto: campos y errores vacíos y la primera ciudad. */
+    fun resetForm() {
+        _uiState.value = RegisterUiState(city = cities.firstOrNull().orEmpty())
+    }
+
     fun resetRegisterResult() {
         _uiState.update { it.copy(registerResult = null) }
     }

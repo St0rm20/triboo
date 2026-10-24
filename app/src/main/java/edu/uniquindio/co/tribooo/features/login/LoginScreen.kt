@@ -230,7 +230,7 @@ fun LoginScreen(
     LaunchedEffect(state.loginResult) {
         when (val result = state.loginResult) {
             is RequestResult.Success -> {
-                snackbarHostState.showSnackbar(result.message)
+                // showSnackbar suspende hasta que el aviso desaparece: se entra sin esperar
                 viewModel.resetLoginResult()
                 onNavigateToHome()
             }

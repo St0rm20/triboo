@@ -16,6 +16,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.event.currentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.emptyEventRepository
 import edu.uniquindio.co.tribooo.domain.usecase.event.testEvent
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetPlaceSuggestionsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.location.ResolvePlaceUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -71,6 +72,7 @@ class CreateEventViewModelTest {
             getEventUseCase = GetEventUseCase(repository),
             updateEventUseCase = UpdateEventUseCase(repository, user),
             resubmitEventUseCase = ResubmitEventUseCase(repository, user),
+            resolvePlaceUseCase = ResolvePlaceUseCase(LocationRepositoryImpl(), user),
             observeEventImages = ObserveEventImagesUseCase(repository),
             savedStateHandle = SavedStateHandle(args)
         )
@@ -185,5 +187,30 @@ class CreateEventViewModelTest {
         assertNotNull(vm.uiState.value.titleError)
         assertNotNull(vm.uiState.value.contributionError)
         assertEquals("Pendiente", repository.findById("pend")!!.title)
+    }
+
+    @Test
+    fun freeTextPlaceIsSavedInThePublishedEvent() = runTest {
+        val vm = viewModel()
+        vm.onTitleChange("Chocolatada")
+        vm.onCategorySelected(vm.categories.first())
+
+        vm.onPlaceConfirmed("  Cancha   del  barrio ", "")
+        vm.publish()
+
+        assertTrue(vm.uiState.value.publishResult is RequestResult.Success)
+        val saved = repository.events.value.single { it.title == "Chocolatada" }
+        assertEquals("Cancha del barrio", saved.place)
+        assertEquals(me.city, saved.neighborhood)
+    }
+
+    @Test
+    fun blankPlaceNameKeepsThePreviousPlace() = runTest {
+        val vm = viewModel()
+        vm.onPlaceConfirmed("Parque X", "Norte")
+
+        vm.onPlaceConfirmed("   ", "Sur")
+
+        assertEquals("Parque X", vm.uiState.value.place?.name)
     }
 }
