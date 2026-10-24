@@ -11,6 +11,8 @@ import edu.uniquindio.co.tribooo.domain.model.Follow
 import edu.uniquindio.co.tribooo.domain.model.ImageEvent
 import edu.uniquindio.co.tribooo.domain.model.Interest
 import edu.uniquindio.co.tribooo.domain.model.Location
+import edu.uniquindio.co.tribooo.domain.model.Notification
+import edu.uniquindio.co.tribooo.domain.model.NotificationType
 import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
 import edu.uniquindio.co.tribooo.domain.model.Saved
 import edu.uniquindio.co.tribooo.domain.model.User
@@ -235,13 +237,28 @@ internal object MockData {
             place = "Salón comunal Granada", neighborhood = "Granada", location = Location(4.5417, -75.6856),
             organizer = daniela, status = EventStatus.RECHAZADO,
             description = "Rifa de electrodomésticos entre los vecinos del barrio."
+        ),
+        // Eventos del usuario actual que ya terminaron
+        event(
+            id = "m1", title = "Bicicletada Familiar del Barrio Granada", category = Category.DEPORTES,
+            daysAhead = -45, start = LocalTime.of(8, 0), end = LocalTime.of(11, 30),
+            place = "Parque Granada", neighborhood = "Granada", location = Location(4.5268, -75.6829),
+            organizer = daniela, cupo = 60, status = EventStatus.FINALIZADO,
+            description = "Recorrido tranquilo por las calles del barrio, pensado para ir en familia y con niños."
+        ),
+        event(
+            id = "m2", title = "Feria de Emprendedores Granada", category = Category.SOCIAL,
+            daysAhead = -90, start = LocalTime.of(10, 0), end = LocalTime.of(16, 0),
+            place = "Salón comunal Granada", neighborhood = "Granada", location = Location(4.5271, -75.6836),
+            organizer = daniela, status = EventStatus.FINALIZADO,
+            description = "Muestra de productos y servicios de emprendedores del barrio, con entrada libre."
         )
     )
 
     /** Número de asistentes confirmados por evento (según el prototipo). */
     private val attendeeCounts = mapOf(
         "7" to 91, "10" to 118, "6" to 63, "15" to 124, "1" to 87, "2" to 342,
-        "3" to 38, "9" to 54, "5" to 156, "4" to 24, "8" to 71
+        "3" to 38, "9" to 54, "5" to 156, "4" to 24, "8" to 71, "m1" to 34, "m2" to 52
     )
 
     /**
@@ -291,6 +308,10 @@ internal object MockData {
 
     private fun minutesAgo(minutes: Long): Instant = Instant.now().minus(Duration.ofMinutes(minutes))
 
+    /** Instante de hace [days] días a las [hour]:00 (hora de la app), para fechas como "ayer". */
+    private fun daysAgoAt(days: Long, hour: Int): Instant =
+        LocalDate.now(APP_ZONE).minusDays(days).atTime(hour, 0).atZone(APP_ZONE).toInstant()
+
     /** Comentarios de prueba (los del ciclopaseo son los del prototipo). */
     val comments: List<Comment> = listOf(
         Comment(
@@ -316,12 +337,58 @@ internal object MockData {
         Comment(
             id = "c-6-2", event = eventById("6"), author = senderistas, date = minutesAgo(25 * 60),
             text = "Sí, el recorrido es tranquilo. Que vengan con un adulto y buen calzado."
+        ),
+        Comment(
+            id = "c-10-1", event = eventById("10"), author = neighbors[9], date = minutesAgo(300),
+            text = "¿Reciben donaciones de ropa para niños?"
+        ),
+        Comment(
+            id = "c-1-4", event = eventById("1"), author = neighbors[7], date = daysAgoAt(2, 10),
+            text = "¿Se puede ir con bicicleta eléctrica?"
+        ),
+        // Reseñas de los eventos finalizados
+        Comment(
+            id = "c-m1-1", event = eventById("m1"), author = neighbors[0], date = daysAgoAt(44, 9), rating = 5,
+            text = "Muy bien organizada, los niños disfrutaron todo el recorrido."
+        ),
+        Comment(
+            id = "c-m1-2", event = eventById("m1"), author = neighbors[2], date = daysAgoAt(44, 15), rating = 5,
+            text = "Ruta segura y buen acompañamiento. Repetimos cuando quieran."
+        ),
+        Comment(
+            id = "c-m1-3", event = eventById("m1"), author = neighbors[5], date = daysAgoAt(43, 10), rating = 4,
+            text = "Excelente ambiente, solo faltó más agua en el punto final."
+        ),
+        Comment(
+            id = "c-m2-1", event = eventById("m2"), author = neighbors[8], date = daysAgoAt(89, 17), rating = 5,
+            text = "Encontré productos buenísimos de gente del barrio."
+        ),
+        Comment(
+            id = "c-m2-2", event = eventById("m2"), author = neighbors[11], date = daysAgoAt(89, 18), rating = 4,
+            text = "Buena feria, ojalá hubiera más puestos de comida."
         )
     )
 
     /** Organizadores que sigue el usuario actual. */
     val follows: List<Follow> = listOf(
-        Follow(follower = daniela, followed = mesaCultural)
+        Follow(follower = daniela, followed = mesaCultural),
+        Follow(follower = neighbors[6], followed = daniela),
+        Follow(follower = neighbors[4], followed = daniela),
+        Follow(follower = neighbors[10], followed = daniela)
+    )
+
+    /**
+     * Notificaciones del usuario actual. En los de comentario la referencia es el id del comentario
+     * y en los de seguidor, el id de quien lo sigue.
+     */
+    val notifications: List<Notification> = listOf(
+        Notification("n-1", daniela, NotificationType.FOLLOWER, neighbors[6].id, read = false, date = minutesAgo(25)),
+        Notification("n-2", daniela, NotificationType.COMMENT, "c-1-3", read = false, date = minutesAgo(39)),
+        Notification("n-3", daniela, NotificationType.COMMENT, "c-1-1", read = false, date = minutesAgo(119)),
+        Notification("n-4", daniela, NotificationType.COMMENT, "c-10-1", read = true, date = minutesAgo(299)),
+        Notification("n-5", daniela, NotificationType.FOLLOWER, neighbors[4].id, read = true, date = daysAgoAt(1, 19)),
+        Notification("n-6", daniela, NotificationType.COMMENT, "c-1-4", read = true, date = daysAgoAt(2, 10)),
+        Notification("n-7", daniela, NotificationType.FOLLOWER, neighbors[10].id, read = true, date = daysAgoAt(4, 9))
     )
 
     /** Eventos guardados por el usuario actual. */

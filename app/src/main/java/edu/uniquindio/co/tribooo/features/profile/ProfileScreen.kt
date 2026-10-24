@@ -31,13 +31,10 @@ import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Shield
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -58,9 +55,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import edu.uniquindio.co.tribooo.core.component.AuthTextField
 import edu.uniquindio.co.tribooo.core.component.ConfirmAlertDialog
-import edu.uniquindio.co.tribooo.core.component.DropdownMenu
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
 import edu.uniquindio.co.tribooo.core.component.MainBottomBar
 import edu.uniquindio.co.tribooo.core.component.MainTab
@@ -163,7 +158,16 @@ fun ProfileScreen(
     }
 
     if (state.showEditDialog) {
-        EditProfileDialog(state = state, cities = viewModel.cities, viewModel = viewModel)
+        EditProfileSheet(
+            state = state,
+            cities = viewModel.cities,
+            onNameChange = viewModel::onNameChange,
+            onCityChange = viewModel::onCityChange,
+            onNeighborhoodChange = viewModel::onNeighborhoodChange,
+            onBioChange = viewModel::onBioChange,
+            onSave = viewModel::onSaveEdit,
+            onDismiss = viewModel::onDismissEditDialog
+        )
     }
 
     if (state.showLogoutDialog) {
@@ -356,7 +360,7 @@ private fun UserLinks(
         LinkRow(Icons.Rounded.Bookmark, "Eventos guardados", stats.saved, onNavigateToSaved)
         LinkRow(Icons.Rounded.Groups, "Seguidores", stats.followers, onNavigateToFollowers)
         LinkRow(Icons.Rounded.Person, "Editar datos personales", null, onEditClick)
-        LinkRow(Icons.Rounded.Notifications, "Notificaciones", null, onNavigateToNotifications)
+        LinkRow(Icons.Rounded.Notifications, "Notificaciones", stats.unreadNotifications, onNavigateToNotifications)
     }
 }
 
@@ -372,7 +376,7 @@ private fun AdminLinks(
         LinkRow(Icons.Rounded.Shield, "Moderar publicaciones", stats.pendingReview, onNavigateToModeration)
         LinkRow(Icons.Rounded.Flag, "Reportes de la comunidad", null, onNavigateToCommunityReports)
         LinkRow(Icons.Rounded.Block, "Publicaciones rechazadas", stats.rejected, onNavigateToRejected)
-        LinkRow(Icons.Rounded.Notifications, "Notificaciones", null, onNavigateToNotifications)
+        LinkRow(Icons.Rounded.Notifications, "Notificaciones", stats.unreadNotifications, onNavigateToNotifications)
     }
 }
 
@@ -433,65 +437,4 @@ private fun ThemeRow(darkTheme: Boolean, onDarkThemeChange: (Boolean) -> Unit) {
             Switch(checked = darkTheme, onCheckedChange = onDarkThemeChange)
         }
     }
-}
-
-@Composable
-private fun EditProfileDialog(state: ProfileUiState, cities: List<String>, viewModel: ProfileViewModel) {
-    // El menú arranca mostrando la primera opción: la ciudad actual va primero
-    val cityOptions = remember { listOf(state.editCity) + cities.filter { it != state.editCity } }
-
-    AlertDialog(
-        onDismissRequest = viewModel::onDismissEditDialog,
-        title = { Text("Editar datos personales") },
-        text = {
-            Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                AuthTextField(
-                    value = state.editName,
-                    onValueChange = viewModel::onNameChange,
-                    label = "Nombre completo",
-                    leadingIcon = Icons.Rounded.Person,
-                    isError = state.nameError != null,
-                    supportingText = state.nameError
-                )
-                DropdownMenu(
-                    label = "Ciudad",
-                    options = cityOptions,
-                    onOptionSelected = viewModel::onCityChange,
-                    leadingIcon = Icons.Rounded.LocationCity
-                )
-                AuthTextField(
-                    value = state.editNeighborhood,
-                    onValueChange = viewModel::onNeighborhoodChange,
-                    label = "Barrio",
-                    leadingIcon = Icons.Rounded.Place,
-                    isError = state.neighborhoodError != null,
-                    supportingText = state.neighborhoodError
-                )
-                OutlinedTextField(
-                    value = state.editBio,
-                    onValueChange = viewModel::onBioChange,
-                    label = { Text("Sobre mí") },
-                    minLines = 3,
-                    maxLines = 5,
-                    shape = RoundedCornerShape(18.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = viewModel::onSaveEdit) { Text("Guardar") }
-        },
-        dismissButton = {
-            TextButton(onClick = viewModel::onDismissEditDialog) { Text("Cancelar") }
-        }
-    )
 }

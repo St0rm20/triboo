@@ -26,6 +26,12 @@ sealed class MainRoutes {
     data object CreateEvent : MainRoutes()
 
     @Serializable
-    data class EventDetail(val eventId: String) : MainRoutes()
+    data class EventDetail(val eventId: String, val commentId: String? = null) : MainRoutes()
+
+    @Serializable
+    data object Notifications : MainRoutes()
+
+    @Serializable
+    data object MyEvents : MainRoutes()
 
 }

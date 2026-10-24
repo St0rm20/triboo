@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.EventBusy
 import androidx.compose.material.icons.rounded.Place
@@ -74,6 +77,7 @@ fun FeedScreen(
     onNavigateToCreateEvent: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToEventDetail: (eventId: String) -> Unit,
+    onNavigateToNotifications: () -> Unit,
     snackbarMessage: String?,
     onSnackbarShown: () -> Unit,
     viewModel: FeedViewModel = hiltViewModel()
@@ -103,7 +107,9 @@ fun FeedScreen(
                 onQueryChange = viewModel::onQueryChange,
                 categories = state.categories,
                 selectedCategories = state.selectedCategories,
-                onToggleCategory = viewModel::toggleCategory
+                onToggleCategory = viewModel::toggleCategory,
+                unreadNotifications = state.unreadNotifications,
+                onNavigateToNotifications = onNavigateToNotifications
             )
 
             LazyColumn(
@@ -161,26 +167,34 @@ private fun FeedHeader(
     onQueryChange: (String) -> Unit,
     categories: List<Category>,
     selectedCategories: Set<String>,
-    onToggleCategory: (String) -> Unit
+    onToggleCategory: (String) -> Unit,
+    unreadNotifications: Int,
+    onNavigateToNotifications: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
 
     Column(modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 8.dp)) {
-        Column(modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 10.dp)) {
-            Text(
-                text = LocalDate.now(APP_ZONE).longLabel().uppercase(),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 0.5.sp,
-                color = colors.primary
-            )
-            Text(
-                text = "Cerca de ti",
-                fontSize = 26.sp,
-                lineHeight = 32.sp,
-                color = colors.onSurface,
-                modifier = Modifier.padding(top = 3.dp)
-            )
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = LocalDate.now(APP_ZONE).longLabel().uppercase(),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.5.sp,
+                    color = colors.primary
+                )
+                Text(
+                    text = "Cerca de ti",
+                    fontSize = 26.sp,
+                    lineHeight = 32.sp,
+                    color = colors.onSurface,
+                    modifier = Modifier.padding(top = 3.dp)
+                )
+            }
+            NotificationsBell(count = unreadNotifications, onClick = onNavigateToNotifications)
         }
 
         // Barra de búsqueda
@@ -488,6 +502,33 @@ private fun EmptyFeed(onClearFilters: () -> Unit) {
         Spacer(Modifier.height(18.dp))
         OutlinedButton(onClick = onClearFilters, shape = RoundedCornerShape(14.dp)) {
             Text("Limpiar filtros")
+        }
+    }
+}
+
+/** Botón circular de campana; muestra la cantidad de avisos sin leer. */
+@Composable
+private fun NotificationsBell(count: Int, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+
+    Box {
+        Surface(onClick = onClick, shape = CircleShape, color = colors.surfaceContainer, modifier = Modifier.size(44.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Notifications, contentDescription = "Notificaciones", tint = colors.onSurface)
+            }
+        }
+        if (count > 0) {
+            Text(
+                text = if (count > 9) "9+" else count.toString(),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.onError,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .background(colors.error, CircleShape)
+                    .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
+                    .wrapContentSize(Alignment.Center)
+            )
         }
     }
 }
