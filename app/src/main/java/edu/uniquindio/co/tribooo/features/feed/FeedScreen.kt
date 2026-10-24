@@ -76,6 +76,7 @@ import java.time.LocalDate
 fun FeedScreen(
     onNavigateToCreateEvent: () -> Unit,
     onNavigateToModeration: () -> Unit,
+    onNavigateToAgenda: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToEventDetail: (eventId: String) -> Unit,
     onNavigateToNotifications: () -> Unit,
@@ -92,8 +93,14 @@ fun FeedScreen(
             MainBottomBar(
                 selected = MainTab.FEED,
                 onCreateClick = if (state.isAdmin) onNavigateToModeration else onNavigateToCreateEvent,
-                enabledTabs = setOf(MainTab.FEED, MainTab.PROFILE),
-                onTabSelected = { tab -> if (tab == MainTab.PROFILE) onNavigateToProfile() },
+                enabledTabs = setOf(MainTab.FEED, MainTab.AGENDA, MainTab.PROFILE),
+                onTabSelected = { tab ->
+                    when (tab) {
+                        MainTab.AGENDA -> onNavigateToAgenda()
+                        MainTab.PROFILE -> onNavigateToProfile()
+                        else -> Unit
+                    }
+                },
                 isAdmin = state.isAdmin,
                 moderationBadge = state.pendingModeration
             )

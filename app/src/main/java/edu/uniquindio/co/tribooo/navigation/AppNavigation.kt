@@ -13,6 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import edu.uniquindio.co.tribooo.domain.model.ModerationTab
+import edu.uniquindio.co.tribooo.features.agenda.AgendaScreen
 import edu.uniquindio.co.tribooo.features.createevent.CreateEventScreen
 import edu.uniquindio.co.tribooo.features.eventdetail.EventDetailScreen
 import edu.uniquindio.co.tribooo.features.feed.FeedScreen
@@ -118,6 +119,9 @@ fun AppNavigation(
                             launchSingleTop = true
                         }
                     },
+                    onNavigateToAgenda = {
+                        navController.navigateToTab(MainRoutes.Agenda)
+                    },
                     onNavigateToProfile = {
                         navController.navigateToTab(MainRoutes.Profile)
                     },
@@ -145,6 +149,9 @@ fun AppNavigation(
                 ProfileScreen(
                     onNavigateToFeed = {
                         navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToAgenda = {
+                        navController.navigateToTab(MainRoutes.Agenda)
                     },
                     onNavigateToCreateEvent = {
                         navController.navigate(MainRoutes.CreateEvent)
@@ -338,6 +345,23 @@ fun AppNavigation(
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null
+                    }
+                )
+            }
+
+            composable<MainRoutes.Agenda> {
+                AgendaScreen(
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToProfile = {
+                        navController.navigateToTab(MainRoutes.Profile)
+                    },
+                    onNavigateToCreateEvent = {
+                        navController.navigate(MainRoutes.CreateEvent)
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
                     }
                 )
             }
