@@ -34,4 +34,7 @@ sealed class MainRoutes {
     @Serializable
     data object MyEvents : MainRoutes()
 
+    @Serializable
+    data object Saved : MainRoutes()
+
 }

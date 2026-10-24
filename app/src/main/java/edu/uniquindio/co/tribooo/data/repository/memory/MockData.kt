@@ -393,7 +393,10 @@ internal object MockData {
 
     /** Eventos guardados por el usuario actual. */
     val saved: List<Saved> = listOf(
-        Saved(user = daniela, event = eventById("6"))
+        Saved(user = daniela, event = eventById("6")),
+        Saved(user = daniela, event = eventById("2")),
+        Saved(user = daniela, event = eventById("5")),
+        Saved(user = daniela, event = eventById("3"))
     )
 
     /** Lugares sugeridos en el selector de ubicación. */

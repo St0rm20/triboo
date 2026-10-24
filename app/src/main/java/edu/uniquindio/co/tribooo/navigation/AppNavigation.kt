@@ -22,6 +22,7 @@ import edu.uniquindio.co.tribooo.features.notifications.NotificationsScreen
 import edu.uniquindio.co.tribooo.features.onboarding.OnboardingScreen
 import edu.uniquindio.co.tribooo.features.profile.ProfileScreen
 import edu.uniquindio.co.tribooo.features.register.RegisterScreen
+import edu.uniquindio.co.tribooo.features.saved.SavedEventsScreen
 import edu.uniquindio.co.tribooo.features.splash.SplashScreen
 
 // Clave para pasar el mensaje del snackbar de una pantalla al feed o al perfil
@@ -150,7 +151,11 @@ fun AppNavigation(
                             launchSingleTop = true
                         }
                     },
-                    onNavigateToSaved = comingSoon,
+                    onNavigateToSaved = {
+                        navController.navigate(MainRoutes.Saved) {
+                            launchSingleTop = true
+                        }
+                    },
                     onNavigateToFollowers = comingSoon,
                     onNavigateToNotifications = {
                         navController.navigate(MainRoutes.Notifications) {
@@ -211,6 +216,20 @@ fun AppNavigation(
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null
+                    }
+                )
+            }
+
+            composable<MainRoutes.Saved> {
+                SavedEventsScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
+                    },
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
                     }
                 )
             }
