@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import edu.uniquindio.co.tribooo.features.createevent.CreateEventScreen
 import edu.uniquindio.co.tribooo.features.eventdetail.EventDetailScreen
 import edu.uniquindio.co.tribooo.features.feed.FeedScreen
+import edu.uniquindio.co.tribooo.features.followers.FollowersScreen
 import edu.uniquindio.co.tribooo.features.login.LoginScreen
 import edu.uniquindio.co.tribooo.features.login.PasswordRecoveryScreen
 import edu.uniquindio.co.tribooo.features.myevents.MyEventsScreen
@@ -22,6 +23,7 @@ import edu.uniquindio.co.tribooo.features.notifications.NotificationsScreen
 import edu.uniquindio.co.tribooo.features.onboarding.OnboardingScreen
 import edu.uniquindio.co.tribooo.features.profile.ProfileScreen
 import edu.uniquindio.co.tribooo.features.register.RegisterScreen
+import edu.uniquindio.co.tribooo.features.saved.SavedEventsScreen
 import edu.uniquindio.co.tribooo.features.splash.SplashScreen
 
 // Clave para pasar el mensaje del snackbar de una pantalla al feed o al perfil
@@ -150,8 +152,16 @@ fun AppNavigation(
                             launchSingleTop = true
                         }
                     },
-                    onNavigateToSaved = comingSoon,
-                    onNavigateToFollowers = comingSoon,
+                    onNavigateToSaved = {
+                        navController.navigate(MainRoutes.Saved) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToFollowers = {
+                        navController.navigate(MainRoutes.Followers) {
+                            launchSingleTop = true
+                        }
+                    },
                     onNavigateToNotifications = {
                         navController.navigate(MainRoutes.Notifications) {
                             launchSingleTop = true
@@ -208,6 +218,40 @@ fun AppNavigation(
                     // PROVISIONAL: el detalle por estado (en revisión, finalizado, rechazado) aún no existe.
                     // Quien lo implemente solo debe reemplazar esta línea por navController.navigate(MainRoutes.X(eventId)).
                     onNavigateToEventStatus = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
+                    snackbarMessage = message,
+                    onSnackbarShown = {
+                        savedStateHandle[FEED_MESSAGE_KEY] = null
+                    }
+                )
+            }
+
+            composable<MainRoutes.Saved> {
+                SavedEventsScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
+                    },
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    }
+                )
+            }
+
+            composable<MainRoutes.Followers> { backStackEntry ->
+                val savedStateHandle = backStackEntry.savedStateHandle
+                val message by savedStateHandle
+                    .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
+                    .collectAsStateWithLifecycle()
+
+                FollowersScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    // PROVISIONAL: el perfil de otro usuario aún no existe. Quien lo implemente solo debe
+                    // reemplazar esta línea por navController.navigate(MainRoutes.X(userId)).
+                    onNavigateToUser = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null

@@ -374,7 +374,12 @@ internal object MockData {
         Follow(follower = daniela, followed = mesaCultural),
         Follow(follower = neighbors[6], followed = daniela),
         Follow(follower = neighbors[4], followed = daniela),
-        Follow(follower = neighbors[10], followed = daniela)
+        Follow(follower = neighbors[10], followed = daniela),
+        Follow(follower = neighbors[0], followed = daniela),
+        Follow(follower = neighbors[2], followed = daniela),
+        Follow(follower = neighbors[12], followed = daniela),
+        // Seguidor mutuo
+        Follow(follower = daniela, followed = neighbors[0])
     )
 
     /**
@@ -393,7 +398,10 @@ internal object MockData {
 
     /** Eventos guardados por el usuario actual. */
     val saved: List<Saved> = listOf(
-        Saved(user = daniela, event = eventById("6"))
+        Saved(user = daniela, event = eventById("6")),
+        Saved(user = daniela, event = eventById("2")),
+        Saved(user = daniela, event = eventById("5")),
+        Saved(user = daniela, event = eventById("3"))
     )
 
     /** Lugares sugeridos en el selector de ubicación. */
