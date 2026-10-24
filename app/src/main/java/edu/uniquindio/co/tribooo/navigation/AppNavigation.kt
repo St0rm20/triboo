@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import edu.uniquindio.co.tribooo.features.createevent.CreateEventScreen
 import edu.uniquindio.co.tribooo.features.eventdetail.EventDetailScreen
 import edu.uniquindio.co.tribooo.features.feed.FeedScreen
+import edu.uniquindio.co.tribooo.features.eventstatus.EventStatusScreen
 import edu.uniquindio.co.tribooo.features.followers.FollowersScreen
 import edu.uniquindio.co.tribooo.features.login.LoginScreen
 import edu.uniquindio.co.tribooo.features.login.PasswordRecoveryScreen
@@ -218,9 +219,11 @@ fun AppNavigation(
                     onNavigateToEventDetail = { eventId ->
                         navController.navigate(MainRoutes.EventDetail(eventId))
                     },
-                    // PROVISIONAL: el detalle por estado (en revisión, finalizado, rechazado) aún no existe.
-                    // Quien lo implemente solo debe reemplazar esta línea por navController.navigate(MainRoutes.X(eventId)).
-                    onNavigateToEventStatus = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
+                    onNavigateToEventStatus = { eventId ->
+                        navController.navigate(MainRoutes.EventStatus(eventId)) {
+                            launchSingleTop = true
+                        }
+                    },
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null
@@ -287,6 +290,39 @@ fun AppNavigation(
                         navController.navigate(MainRoutes.UserProfile(userId)) {
                             launchSingleTop = true
                         }
+                    }
+                )
+            }
+
+            composable<MainRoutes.EventStatus> { backStackEntry ->
+                val savedStateHandle = backStackEntry.savedStateHandle
+                val message by savedStateHandle
+                    .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
+                    .collectAsStateWithLifecycle()
+
+                // El id del evento llega al ViewModel por su SavedStateHandle
+                EventStatusScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onEventRemoved = { message ->
+                        // Mis eventos muestra la confirmación al volver
+                        navController.previousBackStackEntry?.savedStateHandle?.set(FEED_MESSAGE_KEY, message)
+                        navController.popBackStack()
+                    },
+                    // PROVISIONAL: reenviar, editar y duplicar necesitan que Crear evento acepte datos previos.
+                    // Quien lo implemente solo debe reemplazar cada línea por navController.navigate(MainRoutes.X(eventId)).
+                    onResubmitEvent = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
+                    onEditEvent = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
+                    onDuplicateEvent = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
+                    snackbarMessage = message,
+                    onSnackbarShown = {
+                        savedStateHandle[FEED_MESSAGE_KEY] = null
                     }
                 )
             }

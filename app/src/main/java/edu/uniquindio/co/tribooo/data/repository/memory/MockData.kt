@@ -11,11 +11,14 @@ import edu.uniquindio.co.tribooo.domain.model.Follow
 import edu.uniquindio.co.tribooo.domain.model.ImageEvent
 import edu.uniquindio.co.tribooo.domain.model.Interest
 import edu.uniquindio.co.tribooo.domain.model.Location
+import edu.uniquindio.co.tribooo.domain.model.ModerationAction
+import edu.uniquindio.co.tribooo.domain.model.ModerationReview
 import edu.uniquindio.co.tribooo.domain.model.Notification
 import edu.uniquindio.co.tribooo.domain.model.NotificationType
 import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
 import edu.uniquindio.co.tribooo.domain.model.Saved
 import edu.uniquindio.co.tribooo.domain.model.User
+import edu.uniquindio.co.tribooo.domain.model.UserRole
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -113,9 +116,20 @@ internal object MockData {
         )
     }
 
+    /** Administrador de moderación (revisa los eventos enviados). */
+    private val moderador = User(
+        id = "u-moderacion",
+        name = "Mauricio Salazar",
+        email = "moderacion@triboo.co",
+        password = "admin1234",
+        city = "Armenia",
+        neighborhood = "Centro",
+        role = UserRole.ADMIN
+    )
+
     val users: List<User> = listOf(
         daniela, museoQuimbaya, senderistas, jacLosQuindos, mesaCultural, uqLabs,
-        camaraComercio, colectivoBambuco, redAmbiental, armeniaCivica
+        camaraComercio, colectivoBambuco, redAmbiental, armeniaCivica, moderador
     ) + neighbors
 
     private fun unsplash(photoId: String) = "https://images.unsplash.com/$photoId?w=900&q=70&auto=format&fit=crop"
@@ -345,6 +359,12 @@ internal object MockData {
     private fun daysAgoAt(days: Long, hour: Int): Instant =
         LocalDate.now(APP_ZONE).minusDays(days).atTime(hour, 0).atZone(APP_ZONE).toInstant()
 
+    /** Reseña del evento finalizado "m1" que ya tiene respuesta del organizador. */
+    private val reviewWithReply = Comment(
+        id = "c-m1-1", event = eventById("m1"), author = neighbors[0], date = daysAgoAt(44, 9), rating = 5,
+        text = "Muy bien organizada, los niños disfrutaron todo el recorrido."
+    )
+
     /** Comentarios de prueba (los del ciclopaseo son los del prototipo). */
     val comments: List<Comment> = listOf(
         Comment(
@@ -380,10 +400,7 @@ internal object MockData {
             text = "¿Se puede ir con bicicleta eléctrica?"
         ),
         // Reseñas de los eventos finalizados
-        Comment(
-            id = "c-m1-1", event = eventById("m1"), author = neighbors[0], date = daysAgoAt(44, 9), rating = 5,
-            text = "Muy bien organizada, los niños disfrutaron todo el recorrido."
-        ),
+        reviewWithReply,
         Comment(
             id = "c-m1-2", event = eventById("m1"), author = neighbors[2], date = daysAgoAt(44, 15), rating = 5,
             text = "Ruta segura y buen acompañamiento. Repetimos cuando quieran."
@@ -399,6 +416,30 @@ internal object MockData {
         Comment(
             id = "c-m2-2", event = eventById("m2"), author = neighbors[11], date = daysAgoAt(89, 18), rating = 4,
             text = "Buena feria, ojalá hubiera más puestos de comida."
+        ),
+        Comment(
+            id = "c-m2-3", event = eventById("m2"), author = neighbors[3], date = daysAgoAt(88, 11), rating = 5,
+            text = "Muy buena organización y gran variedad de emprendimientos."
+        ),
+        // Respuesta del organizador a una reseña
+        Comment(
+            id = "c-m1-1-r", event = eventById("m1"), author = daniela, date = daysAgoAt(43, 18),
+            text = "¡Gracias por acompañarnos! Ya estamos preparando la próxima bicicletada.",
+            parentComment = reviewWithReply
+        )
+    )
+
+    /** Revisiones de moderación: el rechazo del evento "m6". */
+    val moderationReviews: List<ModerationReview> = listOf(
+        ModerationReview(
+            id = "mr-m6",
+            event = eventById("m6"),
+            admin = moderador,
+            action = ModerationAction.RECHAZAR,
+            reason = "El evento tiene como actividad central una rifa de electrodomésticos y no indica " +
+                "si las boletas tienen costo ni a qué fin benéfico se destinan. La plataforma solo permite " +
+                "sorteos sin costo o con fines benéficos declarados. El resto de la propuesta cumple las normas.",
+            date = daysAgoAt(3, 15)
         )
     )
 

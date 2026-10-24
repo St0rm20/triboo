@@ -43,4 +43,7 @@ sealed class MainRoutes {
     @Serializable
     data class UserProfile(val userId: String) : MainRoutes()
 
+    @Serializable
+    data class EventStatus(val eventId: String) : MainRoutes()
+
 }

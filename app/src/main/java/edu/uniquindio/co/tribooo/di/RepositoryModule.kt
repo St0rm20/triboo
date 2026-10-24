@@ -11,6 +11,7 @@ import edu.uniquindio.co.tribooo.data.repository.memory.EventRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.InterestRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.memory.ModerationReviewRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.NotificationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.SavedEventRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
@@ -20,6 +21,7 @@ import edu.uniquindio.co.tribooo.domain.repository.EventRepository
 import edu.uniquindio.co.tribooo.domain.repository.FollowRepository
 import edu.uniquindio.co.tribooo.domain.repository.InterestRepository
 import edu.uniquindio.co.tribooo.domain.repository.LocationRepository
+import edu.uniquindio.co.tribooo.domain.repository.ModerationReviewRepository
 import edu.uniquindio.co.tribooo.domain.repository.NotificationRepository
 import edu.uniquindio.co.tribooo.domain.repository.SavedEventRepository
 import edu.uniquindio.co.tribooo.domain.repository.SessionRepository
@@ -73,4 +75,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindModerationReviewRepository(impl: ModerationReviewRepositoryImpl): ModerationReviewRepository
 }

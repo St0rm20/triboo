@@ -33,4 +33,9 @@ class EventRepositoryImpl @Inject constructor() : EventRepository {
     override suspend fun findById(id: String): Event? {
         return _events.value.firstOrNull { it.id == id }
     }
+
+    override suspend fun delete(eventId: String) {
+        _events.update { current -> current.filterNot { it.id == eventId } }
+        _images.update { current -> current.filterNot { it.event.id == eventId } }
+    }
 }
