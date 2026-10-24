@@ -40,6 +40,6 @@ fun testEvent(
     title: String = id
 ) = Event(
     id = id, title = title, description = "desc", startDate = start, endDate = end,
-    place = "Parque", neighborhood = "Centro", location = Location(4.5, -75.6), status = status,
+    place = "Parque", neighborhood = "Centro", location = Location(4.5339, -75.6811), status = status,
     organizer = organizer, category = Category.SOCIAL
 )

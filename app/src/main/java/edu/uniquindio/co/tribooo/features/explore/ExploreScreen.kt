@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.core.component.AttendanceDialogs
 import edu.uniquindio.co.tribooo.core.component.CategoryChip
 import edu.uniquindio.co.tribooo.core.component.EventCard
 import edu.uniquindio.co.tribooo.core.component.EventFiltersSheet
@@ -120,6 +121,12 @@ fun ExploreScreen(
             }
         }
     }
+
+    AttendanceDialogs(
+        step = state.attendanceStep,
+        onCancel = viewModel::onAttendanceCancel,
+        onContinue = viewModel::onAttendanceContinue
+    )
 
     if (state.showFilters) {
         EventFiltersSheet(

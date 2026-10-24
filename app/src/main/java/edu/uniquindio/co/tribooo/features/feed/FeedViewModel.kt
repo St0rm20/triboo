@@ -6,10 +6,15 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.component.FeedEventItem
 import edu.uniquindio.co.tribooo.core.component.toCardItems
 import edu.uniquindio.co.tribooo.domain.model.Category
+import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.EventFilters
 import edu.uniquindio.co.tribooo.domain.model.UserRole
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.FindScheduleConflictUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ToggleAttendanceUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.nextAttendanceStep
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.startAttendanceFlow
 import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObservePublishedEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.filters.ClearEventFiltersUseCase
@@ -39,7 +44,9 @@ data class FeedUiState(
     val pendingModeration: Int = 0,
     /** Filtros compartidos con Explorar y cuántos cuentan en la insignia. */
     val filters: EventFilters = EventFilters(),
-    val showFilters: Boolean = false
+    val showFilters: Boolean = false,
+    /** Diálogo que el usuario debe aceptar antes de confirmar su asistencia. */
+    val attendanceStep: AttendanceStep? = null
 )
 
 @HiltViewModel
@@ -54,10 +61,12 @@ class FeedViewModel @Inject constructor(
     private val filterEvents: FilterEventsUseCase,
     private val updateFilters: UpdateEventFiltersUseCase,
     private val clearFiltersUseCase: ClearEventFiltersUseCase,
-    private val toggleAttendanceUseCase: ToggleAttendanceUseCase
+    private val toggleAttendanceUseCase: ToggleAttendanceUseCase,
+    private val findScheduleConflict: FindScheduleConflictUseCase
 ) : ViewModel() {
 
     private val showFilters = MutableStateFlow(false)
+    private val attendanceStep = MutableStateFlow<AttendanceStep?>(null)
 
     private val feed = combine(
         observePublishedEvents(),
@@ -77,7 +86,7 @@ class FeedViewModel @Inject constructor(
         )
     }
 
-    val uiState: StateFlow<FeedUiState> = combine(
+    private val feedWithAccount = combine(
         feed, observeUnreadNotifications(), observeCurrentUser(), observeModerationCounts(), showFilters
     ) { feed, unread, user, moderation, showFilters ->
         val isAdmin = user?.role == UserRole.ADMIN
@@ -87,6 +96,10 @@ class FeedViewModel @Inject constructor(
             pendingModeration = if (isAdmin) moderation.pending else 0,
             showFilters = showFilters
         )
+    }
+
+    val uiState: StateFlow<FeedUiState> = combine(feedWithAccount, attendanceStep) { state, step ->
+        state.copy(attendanceStep = step)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeedUiState())
 
     fun onQueryChange(value: String) = updateFilters { it.copy(query = value) }
@@ -110,6 +123,27 @@ class FeedViewModel @Inject constructor(
     fun toggleAttendance(item: FeedEventItem) {
         // Sin lista de espera en el modelo: si el cupo está lleno solo se permite cancelar
         if (item.isFull && !item.isAttending) return
-        viewModelScope.launch { toggleAttendanceUseCase(item.event) }
+        if (item.isAttending) {
+            confirmAttendance(item.event)
+            return
+        }
+        viewModelScope.launch { attendanceStep.value = startAttendanceFlow(item.event, findScheduleConflict(item.event)) }
+    }
+
+    /** El usuario aceptó el diálogo actual: pasa al siguiente o, si era el último, confirma la asistencia. */
+    fun onAttendanceContinue() {
+        val step = attendanceStep.value ?: return
+        val next = nextAttendanceStep(step)
+        attendanceStep.value = next
+        if (next == null) confirmAttendance(step.event)
+    }
+
+    /** "Cancelar" o "No confirmar": cierra el diálogo sin cambiar la asistencia. */
+    fun onAttendanceCancel() {
+        attendanceStep.value = null
+    }
+
+    private fun confirmAttendance(event: Event) {
+        viewModelScope.launch { toggleAttendanceUseCase(event) }
     }
 }
