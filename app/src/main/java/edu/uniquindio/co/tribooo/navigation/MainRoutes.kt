@@ -37,4 +37,7 @@ sealed class MainRoutes {
     @Serializable
     data object Saved : MainRoutes()
 
+    @Serializable
+    data object Followers : MainRoutes()
+
 }

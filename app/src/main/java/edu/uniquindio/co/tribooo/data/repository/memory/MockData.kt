@@ -374,7 +374,12 @@ internal object MockData {
         Follow(follower = daniela, followed = mesaCultural),
         Follow(follower = neighbors[6], followed = daniela),
         Follow(follower = neighbors[4], followed = daniela),
-        Follow(follower = neighbors[10], followed = daniela)
+        Follow(follower = neighbors[10], followed = daniela),
+        Follow(follower = neighbors[0], followed = daniela),
+        Follow(follower = neighbors[2], followed = daniela),
+        Follow(follower = neighbors[12], followed = daniela),
+        // Seguidor mutuo
+        Follow(follower = daniela, followed = neighbors[0])
     )
 
     /**

@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import edu.uniquindio.co.tribooo.features.createevent.CreateEventScreen
 import edu.uniquindio.co.tribooo.features.eventdetail.EventDetailScreen
 import edu.uniquindio.co.tribooo.features.feed.FeedScreen
+import edu.uniquindio.co.tribooo.features.followers.FollowersScreen
 import edu.uniquindio.co.tribooo.features.login.LoginScreen
 import edu.uniquindio.co.tribooo.features.login.PasswordRecoveryScreen
 import edu.uniquindio.co.tribooo.features.myevents.MyEventsScreen
@@ -156,7 +157,11 @@ fun AppNavigation(
                             launchSingleTop = true
                         }
                     },
-                    onNavigateToFollowers = comingSoon,
+                    onNavigateToFollowers = {
+                        navController.navigate(MainRoutes.Followers) {
+                            launchSingleTop = true
+                        }
+                    },
                     onNavigateToNotifications = {
                         navController.navigate(MainRoutes.Notifications) {
                             launchSingleTop = true
@@ -230,6 +235,26 @@ fun AppNavigation(
                     },
                     onNavigateToFeed = {
                         navController.navigateToTab(MainRoutes.Feed)
+                    }
+                )
+            }
+
+            composable<MainRoutes.Followers> { backStackEntry ->
+                val savedStateHandle = backStackEntry.savedStateHandle
+                val message by savedStateHandle
+                    .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
+                    .collectAsStateWithLifecycle()
+
+                FollowersScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    // PROVISIONAL: el perfil de otro usuario aún no existe. Quien lo implemente solo debe
+                    // reemplazar esta línea por navController.navigate(MainRoutes.X(userId)).
+                    onNavigateToUser = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
+                    snackbarMessage = message,
+                    onSnackbarShown = {
+                        savedStateHandle[FEED_MESSAGE_KEY] = null
                     }
                 )
             }

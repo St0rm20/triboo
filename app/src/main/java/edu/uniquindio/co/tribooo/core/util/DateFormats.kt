@@ -39,6 +39,9 @@ fun LocalDate.shortLabelWithYear(): String = "${shortLabel()} $year"
 /** "18 jul 2026" */
 fun LocalDate.dayMonthYearLabel(): String = "$dayOfMonth ${MONTHS[monthValue - 1]} $year"
 
+/** "marzo 2025" */
+fun Instant.monthYearLabel(): String = atAppZone().let { "${MONTHS_LONG[it.monthValue - 1]} ${it.year}" }
+
 /** "sep" */
 fun LocalDate.monthShort(): String = MONTHS[monthValue - 1]
 
