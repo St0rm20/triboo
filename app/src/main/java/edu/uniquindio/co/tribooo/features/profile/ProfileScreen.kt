@@ -69,6 +69,8 @@ import java.util.Locale
 @Composable
 fun ProfileScreen(
     onNavigateToFeed: () -> Unit,
+    onNavigateToExplore: () -> Unit,
+    onNavigateToAgenda: () -> Unit,
     onNavigateToCreateEvent: () -> Unit,
     onNavigateToLogin: () -> Unit,
     onNavigateToMyEvents: () -> Unit,
@@ -92,9 +94,18 @@ fun ProfileScreen(
         bottomBar = {
             MainBottomBar(
                 selected = MainTab.PROFILE,
-                onCreateClick = onNavigateToCreateEvent,
-                enabledTabs = setOf(MainTab.FEED, MainTab.PROFILE),
-                onTabSelected = { tab -> if (tab == MainTab.FEED) onNavigateToFeed() }
+                onCreateClick = if (state.isAdmin) onNavigateToModeration else onNavigateToCreateEvent,
+                enabledTabs = setOf(MainTab.FEED, MainTab.EXPLORE, MainTab.AGENDA, MainTab.PROFILE),
+                onTabSelected = { tab ->
+                    when (tab) {
+                        MainTab.FEED -> onNavigateToFeed()
+                        MainTab.EXPLORE -> onNavigateToExplore()
+                        MainTab.AGENDA -> onNavigateToAgenda()
+                        else -> Unit
+                    }
+                },
+                isAdmin = state.isAdmin,
+                moderationBadge = state.stats.pendingReview
             )
         }
     ) { innerPadding ->
@@ -374,7 +385,7 @@ private fun AdminLinks(
 ) {
     LinksCard {
         LinkRow(Icons.Rounded.Shield, "Moderar publicaciones", stats.pendingReview, onNavigateToModeration)
-        LinkRow(Icons.Rounded.Flag, "Reportes de la comunidad", null, onNavigateToCommunityReports)
+        LinkRow(Icons.Rounded.Flag, "Reportes de la comunidad", stats.reports, onNavigateToCommunityReports)
         LinkRow(Icons.Rounded.Block, "Publicaciones rechazadas", stats.rejected, onNavigateToRejected)
         LinkRow(Icons.Rounded.Notifications, "Notificaciones", stats.unreadNotifications, onNavigateToNotifications)
     }

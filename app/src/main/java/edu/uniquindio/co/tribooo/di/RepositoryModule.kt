@@ -7,20 +7,26 @@ import dagger.hilt.components.SingletonComponent
 import edu.uniquindio.co.tribooo.data.repository.local.SessionRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.AttendanceRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.memory.EventFilterRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.EventRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.InterestRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.memory.ModerationReviewRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.NotificationRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.memory.ReportRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.SavedEventRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.repository.AttendanceRepository
 import edu.uniquindio.co.tribooo.domain.repository.CommentRepository
+import edu.uniquindio.co.tribooo.domain.repository.EventFilterRepository
 import edu.uniquindio.co.tribooo.domain.repository.EventRepository
 import edu.uniquindio.co.tribooo.domain.repository.FollowRepository
 import edu.uniquindio.co.tribooo.domain.repository.InterestRepository
 import edu.uniquindio.co.tribooo.domain.repository.LocationRepository
+import edu.uniquindio.co.tribooo.domain.repository.ModerationReviewRepository
 import edu.uniquindio.co.tribooo.domain.repository.NotificationRepository
+import edu.uniquindio.co.tribooo.domain.repository.ReportRepository
 import edu.uniquindio.co.tribooo.domain.repository.SavedEventRepository
 import edu.uniquindio.co.tribooo.domain.repository.SessionRepository
 import edu.uniquindio.co.tribooo.domain.repository.UserRepository
@@ -73,4 +79,16 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindModerationReviewRepository(impl: ModerationReviewRepositoryImpl): ModerationReviewRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindReportRepository(impl: ReportRepositoryImpl): ReportRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindEventFilterRepository(impl: EventFilterRepositoryImpl): EventFilterRepository
 }

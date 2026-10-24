@@ -11,11 +11,16 @@ import edu.uniquindio.co.tribooo.domain.model.Follow
 import edu.uniquindio.co.tribooo.domain.model.ImageEvent
 import edu.uniquindio.co.tribooo.domain.model.Interest
 import edu.uniquindio.co.tribooo.domain.model.Location
+import edu.uniquindio.co.tribooo.domain.model.ModerationAction
+import edu.uniquindio.co.tribooo.domain.model.ModerationReview
 import edu.uniquindio.co.tribooo.domain.model.Notification
 import edu.uniquindio.co.tribooo.domain.model.NotificationType
 import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
+import edu.uniquindio.co.tribooo.domain.model.Report
+import edu.uniquindio.co.tribooo.domain.model.ReportReasons
 import edu.uniquindio.co.tribooo.domain.model.Saved
 import edu.uniquindio.co.tribooo.domain.model.User
+import edu.uniquindio.co.tribooo.domain.model.UserRole
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -32,7 +37,12 @@ internal object MockData {
     val currentLocation = Location(latitude = 4.5339, longitude = -75.6811)
 
     /** Ciudades disponibles en el registro. */
-    val cities = listOf("Ciudad 1", "Ciudad 2", "Ciudad 3")
+    val cities = listOf(
+        "Armenia", "Barranquilla", "Bogotá", "Bucaramanga", "Buenavista", "Calarcá", "Cali", "Cartagena",
+        "Circasia", "Córdoba", "Cúcuta", "Filandia", "Génova", "Ibagué", "La Tebaida", "Manizales",
+        "Medellín", "Montenegro", "Montería", "Neiva", "Pasto", "Pereira", "Pijao", "Popayán",
+        "Quimbaya", "Salento", "Santa Marta", "Tunja", "Valledupar", "Villavicencio"
+    )
 
     /** Usuaria de prueba con eventos, comentarios y seguidos (inicia sesión con su email y "123456"). */
     val daniela = User(
@@ -45,24 +55,52 @@ internal object MockData {
         bio = "Organizo ciclopaseos y bazares en el barrio."
     )
 
-    private fun organizer(id: String, name: String, neighborhood: String) = User(
+    private fun organizer(id: String, name: String, neighborhood: String, bio: String) = User(
         id = id,
         name = name,
         email = "$id@triboo.co",
         password = "123456",
         city = "Armenia",
-        neighborhood = neighborhood
+        neighborhood = neighborhood,
+        bio = bio
     )
 
-    private val museoQuimbaya = organizer("u-museo", "Museo Quimbaya", "Av. Bolívar")
-    private val senderistas = organizer("u-senderistas", "Senderistas Armenia", "Norte")
-    private val jacLosQuindos = organizer("u-jac-quindos", "Junta de Acción Comunal Los Quindos", "Los Quindos")
-    private val mesaCultural = organizer("u-mesa-cultural", "Mesa Cultural Armenia", "Centro")
-    private val uqLabs = organizer("u-uqlabs", "Semillero UQ Labs", "Universidad")
-    private val camaraComercio = organizer("u-camara", "Cámara de Comercio", "Centro")
-    private val colectivoBambuco = organizer("u-bambuco", "Colectivo Bambuco", "Centro")
-    private val redAmbiental = organizer("u-red-ambiental", "Red Ambiental Quindío", "La Florida")
-    private val armeniaCivica = organizer("u-armenia-civica", "Armenia Cívica", "Norte")
+    private val museoQuimbaya = organizer(
+        "u-museo", "Museo Quimbaya", "Av. Bolívar",
+        "Guardamos y contamos la historia del Quindío con exposiciones, talleres y visitas guiadas abiertas a toda la comunidad."
+    )
+    private val senderistas = organizer(
+        "u-senderistas", "Senderistas Armenia", "Norte",
+        "Grupo de vecinos que camina los senderos del Quindío cada semana. Caminatas seguras, con guía y para todos los niveles."
+    )
+    private val jacLosQuindos = organizer(
+        "u-jac-quindos", "Junta de Acción Comunal Los Quindos", "Los Quindos",
+        "Trabajamos por el barrio con bingos, bazares y jornadas comunitarias para mejorar nuestro salón comunal."
+    )
+    private val mesaCultural = organizer(
+        "u-mesa-cultural", "Mesa Cultural Armenia", "Centro",
+        "Colectivo que reúne a artistas, caficultores y gestores culturales para mantener vivas las ferias y fiestas de la ciudad."
+    )
+    private val uqLabs = organizer(
+        "u-uqlabs", "Semillero UQ Labs", "Universidad",
+        "Semillero de estudiantes y profesores que lleva la innovación y el prototipado a los problemas reales de los barrios."
+    )
+    private val camaraComercio = organizer(
+        "u-camara", "Cámara de Comercio", "Centro",
+        "Acompañamos a los empresarios y emprendedores del Quindío con charlas, ferias y espacios de formación."
+    )
+    private val colectivoBambuco = organizer(
+        "u-bambuco", "Colectivo Bambuco", "Centro",
+        "Músicos que defienden el bambuco y la música andina con conciertos y una escuela abierta para nuevas generaciones."
+    )
+    private val redAmbiental = organizer(
+        "u-red-ambiental", "Red Ambiental Quindío", "La Florida",
+        "Voluntarios que cuidan las quebradas y los parques de la ciudad con jornadas de limpieza y siembra."
+    )
+    private val armeniaCivica = organizer(
+        "u-armenia-civica", "Armenia Cívica", "Norte",
+        "Comunidad de ciudadanos, programadores y funcionarios que usa datos abiertos para resolver retos de la ciudad."
+    )
 
     /** Vecinos con nombre, usados como primeros asistentes (avatares del feed). */
     private val neighbors = listOf(
@@ -80,9 +118,20 @@ internal object MockData {
         )
     }
 
+    /** Administrador de moderación (revisa los eventos enviados). */
+    private val moderador = User(
+        id = "u-moderacion",
+        name = "Mauricio Salazar",
+        email = "moderacion@triboo.co",
+        password = "admin1234",
+        city = "Armenia",
+        neighborhood = "Centro",
+        role = UserRole.ADMIN
+    )
+
     val users: List<User> = listOf(
         daniela, museoQuimbaya, senderistas, jacLosQuindos, mesaCultural, uqLabs,
-        camaraComercio, colectivoBambuco, redAmbiental, armeniaCivica
+        camaraComercio, colectivoBambuco, redAmbiental, armeniaCivica, moderador
     ) + neighbors
 
     private fun unsplash(photoId: String) = "https://images.unsplash.com/$photoId?w=900&q=70&auto=format&fit=crop"
@@ -252,7 +301,38 @@ internal object MockData {
             place = "Salón comunal Granada", neighborhood = "Granada", location = Location(4.5271, -75.6836),
             organizer = daniela, status = EventStatus.FINALIZADO,
             description = "Muestra de productos y servicios de emprendedores del barrio, con entrada libre."
-        )
+        ),
+        // Eventos de otros organizadores que esperan moderación (del más antiguo al más nuevo)
+        event(
+            id = "p1", title = "Club de Lectura Latinoamericana", category = Category.CULTURA,
+            daysAhead = 9, start = LocalTime.of(18, 30), end = LocalTime.of(20, 0),
+            place = "Biblioteca del Quindío", neighborhood = "Centro", location = Location(4.5352, -75.6760),
+            organizer = neighbors[3], cupo = 25, status = EventStatus.PENDIENTE,
+            description = "Encuentro quincenal para conversar sobre una novela latinoamericana. Este mes leemos \"Pedro Páramo\" de Juan Rulfo; no hace falta haberla terminado para participar."
+        ).copy(publicationDate = minutesAgo(26 * 60)),
+        event(
+            id = "p2", title = "Torneo de Microfútbol Barrio Laureles", category = Category.DEPORTES,
+            daysAhead = 12, start = LocalTime.of(8, 0), end = LocalTime.of(17, 0),
+            place = "Cancha múltiple Laureles", neighborhood = "Laureles", location = Location(4.5207, -75.6921),
+            organizer = neighbors[8], cupo = 96, status = EventStatus.PENDIENTE,
+            description = "Torneo de microfútbol por equipos de 6 jugadores, categoría libre. Inscripción gratuita en la cancha desde las 7:00 y premiación con trofeos para los tres primeros puestos."
+        ).copy(publicationDate = minutesAgo(9 * 60)),
+        event(
+            id = "p3", title = "Rifa y bazar navideño con boletas", category = Category.SOCIAL,
+            daysAhead = 22, start = LocalTime.of(15, 0), end = LocalTime.of(21, 0),
+            place = "Salón comunal La Patria", neighborhood = "La Patria", location = Location(4.5148, -75.6712),
+            organizer = neighbors[7], status = EventStatus.PENDIENTE,
+            contribution = Contribution(20000.0, "Ganancia personal de los organizadores"),
+            description = "Bazar con comidas y manualidades y gran rifa de una moto y un televisor. Las boletas cuestan $20.000 y se venden por adelantado; lo recaudado es para los organizadores."
+        ).copy(publicationDate = minutesAgo(3 * 60)),
+        event(
+            id = "p4", title = "Curso intensivo de inversión cripto", category = Category.ACADEMICO,
+            daysAhead = 5, start = LocalTime.of(9, 0), end = LocalTime.of(13, 0),
+            place = "Hotel Portal del Quindío", neighborhood = "Norte", location = Location(4.5512, -75.6598),
+            organizer = neighbors[12], cupo = 50, status = EventStatus.PENDIENTE,
+            contribution = Contribution(150000.0, "Membresía del grupo de inversión"),
+            description = "Aprende a duplicar tu dinero en 30 días con nuestras señales de trading. Rentabilidad garantizada del 40% mensual; al final del curso podrás comprar la membresía VIP con cupos limitados."
+        ).copy(publicationDate = minutesAgo(40))
     )
 
     /** Número de asistentes confirmados por evento (según el prototipo). */
@@ -312,6 +392,12 @@ internal object MockData {
     private fun daysAgoAt(days: Long, hour: Int): Instant =
         LocalDate.now(APP_ZONE).minusDays(days).atTime(hour, 0).atZone(APP_ZONE).toInstant()
 
+    /** Reseña del evento finalizado "m1" que ya tiene respuesta del organizador. */
+    private val reviewWithReply = Comment(
+        id = "c-m1-1", event = eventById("m1"), author = neighbors[0], date = daysAgoAt(44, 9), rating = 5,
+        text = "Muy bien organizada, los niños disfrutaron todo el recorrido."
+    )
+
     /** Comentarios de prueba (los del ciclopaseo son los del prototipo). */
     val comments: List<Comment> = listOf(
         Comment(
@@ -347,10 +433,7 @@ internal object MockData {
             text = "¿Se puede ir con bicicleta eléctrica?"
         ),
         // Reseñas de los eventos finalizados
-        Comment(
-            id = "c-m1-1", event = eventById("m1"), author = neighbors[0], date = daysAgoAt(44, 9), rating = 5,
-            text = "Muy bien organizada, los niños disfrutaron todo el recorrido."
-        ),
+        reviewWithReply,
         Comment(
             id = "c-m1-2", event = eventById("m1"), author = neighbors[2], date = daysAgoAt(44, 15), rating = 5,
             text = "Ruta segura y buen acompañamiento. Repetimos cuando quieran."
@@ -366,7 +449,57 @@ internal object MockData {
         Comment(
             id = "c-m2-2", event = eventById("m2"), author = neighbors[11], date = daysAgoAt(89, 18), rating = 4,
             text = "Buena feria, ojalá hubiera más puestos de comida."
+        ),
+        Comment(
+            id = "c-m2-3", event = eventById("m2"), author = neighbors[3], date = daysAgoAt(88, 11), rating = 5,
+            text = "Muy buena organización y gran variedad de emprendimientos."
+        ),
+        // Respuesta del organizador a una reseña
+        Comment(
+            id = "c-m1-1-r", event = eventById("m1"), author = daniela, date = daysAgoAt(43, 18),
+            text = "¡Gracias por acompañarnos! Ya estamos preparando la próxima bicicletada.",
+            parentComment = reviewWithReply
         )
+    )
+
+    /** Revisiones de moderación: el rechazo del evento "m6" y el caso resuelto del "9". */
+    val moderationReviews: List<ModerationReview> = listOf(
+        ModerationReview(
+            id = "mr-m6",
+            event = eventById("m6"),
+            admin = moderador,
+            action = ModerationAction.RECHAZAR,
+            reason = "El evento tiene como actividad central una rifa de electrodomésticos y no indica " +
+                "si las boletas tienen costo ni a qué fin benéfico se destinan. La plataforma solo permite " +
+                "sorteos sin costo o con fines benéficos declarados. El resto de la propuesta cumple las normas.",
+            date = daysAgoAt(3, 15)
+        ),
+        ModerationReview(
+            id = "mr-9",
+            event = eventById("9"),
+            admin = moderador,
+            action = ModerationAction.RESOLVER,
+            date = daysAgoAt(5, 16)
+        )
+    )
+
+    /** Reportes de vecinos: dos eventos activos con casos abiertos y uno ya resuelto. */
+    val reports: List<Report> = listOf(
+        // Salón comunal no disponible y contacto que no responde (evento "15")
+        Report("r-15-1", eventById("15"), neighbors[1], ReportReasons.NO_LONGER_EXISTS,
+            "Fui al salón comunal y me dijeron que ese día está ocupado por otro evento.", date = minutesAgo(40)),
+        Report("r-15-2", eventById("15"), neighbors[5], ReportReasons.WRONG_PLACE_OR_CONTACT,
+            "El número de contacto no responde desde hace días.", date = minutesAgo(6 * 60)),
+        Report("r-15-3", eventById("15"), neighbors[9], ReportReasons.WRONG_PLACE_OR_CONTACT, date = daysAgoAt(1, 20)),
+        Report("r-15-4", eventById("15"), neighbors[11], ReportReasons.NO_LONGER_EXISTS,
+            "La junta comunal dice que el bingo se aplazó.", date = daysAgoAt(2, 11)),
+        // Reventa de entradas (evento "5")
+        Report("r-5-1", eventById("5"), neighbors[13], ReportReasons.CHARGES_OR_ADS,
+            "Alguien en redes está vendiendo entradas a $40.000 y el concierto es de aporte voluntario.", date = minutesAgo(90)),
+        Report("r-5-2", eventById("5"), neighbors[14], ReportReasons.CHARGES_OR_ADS, date = minutesAgo(5 * 60)),
+        // Caso ya cerrado por moderación (evento "9")
+        Report("r-9-1", eventById("9"), neighbors[2], ReportReasons.NO_LONGER_EXISTS,
+            "Decía que cambió de salón, pero sigue siendo en la Cámara de Comercio.", date = daysAgoAt(6, 10), resolved = true)
     )
 
     /** Organizadores que sigue el usuario actual. */

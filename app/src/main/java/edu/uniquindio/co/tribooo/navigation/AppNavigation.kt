@@ -12,12 +12,19 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
+import edu.uniquindio.co.tribooo.domain.model.ModerationTab
+import edu.uniquindio.co.tribooo.features.agenda.AgendaScreen
 import edu.uniquindio.co.tribooo.features.createevent.CreateEventScreen
+import edu.uniquindio.co.tribooo.features.createevent.EventFormMode
 import edu.uniquindio.co.tribooo.features.eventdetail.EventDetailScreen
+import edu.uniquindio.co.tribooo.features.explore.ExploreScreen
 import edu.uniquindio.co.tribooo.features.feed.FeedScreen
+import edu.uniquindio.co.tribooo.features.eventstatus.EventStatusScreen
 import edu.uniquindio.co.tribooo.features.followers.FollowersScreen
 import edu.uniquindio.co.tribooo.features.login.LoginScreen
 import edu.uniquindio.co.tribooo.features.login.PasswordRecoveryScreen
+import edu.uniquindio.co.tribooo.features.moderation.ModerationScreen
 import edu.uniquindio.co.tribooo.features.myevents.MyEventsScreen
 import edu.uniquindio.co.tribooo.features.notifications.NotificationsScreen
 import edu.uniquindio.co.tribooo.features.onboarding.OnboardingScreen
@@ -25,6 +32,7 @@ import edu.uniquindio.co.tribooo.features.profile.ProfileScreen
 import edu.uniquindio.co.tribooo.features.register.RegisterScreen
 import edu.uniquindio.co.tribooo.features.saved.SavedEventsScreen
 import edu.uniquindio.co.tribooo.features.splash.SplashScreen
+import edu.uniquindio.co.tribooo.features.userprofile.UserProfileScreen
 
 // Clave para pasar el mensaje del snackbar de una pantalla al feed o al perfil
 private const val FEED_MESSAGE_KEY = "feed_message"
@@ -109,6 +117,17 @@ fun AppNavigation(
                     onNavigateToCreateEvent = {
                         navController.navigate(MainRoutes.CreateEvent)
                     },
+                    onNavigateToModeration = {
+                        navController.navigate(MainRoutes.Moderation(ModerationTab.PENDIENTES.name)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToExplore = {
+                        navController.navigateToTab(MainRoutes.Explore)
+                    },
+                    onNavigateToAgenda = {
+                        navController.navigateToTab(MainRoutes.Agenda)
+                    },
                     onNavigateToProfile = {
                         navController.navigateToTab(MainRoutes.Profile)
                     },
@@ -133,13 +152,15 @@ fun AppNavigation(
                     .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
                     .collectAsStateWithLifecycle()
 
-                // PROVISIONAL: estas pantallas aún no existen. Quien implemente cada una solo debe
-                // reemplazar su línea por navController.navigate(MainRoutes.X).
-                val comingSoon = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" }
-
                 ProfileScreen(
                     onNavigateToFeed = {
                         navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToExplore = {
+                        navController.navigateToTab(MainRoutes.Explore)
+                    },
+                    onNavigateToAgenda = {
+                        navController.navigateToTab(MainRoutes.Agenda)
                     },
                     onNavigateToCreateEvent = {
                         navController.navigate(MainRoutes.CreateEvent)
@@ -167,9 +188,21 @@ fun AppNavigation(
                             launchSingleTop = true
                         }
                     },
-                    onNavigateToModeration = comingSoon,
-                    onNavigateToCommunityReports = comingSoon,
-                    onNavigateToRejected = comingSoon,
+                    onNavigateToModeration = {
+                        navController.navigate(MainRoutes.Moderation(ModerationTab.PENDIENTES.name)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToCommunityReports = {
+                        navController.navigate(MainRoutes.Moderation(ModerationTab.REPORTES.name)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToRejected = {
+                        navController.navigate(MainRoutes.Moderation(ModerationTab.RECHAZADAS.name)) {
+                            launchSingleTop = true
+                        }
+                    },
                     darkTheme = darkTheme ?: isSystemInDarkTheme(),
                     onDarkThemeChange = appViewModel::setDarkTheme,
                     snackbarMessage = message,
@@ -192,9 +225,11 @@ fun AppNavigation(
                     onNavigateToEventDetail = { eventId, commentId ->
                         navController.navigate(MainRoutes.EventDetail(eventId, commentId))
                     },
-                    // PROVISIONAL: el perfil de otro usuario aún no existe. Quien lo implemente solo debe
-                    // reemplazar esta línea por navController.navigate(MainRoutes.X(userId)).
-                    onNavigateToUser = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    },
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null
@@ -215,9 +250,11 @@ fun AppNavigation(
                     onNavigateToEventDetail = { eventId ->
                         navController.navigate(MainRoutes.EventDetail(eventId))
                     },
-                    // PROVISIONAL: el detalle por estado (en revisión, finalizado, rechazado) aún no existe.
-                    // Quien lo implemente solo debe reemplazar esta línea por navController.navigate(MainRoutes.X(eventId)).
-                    onNavigateToEventStatus = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
+                    onNavigateToEventStatus = { eventId ->
+                        navController.navigate(MainRoutes.EventStatus(eventId)) {
+                            launchSingleTop = true
+                        }
+                    },
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null
@@ -249,9 +286,11 @@ fun AppNavigation(
                     onNavigateBack = {
                         navController.popBackStack()
                     },
-                    // PROVISIONAL: el perfil de otro usuario aún no existe. Quien lo implemente solo debe
-                    // reemplazar esta línea por navController.navigate(MainRoutes.X(userId)).
-                    onNavigateToUser = { savedStateHandle[FEED_MESSAGE_KEY] = "Disponible pronto" },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    },
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null
@@ -272,11 +311,152 @@ fun AppNavigation(
                 )
             }
 
+            composable<MainRoutes.EditEvent> { backStackEntry ->
+                val mode = backStackEntry.toRoute<MainRoutes.EditEvent>().mode
+
+                // El id y el modo llegan al ViewModel por su SavedStateHandle
+                CreateEventScreen(
+                    onClose = {
+                        navController.popBackStack()
+                    },
+                    onEventPublished = { message ->
+                        if (mode == EventFormMode.EDIT) {
+                            // El detalle por estado se actualiza solo y muestra la confirmación al volver
+                            navController.previousBackStackEntry?.savedStateHandle?.set(FEED_MESSAGE_KEY, message)
+                            navController.popBackStack()
+                        } else {
+                            // Reenviar y duplicar terminan en Mis eventos
+                            runCatching { navController.getBackStackEntry(MainRoutes.MyEvents) }
+                                .getOrNull()?.savedStateHandle?.set(FEED_MESSAGE_KEY, message)
+                            navController.popBackStack(MainRoutes.MyEvents, inclusive = false)
+                        }
+                    }
+                )
+            }
+
             composable<MainRoutes.EventDetail> {
                 // El id del evento llega al ViewModel por su SavedStateHandle
                 EventDetailScreen(
                     onNavigateBack = {
                         navController.popBackStack()
+                    },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+
+            composable<MainRoutes.EventStatus> { backStackEntry ->
+                val savedStateHandle = backStackEntry.savedStateHandle
+                val message by savedStateHandle
+                    .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
+                    .collectAsStateWithLifecycle()
+
+                // El id del evento llega al ViewModel por su SavedStateHandle
+                EventStatusScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onEventRemoved = { message ->
+                        // Mis eventos muestra la confirmación al volver
+                        navController.previousBackStackEntry?.savedStateHandle?.set(FEED_MESSAGE_KEY, message)
+                        navController.popBackStack()
+                    },
+                    onResubmitEvent = { eventId ->
+                        navController.navigate(MainRoutes.EditEvent(eventId, EventFormMode.RESUBMIT))
+                    },
+                    onEditEvent = { eventId ->
+                        navController.navigate(MainRoutes.EditEvent(eventId, EventFormMode.EDIT))
+                    },
+                    onDuplicateEvent = { eventId ->
+                        navController.navigate(MainRoutes.EditEvent(eventId, EventFormMode.DUPLICATE))
+                    },
+                    snackbarMessage = message,
+                    onSnackbarShown = {
+                        savedStateHandle[FEED_MESSAGE_KEY] = null
+                    }
+                )
+            }
+
+            composable<MainRoutes.Explore> {
+                ExploreScreen(
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToAgenda = {
+                        navController.navigateToTab(MainRoutes.Agenda)
+                    },
+                    onNavigateToProfile = {
+                        navController.navigateToTab(MainRoutes.Profile)
+                    },
+                    onNavigateToCreateEvent = {
+                        navController.navigate(MainRoutes.CreateEvent)
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
+                    }
+                )
+            }
+
+            composable<MainRoutes.Agenda> {
+                AgendaScreen(
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToExplore = {
+                        navController.navigateToTab(MainRoutes.Explore)
+                    },
+
+                    onNavigateToProfile = {
+                        navController.navigateToTab(MainRoutes.Profile)
+                    },
+                    onNavigateToCreateEvent = {
+                        navController.navigate(MainRoutes.CreateEvent)
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
+                    }
+                )
+            }
+
+            composable<MainRoutes.Moderation> {
+                // La pestaña inicial llega al ViewModel por su SavedStateHandle
+                ModerationScreen(
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToExplore = {
+                        navController.navigateToTab(MainRoutes.Explore)
+                    },
+                    onNavigateToAgenda = {
+                        navController.navigateToTab(MainRoutes.Agenda)
+                    },
+                    onNavigateToProfile = {
+                        navController.navigateToTab(MainRoutes.Profile)
+                    },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+
+            composable<MainRoutes.UserProfile> {
+                // El id del usuario llega al ViewModel por su SavedStateHandle
+                UserProfileScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
                     }
                 )
             }

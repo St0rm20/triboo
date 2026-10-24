@@ -196,7 +196,7 @@ class EventDetailViewModel @Inject constructor(
             isFollowingOrganizer = engagement.follows.any {
                 it.follower.id == currentUser?.id && it.followed.id == event.organizer.id
             },
-            comments = engagement.comments.filter { it.event.id == eventId }
+            comments = engagement.comments.filter { it.event.id == eventId && it.parentComment == null }
                 .sortedBy { it.date }
                 .map { comment ->
                     CommentItem(

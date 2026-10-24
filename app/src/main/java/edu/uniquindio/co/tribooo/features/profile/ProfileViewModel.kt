@@ -17,6 +17,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.ObserveCommentsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetCitiesUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.moderation.ObserveModerationCountsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveUnreadNotificationsCountUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ObserveSavedEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
@@ -41,7 +42,7 @@ data class ProfileStats(
     val rating: Double? = null,
     val pendingReview: Int = 0,
     val rejected: Int = 0,
-    // Aún no existe el repositorio de moderación
+    val reports: Int = 0,
     val resolved: Int = 0,
     val unreadNotifications: Int = 0
 ) {
@@ -111,6 +112,7 @@ class ProfileViewModel @Inject constructor(
     observeSavedEvents: ObserveSavedEventsUseCase,
     observeComments: ObserveCommentsUseCase,
     observeUnreadNotifications: ObserveUnreadNotificationsCountUseCase,
+    observeModerationCounts: ObserveModerationCountsUseCase,
     getCities: GetCitiesUseCase,
     private val updateProfileUseCase: UpdateProfileUseCase,
     private val logoutUseCase: LogoutUseCase
@@ -135,14 +137,25 @@ class ProfileViewModel @Inject constructor(
         observeCurrentUser(),
         sources,
         local,
-        observeUnreadNotifications()
-    ) { user, sources, local, unread ->
+        observeUnreadNotifications(),
+        observeModerationCounts()
+    ) { user, sources, local, unread, moderation ->
+        val isAdmin = user?.role == UserRole.ADMIN
+        val stats = user?.let {
+            calculateProfileStats(it, sources.events, sources.attendances, sources.follows, sources.saved, sources.comments)
+        }?.copy(unreadNotifications = unread) ?: ProfileStats()
         local.copy(
             user = user,
-            isAdmin = user?.role == UserRole.ADMIN,
-            stats = user?.let {
-                calculateProfileStats(it, sources.events, sources.attendances, sources.follows, sources.saved, sources.comments)
-            }?.copy(unreadNotifications = unread) ?: ProfileStats()
+            isAdmin = isAdmin,
+            // Las cifras del administrador salen de moderación
+            stats = if (isAdmin) {
+                stats.copy(
+                    pendingReview = moderation.pending,
+                    rejected = moderation.rejected,
+                    reports = moderation.reports,
+                    resolved = moderation.resolved
+                )
+            } else stats
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ProfileUiState())
 

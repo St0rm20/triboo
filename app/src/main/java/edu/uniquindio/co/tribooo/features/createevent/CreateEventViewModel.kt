@@ -1,5 +1,6 @@
     package edu.uniquindio.co.tribooo.features.createevent
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -9,9 +10,14 @@ import edu.uniquindio.co.tribooo.core.util.formatMoney
 import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Contribution
 import edu.uniquindio.co.tribooo.domain.model.Event
+import edu.uniquindio.co.tribooo.domain.model.ImageEvent
 import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
 import edu.uniquindio.co.tribooo.domain.usecase.auth.GetCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.CreateEventUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.event.GetEventUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventImagesUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.event.ResubmitEventUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.event.UpdateEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetPlaceSuggestionsUseCase
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +25,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
@@ -27,11 +34,18 @@ import java.util.UUID
 private const val MIN_CUPO = 5
 private const val CUPO_STEP = 5
 private const val MAX_IMAGES = 5
+private const val EVENT_ID_KEY = "eventId"
+private const val MODE_KEY = "mode"
+private const val EVENT_NOT_FOUND = "No encontramos este evento o no es tuyo."
 
 /** Selector abierto en la pantalla. Algunos encadenan al siguiente (fecha → hora). */
 enum class PickerTarget { START_DATE, START_TIME, END_DATE, END_TIME, PLACE }
 
 data class CreateEventUiState(
+    /** null = crear un evento desde cero. */
+    val mode: EventFormMode? = null,
+    val isLoading: Boolean = false,
+    val loadError: String? = null,
     val title: String = "",
     val titleError: String? = null,
     val category: Category? = null,
@@ -65,15 +79,49 @@ data class CreateEventUiState(
 class CreateEventViewModel @Inject constructor(
     getPlaceSuggestions: GetPlaceSuggestionsUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
-    private val createEventUseCase: CreateEventUseCase
+    private val createEventUseCase: CreateEventUseCase,
+    private val getEventUseCase: GetEventUseCase,
+    private val updateEventUseCase: UpdateEventUseCase,
+    private val resubmitEventUseCase: ResubmitEventUseCase,
+    observeEventImages: ObserveEventImagesUseCase,
+    savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(CreateEventUiState())
+    // Solo la ruta EditEvent trae estos argumentos; en CreateEvent no existen (modo crear)
+    private val eventId: String? = savedStateHandle[EVENT_ID_KEY]
+    private val mode: EventFormMode? = when (val raw = savedStateHandle.get<Any>(MODE_KEY)) {
+        is EventFormMode -> raw
+        is String -> EventFormMode.entries.firstOrNull { it.name == raw }
+        else -> null
+    }
+
+    private val _uiState = MutableStateFlow(CreateEventUiState(mode = mode, isLoading = mode != null))
     val uiState: StateFlow<CreateEventUiState> = _uiState.asStateFlow()
 
     val placeSuggestions: List<PlaceSuggestion> = getPlaceSuggestions()
     val categories: List<Category> = Category.defaultCategories
     val contributionPresets: List<Long> = listOf(2000, 5000, 10000)
+
+    init {
+        if (mode != null && eventId != null) {
+            viewModelScope.launch { preload(eventId, mode, observeEventImages()) }
+        } else if (mode != null) {
+            _uiState.update { it.copy(isLoading = false, loadError = EVENT_NOT_FOUND) }
+        }
+    }
+
+    // Se ejecuta una sola vez por ViewModel: girar la pantalla no pisa lo que el usuario ya editó
+    private suspend fun preload(eventId: String, mode: EventFormMode, images: StateFlow<List<ImageEvent>>) {
+        val event = getEventUseCase(eventId)
+        val user = getCurrentUserUseCase()
+        if (event == null || user == null || event.organizer.id != user.id) {
+            _uiState.update { it.copy(isLoading = false, loadError = EVENT_NOT_FOUND) }
+            return
+        }
+        val gallery = images.value.filter { it.event.id == eventId }.sortedBy { it.order }.map { it.url }
+        val imageUris = (listOfNotNull(event.imageUrl) + gallery).distinct()
+        _uiState.value = event.toFormState(mode, imageUris, placeSuggestions, Instant.now())
+    }
 
     fun onTitleChange(value: String) {
         _uiState.update { it.copy(title = value, titleError = null) }
@@ -161,7 +209,7 @@ class CreateEventViewModel @Inject constructor(
 
     fun publish() {
         val state = _uiState.value
-        if (state.publishResult == RequestResult.Loading) return
+        if (state.isLoading || state.loadError != null || state.publishResult == RequestResult.Loading) return
         val titleError = if (state.title.isBlank()) "Ponle un nombre claro al evento" else null
         val contributionError = if (state.contributionEnabled && state.contributionAmount <= 0) {
             "Indica el monto del aporte o desactiva el costo"
@@ -201,7 +249,8 @@ class CreateEventViewModel @Inject constructor(
             }
 
             val event = Event(
-                id = UUID.randomUUID().toString(),
+                // Editar y reenviar actualizan el mismo evento; crear y duplicar generan uno nuevo
+                id = if (mode == EventFormMode.EDIT || mode == EventFormMode.RESUBMIT) eventId.orEmpty() else UUID.randomUUID().toString(),
                 title = state.title.trim(),
                 description = state.description.trim(),
                 startDate = state.start.atZone(APP_ZONE).toInstant(),
@@ -216,16 +265,24 @@ class CreateEventViewModel @Inject constructor(
                 category = category
             )
 
-            // El caso de uso lo envía a moderación antes de que aparezca en el feed
-            createEventUseCase(event, state.imageUris)
-
-            val message = if (state.contributionEnabled) {
-                "Evento enviado a revisión. Moderación verificará que el aporte de ${state.contributionAmount.formatMoney()} sea benéfico."
-            } else {
-                "Evento enviado a revisión. Te avisamos al aprobarlo."
+            val result = when (mode) {
+                EventFormMode.EDIT -> updateEventUseCase(event, state.imageUris)
+                EventFormMode.RESUBMIT -> resubmitEventUseCase(event, state.imageUris)
+                // El caso de uso lo envía a moderación antes de que aparezca en el feed
+                else -> {
+                    createEventUseCase(event, state.imageUris)
+                    RequestResult.Success(createdMessage(state))
+                }
             }
-            _uiState.update { it.copy(publishResult = RequestResult.Success(message)) }
+            _uiState.update { it.copy(publishResult = result) }
         }
+    }
+
+    private fun createdMessage(state: CreateEventUiState) = when {
+        mode == EventFormMode.DUPLICATE -> "Evento duplicado y enviado a revisión."
+        state.contributionEnabled ->
+            "Evento enviado a revisión. Moderación verificará que el aporte de ${state.contributionAmount.formatMoney()} sea benéfico."
+        else -> "Evento enviado a revisión. Te avisamos al aprobarlo."
     }
 
     fun resetPublishResult() {

@@ -5,6 +5,7 @@ import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
+import java.time.YearMonth
 import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.time.temporal.ChronoUnit
@@ -39,8 +40,15 @@ fun LocalDate.shortLabelWithYear(): String = "${shortLabel()} $year"
 /** "18 jul 2026" */
 fun LocalDate.dayMonthYearLabel(): String = "$dayOfMonth ${MONTHS[monthValue - 1]} $year"
 
+/** "18 jul 2026, 14:30" */
+fun Instant.dayMonthYearTimeLabel(): String =
+    atAppZone().let { "${it.toLocalDate().dayMonthYearLabel()}, ${it.toLocalTime().label()}" }
+
 /** "marzo 2025" */
 fun Instant.monthYearLabel(): String = atAppZone().let { "${MONTHS_LONG[it.monthValue - 1]} ${it.year}" }
+
+/** "octubre 2026" */
+fun YearMonth.label(): String = "${MONTHS_LONG[monthValue - 1]} $year"
 
 /** "sep" */
 fun LocalDate.monthShort(): String = MONTHS[monthValue - 1]
