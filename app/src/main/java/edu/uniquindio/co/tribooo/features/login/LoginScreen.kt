@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Lock
@@ -29,6 +30,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -52,6 +54,9 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import edu.uniquindio.co.tribooo.core.component.AuthTextField
+import edu.uniquindio.co.tribooo.core.component.RequiredLegend
+import edu.uniquindio.co.tribooo.core.component.formTarget
+import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.RequestResult
 
 @Composable
@@ -113,15 +118,24 @@ fun LoginScreen(
                     .padding(top = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                RequiredLegend()
+
                 AuthTextField(
                     value = state.email,
                     onValueChange = viewModel::onEmailChange,
                     label = "Correo",
                     leadingIcon = Icons.Rounded.Email,
                     placeholder = "tunombre@correo.com",
-                    isError = state.emailError != null,
+                    required = true,
+                    hint = FormTexts.EMAIL_HINT,
+                    error = state.emailError,
+                    isValid = state.isEmailValid,
+                    onFocusLost = { viewModel.onFieldFocusLost(LoginField.EMAIL) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    supportingText = state.emailError
+                    modifier = Modifier.formTarget(
+                        active = state.focusField == LoginField.EMAIL,
+                        onHandled = viewModel::onFocusHandled
+                    )
                 )
 
                 AuthTextField(
@@ -130,8 +144,14 @@ fun LoginScreen(
                     label = "Contraseña",
                     leadingIcon = Icons.Rounded.Lock,
                     placeholder = "••••••••",
-                    isError = state.passwordError != null,
-                    supportingText = state.passwordError,
+                    required = true,
+                    hint = FormTexts.PASSWORD_HINT,
+                    error = state.passwordError,
+                    onFocusLost = { viewModel.onFieldFocusLost(LoginField.PASSWORD) },
+                    modifier = Modifier.formTarget(
+                        active = state.focusField == LoginField.PASSWORD,
+                        onHandled = viewModel::onFocusHandled
+                    ),
                     visualTransformation = if (isPasswordVisible) {
                         VisualTransformation.None
                     } else {
@@ -170,7 +190,7 @@ fun LoginScreen(
 
             Button(
                 onClick = { viewModel.login() },
-                enabled = state.isFormValid && !isLoading,
+                enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 24.dp),
@@ -209,6 +229,19 @@ fun LoginScreen(
                 HorizontalDivider(modifier = Modifier.weight(1f))
             }
 
+            OutlinedButton(
+                onClick = { viewModel.loginWithGoogle() },
+                enabled = !isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+                    .height(54.dp),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Icon(Icons.Rounded.AccountCircle, contentDescription = null, modifier = Modifier.size(22.dp))
+                Text("Continuar con mi cuenta Google", modifier = Modifier.padding(start = 10.dp))
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -230,7 +263,7 @@ fun LoginScreen(
     LaunchedEffect(state.loginResult) {
         when (val result = state.loginResult) {
             is RequestResult.Success -> {
-                // showSnackbar suspende hasta que el aviso desaparece: se entra sin esperar
+                // El aviso viaja por SnackbarMessenger al feed: se entra sin esperar al snackbar
                 viewModel.resetLoginResult()
                 onNavigateToHome()
             }
@@ -242,5 +275,17 @@ fun LoginScreen(
 
             else -> Unit
         }
+    }
+
+
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onMessageShown()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
     }
 }

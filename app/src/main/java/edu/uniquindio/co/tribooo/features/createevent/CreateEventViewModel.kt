@@ -5,7 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.util.APP_ZONE
+import edu.uniquindio.co.tribooo.core.util.FormLimits
+import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.formatMoney
 import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Contribution
@@ -35,7 +38,6 @@ import java.util.UUID
 
 private const val MIN_CUPO = 5
 private const val CUPO_STEP = 5
-private const val MAX_IMAGES = 5
 private const val EVENT_ID_KEY = "eventId"
 private const val MODE_KEY = "mode"
 private const val EVENT_NOT_FOUND = "No encontramos este evento o no es tuyo."
@@ -43,15 +45,16 @@ private const val EVENT_NOT_FOUND = "No encontramos este evento o no es tuyo."
 /** Selector abierto en la pantalla. Algunos encadenan al siguiente (fecha → hora). */
 enum class PickerTarget { START_DATE, START_TIME, END_DATE, END_TIME, PLACE }
 
+/** Campos validables del formulario, en el orden en que se revisan al enviar. */
+enum class EventField { TITLE, CATEGORY, SCHEDULE, PLACE, CONTRIBUTION_AMOUNT, CONTRIBUTION_CAUSE }
+
 data class CreateEventUiState(
     /** null = crear un evento desde cero. */
     val mode: EventFormMode? = null,
     val isLoading: Boolean = false,
     val loadError: String? = null,
     val title: String = "",
-    val titleError: String? = null,
     val category: Category? = null,
-    val categoryError: Boolean = false,
     val description: String = "",
     val multiDay: Boolean = false,
     val startDate: LocalDate = LocalDate.now(APP_ZONE).plusDays(1),
@@ -59,14 +62,19 @@ data class CreateEventUiState(
     val endDate: LocalDate = LocalDate.now(APP_ZONE).plusDays(1),
     val endTime: LocalTime = LocalTime.of(20, 30),
     val place: PlaceSuggestion? = null,
-    val placeError: Boolean = false,
     val cupoEnabled: Boolean = true,
     val cupo: Int = 40,
     val contributionEnabled: Boolean = false,
     val contributionAmount: Long = 0,
-    val contributionError: String? = null,
+    val contributionCause: String = "",
     val imageUris: List<String> = emptyList(),
+    /** Aviso (no error) cuando se eligieron más imágenes de las permitidas. */
+    val imageNotice: String? = null,
     val picker: PickerTarget? = null,
+    val touched: Set<EventField> = emptySet(),
+    val submitAttempted: Boolean = false,
+    /** Campo que debe recibir el foco tras un envío inválido. */
+    val focusField: EventField? = null,
     val publishResult: RequestResult? = null
 ) {
     val start: LocalDateTime get() = startDate.atTime(startTime)
@@ -75,6 +83,34 @@ data class CreateEventUiState(
     val end: LocalDateTime get() = (if (multiDay) endDate else startDate).atTime(endTime)
 
     val isRangeValid: Boolean get() = end.isAfter(start)
+
+    val isPublishing: Boolean get() = publishResult == RequestResult.Loading
+
+    private fun rawError(field: EventField): String? = when (field) {
+        EventField.TITLE -> Validators.eventTitle(title)
+        EventField.CATEGORY -> Validators.category(category != null)
+        EventField.SCHEDULE -> Validators.schedule(isRangeValid)
+        EventField.PLACE -> Validators.place(place != null)
+        EventField.CONTRIBUTION_AMOUNT ->
+            if (contributionEnabled) Validators.contributionAmount(contributionAmount) else null
+        EventField.CONTRIBUTION_CAUSE ->
+            if (contributionEnabled) Validators.contributionCause(contributionCause) else null
+    }
+
+    /** El error del campo solo se ve si el usuario ya lo tocó o intentó enviar el formulario. */
+    private fun shownError(field: EventField): String? =
+        rawError(field).takeIf { submitAttempted || field in touched }
+
+    val titleError: String? get() = shownError(EventField.TITLE)
+    val categoryError: String? get() = shownError(EventField.CATEGORY)
+    val placeError: String? get() = shownError(EventField.PLACE)
+    val contributionError: String? get() = shownError(EventField.CONTRIBUTION_AMOUNT)
+    val contributionCauseError: String? get() = shownError(EventField.CONTRIBUTION_CAUSE)
+
+    /** El horario se revisa siempre: sus valores iniciales son válidos y solo el usuario puede romperlos. */
+    val scheduleError: String? get() = rawError(EventField.SCHEDULE)
+
+    val firstInvalidField: EventField? get() = EventField.entries.firstOrNull { rawError(it) != null }
 }
 
 @HiltViewModel
@@ -127,15 +163,19 @@ class CreateEventViewModel @Inject constructor(
     }
 
     fun onTitleChange(value: String) {
-        _uiState.update { it.copy(title = value, titleError = null) }
+        _uiState.update { it.copy(title = value) }
+    }
+
+    fun onFieldFocusLost(field: EventField) {
+        _uiState.update { it.copy(touched = it.touched + field) }
     }
 
     fun onCategorySelected(category: Category) {
-        _uiState.update { it.copy(category = category, categoryError = false) }
+        _uiState.update { it.copy(category = category) }
     }
 
     fun onDescriptionChange(value: String) {
-        _uiState.update { it.copy(description = value) }
+        _uiState.update { it.copy(description = value.take(FormLimits.EVENT_DESCRIPTION)) }
     }
 
     fun onMultiDayChange(enabled: Boolean) {
@@ -183,7 +223,7 @@ class CreateEventViewModel @Inject constructor(
     fun onPlaceConfirmed(name: String, neighborhood: String) {
         viewModelScope.launch {
             val place = resolvePlaceUseCase(name, neighborhood) ?: return@launch
-            _uiState.update { it.copy(place = place, placeError = false, picker = null) }
+            _uiState.update { it.copy(place = place, picker = null) }
         }
     }
 
@@ -200,51 +240,47 @@ class CreateEventViewModel @Inject constructor(
     }
 
     fun onContributionEnabledChange(enabled: Boolean) {
-        _uiState.update { it.copy(contributionEnabled = enabled, contributionError = null) }
+        _uiState.update { it.copy(contributionEnabled = enabled) }
     }
 
     fun onContributionAmountChange(value: String) {
         val amount = value.filter { it.isDigit() }.take(9).toLongOrNull() ?: 0
-        _uiState.update { it.copy(contributionAmount = amount, contributionError = null) }
+        _uiState.update { it.copy(contributionAmount = amount) }
     }
 
     fun onContributionPresetSelected(amount: Long) {
-        _uiState.update { it.copy(contributionAmount = amount, contributionError = null) }
+        _uiState.update { it.copy(contributionAmount = amount, touched = it.touched + EventField.CONTRIBUTION_AMOUNT) }
+    }
+
+    fun onContributionCauseChange(value: String) {
+        _uiState.update { it.copy(contributionCause = value.take(FormLimits.CONTRIBUTION_CAUSE)) }
     }
 
     fun onImagesSelected(uris: List<String>) {
         if (uris.isEmpty()) return
-        _uiState.update { it.copy(imageUris = uris.take(MAX_IMAGES)) }
+        _uiState.update {
+            it.copy(imageUris = uris.take(FormLimits.MAX_IMAGES), imageNotice = Validators.imageLimitNotice(uris.size))
+        }
+    }
+
+    fun onFocusHandled() {
+        _uiState.update { it.copy(focusField = null) }
     }
 
     fun publish() {
         val state = _uiState.value
         if (state.isLoading || state.loadError != null || state.publishResult == RequestResult.Loading) return
-        val titleError = if (state.title.isBlank()) "Ponle un nombre claro al evento" else null
-        val contributionError = if (state.contributionEnabled && state.contributionAmount <= 0) {
-            "Indica el monto del aporte o desactiva el costo"
-        } else {
-            null
-        }
-
-        _uiState.update {
-            it.copy(
-                titleError = titleError,
-                categoryError = state.category == null,
-                placeError = state.place == null,
-                contributionError = contributionError
-            )
-        }
-
+        val invalid = state.firstInvalidField
         val category = state.category
         val place = state.place
-        if (titleError != null || contributionError != null || category == null || place == null) {
-            _uiState.update { it.copy(publishResult = RequestResult.Failure("Completa los campos marcados.")) }
-            return
-        }
-        if (!state.isRangeValid) {
+        if (invalid != null || category == null || place == null) {
+            // Todos los errores se muestran a la vez y el foco va al primer campo inválido
             _uiState.update {
-                it.copy(publishResult = RequestResult.Failure("Revisa el horario: el fin debe ser posterior al inicio."))
+                it.copy(
+                    submitAttempted = true,
+                    focusField = invalid,
+                    publishResult = RequestResult.Failure(FormTexts.SUBMIT_INVALID)
+                )
             }
             return
         }
@@ -270,7 +306,7 @@ class CreateEventViewModel @Inject constructor(
                 neighborhood = place.neighborhood,
                 location = place.location,
                 cupo = if (state.cupoEnabled) state.cupo else null,
-                contribution = if (state.contributionEnabled) Contribution(amount = state.contributionAmount.toDouble()) else null,
+                contribution = if (state.contributionEnabled) Contribution(amount = state.contributionAmount.toDouble(), cause = state.contributionCause.trim()) else null,
                 organizer = organizer,
                 category = category
             )

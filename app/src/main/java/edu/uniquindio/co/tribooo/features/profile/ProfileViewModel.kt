@@ -3,6 +3,7 @@ package edu.uniquindio.co.tribooo.features.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.model.Event
@@ -76,6 +77,9 @@ internal fun calculateProfileStats(
 /** Máximo de caracteres de la presentación ("Sobre mí"), como en el prototipo. */
 const val MAX_BIO_LENGTH = 220
 
+/** Campos validables de "Editar datos personales", en el orden en que se revisan al guardar. */
+enum class EditProfileField { NAME, NEIGHBORHOOD }
+
 data class ProfileUiState(
     val user: User? = null,
     val stats: ProfileStats = ProfileStats(),
@@ -86,13 +90,34 @@ data class ProfileUiState(
     val editCity: String = "",
     val editNeighborhood: String = "",
     val editBio: String = "",
-    val nameError: String? = null,
-    val neighborhoodError: String? = null,
+    /** Foto del borrador (URI del selector del sistema); null si no hay. Se guarda con "Guardar cambios". */
+    val editPhoto: String? = null,
+    val editTouched: Set<EditProfileField> = emptySet(),
+    val editSubmitAttempted: Boolean = false,
+    /** Campo que debe recibir el foco tras intentar guardar con errores. */
+    val editFocusField: EditProfileField? = null,
+    val isSaving: Boolean = false,
     val showLogoutDialog: Boolean = false,
     val showDeleteDialog: Boolean = false,
     val snackbarMessage: String? = null,
     val loggedOut: Boolean = false
-)
+) {
+    private fun rawError(field: EditProfileField): String? = when (field) {
+        EditProfileField.NAME -> Validators.name(editName)
+        EditProfileField.NEIGHBORHOOD -> Validators.neighborhood(editNeighborhood)
+    }
+
+    private fun shownError(field: EditProfileField): String? =
+        rawError(field).takeIf { editSubmitAttempted || field in editTouched }
+
+    val nameError: String? get() = shownError(EditProfileField.NAME)
+    val neighborhoodError: String? get() = shownError(EditProfileField.NEIGHBORHOOD)
+
+    val firstInvalidEditField: EditProfileField? get() = EditProfileField.entries.firstOrNull { rawError(it) != null }
+
+    /** Se intentó guardar y aún quedan campos inválidos. */
+    val showInvalidNotice: Boolean get() = editSubmitAttempted && firstInvalidEditField != null
+}
 
 /** Datos de los repositorios que alimentan las cifras (se agrupan porque `combine` admite máximo 5 flujos). */
 private data class ProfileSources(
@@ -170,36 +195,48 @@ class ProfileViewModel @Inject constructor(
                 editCity = user.city,
                 editNeighborhood = user.neighborhood,
                 editBio = user.bio.orEmpty(),
-                nameError = null,
-                neighborhoodError = null
+                editPhoto = user.photo,
+                editTouched = emptySet(),
+                editSubmitAttempted = false,
+                editFocusField = null,
+                isSaving = false
             )
         }
     }
 
-    fun onNameChange(value: String) = local.update { it.copy(editName = value, nameError = null) }
+    fun onNameChange(value: String) = local.update { it.copy(editName = value) }
 
     fun onCityChange(value: String) = local.update { it.copy(editCity = value) }
 
-    fun onNeighborhoodChange(value: String) = local.update { it.copy(editNeighborhood = value, neighborhoodError = null) }
+    fun onNeighborhoodChange(value: String) = local.update { it.copy(editNeighborhood = value) }
+
+    fun onEditFieldFocusLost(field: EditProfileField) = local.update { it.copy(editTouched = it.editTouched + field) }
+
+    fun onEditFocusHandled() = local.update { it.copy(editFocusField = null) }
 
     fun onBioChange(value: String) = local.update { it.copy(editBio = value.take(MAX_BIO_LENGTH)) }
+
+    fun onPhotoSelected(uri: String) = local.update { it.copy(editPhoto = uri) }
+
+    fun onPhotoRemoved() = local.update { it.copy(editPhoto = null) }
 
     fun onDismissEditDialog() = local.update { it.copy(showEditDialog = false) }
 
     fun onSaveEdit() {
         val user = uiState.value.user ?: return
         val form = local.value
+        if (form.isSaving) return
 
-        val nameError = if (form.editName.trim().length < 3) "Escribe tu nombre y apellido" else null
-        val neighborhoodError = if (form.editNeighborhood.isBlank()) "Indica tu barrio" else null
-        if (nameError != null || neighborhoodError != null) {
-            local.update { it.copy(nameError = nameError, neighborhoodError = neighborhoodError) }
+        val invalid = form.firstInvalidEditField
+        if (invalid != null) {
+            local.update { it.copy(editSubmitAttempted = true, editFocusField = invalid) }
             return
         }
 
+        local.update { it.copy(isSaving = true) }
         viewModelScope.launch {
-            updateProfileUseCase(user, form.editName, form.editCity, form.editNeighborhood, form.editBio)
-            local.update { it.copy(showEditDialog = false, snackbarMessage = "Datos personales actualizados.") }
+            updateProfileUseCase(user, form.editName, form.editCity, form.editNeighborhood, form.editBio, form.editPhoto)
+            local.update { it.copy(showEditDialog = false, isSaving = false, snackbarMessage = "Datos personales actualizados.") }
         }
     }
 

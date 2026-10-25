@@ -3,7 +3,11 @@ package edu.uniquindio.co.tribooo.features.register
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.core.util.FormTexts
+import edu.uniquindio.co.tribooo.core.util.MessageTarget
 import edu.uniquindio.co.tribooo.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
+import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.domain.usecase.auth.RegisterUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetCitiesUseCase
 import jakarta.inject.Inject
@@ -13,6 +17,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+enum class RegisterField { NAME, CITY, ADDRESS, EMAIL, PASSWORD, CONFIRM_PASSWORD, TERMS }
+
 data class RegisterUiState(
     val name: String = "",
     val city: String = "",
@@ -20,21 +26,55 @@ data class RegisterUiState(
     val email: String = "",
     val password: String = "",
     val confirmPassword: String = "",
-    val nameError: String? = null,
-    val cityError: String? = null,
-    val addressError: String? = null,
-    val emailError: String? = null,
-    val passwordError: String? = null,
-    val confirmPasswordError: String? = null,
-    val isFormValid: Boolean = false,
+    val termsAccepted: Boolean = false,
+    val touched: Set<RegisterField> = emptySet(),
+    val submitAttempted: Boolean = false,
+    /** Campo que debe recibir el foco tras un envío inválido. */
+    val focusField: RegisterField? = null,
+    /** Aviso de una sola vez para el snackbar. */
+    val message: String? = null,
     val registerResult: RequestResult? = null,
     val showConfirmDialog: Boolean = false
-)
+) {
+    private fun rawError(field: RegisterField): String? = when (field) {
+        RegisterField.NAME -> Validators.name(name)
+        RegisterField.CITY -> Validators.city(city)
+        RegisterField.ADDRESS -> Validators.address(address)
+        RegisterField.EMAIL -> Validators.email(email)
+        RegisterField.PASSWORD -> Validators.newPassword(password)
+        RegisterField.CONFIRM_PASSWORD -> Validators.confirmPassword(password, confirmPassword)
+        RegisterField.TERMS -> Validators.terms(termsAccepted)
+    }
+
+    /** El error del campo solo se ve si el usuario ya lo tocó o intentó enviar el formulario. */
+    private fun shownError(field: RegisterField): String? =
+        rawError(field).takeIf { submitAttempted || field in touched }
+
+    val nameError: String? get() = shownError(RegisterField.NAME)
+    val cityError: String? get() = shownError(RegisterField.CITY)
+    val addressError: String? get() = shownError(RegisterField.ADDRESS)
+    val emailError: String? get() = shownError(RegisterField.EMAIL)
+    val passwordError: String? get() = shownError(RegisterField.PASSWORD)
+    val confirmPasswordError: String? get() = shownError(RegisterField.CONFIRM_PASSWORD)
+    val termsError: String? get() = shownError(RegisterField.TERMS)
+
+    val isEmailValid: Boolean get() = rawError(RegisterField.EMAIL) == null
+
+    /** Las dos contraseñas coinciden y la primera es válida. */
+    val passwordsMatch: Boolean
+        get() = confirmPassword.isNotEmpty() && rawError(RegisterField.PASSWORD) == null &&
+            rawError(RegisterField.CONFIRM_PASSWORD) == null
+
+    val firstInvalidField: RegisterField? get() = RegisterField.entries.firstOrNull { rawError(it) != null }
+
+    val isFormValid: Boolean get() = firstInvalidField == null
+}
 
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     getCities: GetCitiesUseCase,
-    private val registerUseCase: RegisterUseCase
+    private val registerUseCase: RegisterUseCase,
+    private val messenger: SnackbarMessenger
 ) : ViewModel() {
 
     val cities: List<String> = getCities()
@@ -43,88 +83,33 @@ class RegisterViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(RegisterUiState(city = cities.firstOrNull().orEmpty()))
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
-    fun onNameChange(name: String) {
-        _uiState.update { it.copy(name = name, nameError = null) }
-        validateForm()
-    }
+    fun onNameChange(name: String) = _uiState.update { it.copy(name = name) }
 
-    fun onCityChange(city: String) {
-        _uiState.update { it.copy(city = city, cityError = null) }
-        validateForm()
-    }
+    fun onCityChange(city: String) = _uiState.update { it.copy(city = city, touched = it.touched + RegisterField.CITY) }
 
-    fun onAddressChange(address: String) {
-        _uiState.update { it.copy(address = address, addressError = null) }
-        validateForm()
-    }
+    fun onAddressChange(address: String) = _uiState.update { it.copy(address = address) }
 
-    fun onEmailChange(email: String) {
-        _uiState.update { it.copy(email = email, emailError = null) }
-        validateForm()
-    }
+    fun onEmailChange(email: String) = _uiState.update { it.copy(email = email) }
 
-    fun onPasswordChange(password: String) {
-        _uiState.update { it.copy(password = password, passwordError = null) }
-        validateForm()
-    }
+    fun onPasswordChange(password: String) = _uiState.update { it.copy(password = password) }
 
-    fun onConfirmPasswordChange(confirmPassword: String) {
-        _uiState.update { it.copy(confirmPassword = confirmPassword, confirmPasswordError = null) }
-        validateForm()
-    }
+    fun onConfirmPasswordChange(confirmPassword: String) = _uiState.update { it.copy(confirmPassword = confirmPassword) }
 
-    private fun validateForm() {
-        val currentState = _uiState.value
+    fun onTermsChange(accepted: Boolean) =
+        _uiState.update { it.copy(termsAccepted = accepted, touched = it.touched + RegisterField.TERMS) }
 
-        val nameError = when {
-            currentState.name.isBlank() -> "El nombre es obligatorio"
-            currentState.name.length < 3 -> "El nombre debe tener al menos 3 caracteres"
-            else -> null
-        }
-        val cityError = if (currentState.city.isBlank()) "La ciudad es obligatoria" else null
-        val addressError = if (currentState.address.isBlank()) "La dirección es obligatoria" else null
-        val emailError = when {
-            currentState.email.isBlank() -> "El email es obligatorio"
-            !isValidEmail(currentState.email) -> "El email no es válido"
-            else -> null
-        }
-        val passwordError = when {
-            currentState.password.isBlank() -> "La contraseña es obligatoria"
-            currentState.password.length < 6 -> "La contraseña debe tener al menos 6 caracteres"
-            else -> null
-        }
-        val confirmPasswordError = when {
-            currentState.confirmPassword.isBlank() -> "Debes confirmar la contraseña"
-            currentState.confirmPassword != currentState.password -> "Las contraseñas no coinciden"
-            else -> null
-        }
-
-        _uiState.update {
-            it.copy(
-                nameError = nameError,
-                cityError = cityError,
-                addressError = addressError,
-                emailError = emailError,
-                passwordError = passwordError,
-                confirmPasswordError = confirmPasswordError,
-                isFormValid = listOf(
-                    nameError,
-                    cityError,
-                    addressError,
-                    emailError,
-                    passwordError,
-                    confirmPasswordError
-                ).all { error -> error == null }
-            )
-        }
-    }
-
-    private fun isValidEmail(email: String): Boolean {
-        return Regex("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$").matches(email)
-    }
+    fun onFieldFocusLost(field: RegisterField) = _uiState.update { it.copy(touched = it.touched + field) }
 
     fun onRegisterClick() {
-        if (!_uiState.value.isFormValid) return
+        val state = _uiState.value
+        if (state.registerResult == RequestResult.Loading) return
+        val invalid = state.firstInvalidField
+        if (invalid != null) {
+            _uiState.update {
+                it.copy(submitAttempted = true, focusField = invalid, message = FormTexts.SUBMIT_INVALID)
+            }
+            return
+        }
         _uiState.update { it.copy(showConfirmDialog = true) }
     }
 
@@ -151,6 +136,7 @@ class RegisterViewModel @Inject constructor(
                 password = state.password
             )
             val result = if (user != null) {
+                messenger.post(MessageTarget.LOGIN, FormTexts.ACCOUNT_CREATED)
                 RequestResult.Success("Registro exitoso")
             } else {
                 RequestResult.Failure("Ya existe una cuenta con ese email")
@@ -167,4 +153,8 @@ class RegisterViewModel @Inject constructor(
     fun resetRegisterResult() {
         _uiState.update { it.copy(registerResult = null) }
     }
+
+    fun onFocusHandled() = _uiState.update { it.copy(focusField = null) }
+
+    fun onMessageShown() = _uiState.update { it.copy(message = null) }
 }

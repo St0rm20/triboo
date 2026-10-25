@@ -29,10 +29,14 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -55,6 +59,7 @@ import edu.uniquindio.co.tribooo.core.component.MainBottomBar
 import edu.uniquindio.co.tribooo.core.component.MainTab
 import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
 import edu.uniquindio.co.tribooo.core.util.kmLabel
+import edu.uniquindio.co.tribooo.core.util.waitlistLabel
 
 @Composable
 fun ExploreScreen(
@@ -66,9 +71,18 @@ fun ExploreScreen(
     viewModel: ExploreViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onMessageShown()
+        }
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             MainBottomBar(
                 selected = MainTab.EXPLORE,
@@ -271,23 +285,24 @@ private fun SelectedEventSheet(item: FeedEventItem, onOpenDetail: () -> Unit, on
     }
 }
 
-/** "Voy", "Ya voy" (tonal) o "Lleno" (deshabilitado si el usuario no asiste). */
+/** "Voy", "Ya voy" (tonal), "Lista de espera" o "En lista · puesto N" (tonal) cuando el cupo está lleno. */
 @Composable
 private fun AttendanceButton(item: FeedEventItem, onClick: () -> Unit, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
     val full = item.isFull && !item.isAttending
+    val position = item.waitlistPosition.takeIf { full }
 
     Surface(
         onClick = onClick,
-        enabled = !full,
+        enabled = !full || item.canJoinWaitlist || position != null,
         shape = RoundedCornerShape(14.dp),
         color = when {
-            item.isAttending -> colors.secondaryContainer
+            item.isAttending || position != null -> colors.secondaryContainer
             full -> colors.surfaceContainerHigh
             else -> colors.primary
         },
         contentColor = when {
-            item.isAttending -> colors.onSecondaryContainer
+            item.isAttending || position != null -> colors.onSecondaryContainer
             full -> colors.onSurfaceVariant
             else -> colors.onPrimary
         },
@@ -304,7 +319,8 @@ private fun AttendanceButton(item: FeedEventItem, onClick: () -> Unit, modifier:
             Text(
                 text = when {
                     item.isAttending -> "Ya voy"
-                    full -> "Lleno"
+                    position != null -> waitlistLabel(position)
+                    full -> "Lista de espera"
                     else -> "Voy"
                 },
                 fontSize = 14.sp,

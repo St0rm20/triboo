@@ -168,7 +168,8 @@ private fun UserCard(user: User, state: UserProfileUiState, onToggleFollow: () -
                 content = avatarFg,
                 size = 78.dp,
                 shape = RoundedCornerShape(26.dp),
-                fontSize = 26.sp
+                fontSize = 26.sp,
+                photo = user.photo
             )
             Text(
                 text = user.name,

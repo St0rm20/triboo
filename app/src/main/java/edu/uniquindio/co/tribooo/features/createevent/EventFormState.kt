@@ -48,6 +48,7 @@ fun Event.toFormState(
         cupo = cupo ?: defaults.cupo,
         contributionEnabled = contribution != null,
         contributionAmount = contribution?.amount?.toLong() ?: 0,
+        contributionCause = contribution?.cause.orEmpty(),
         imageUris = images
     )
 }

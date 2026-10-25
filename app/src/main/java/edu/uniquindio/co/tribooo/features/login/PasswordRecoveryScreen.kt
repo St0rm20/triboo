@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -18,6 +19,9 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.MarkEmailRead
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,26 +31,37 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import edu.uniquindio.co.tribooo.core.component.AuthTextField
+import edu.uniquindio.co.tribooo.core.component.RequiredLegend
+import edu.uniquindio.co.tribooo.core.component.formTarget
+import edu.uniquindio.co.tribooo.core.util.FormTexts
 
 @Composable
 fun PasswordRecoveryScreen(
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    viewModel: PasswordRecoveryViewModel = hiltViewModel()
 ) {
-    var email by rememberSaveable { mutableStateOf("") }
-    var codeSent by rememberSaveable { mutableStateOf(false) }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val codeSent = state.sentTo != null
+    val backToLogin = {
+        viewModel.onBackToLogin()
+        onNavigateToLogin()
+    }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surface,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -105,7 +120,7 @@ fun PasswordRecoveryScreen(
 
             Text(
                 text = if (codeSent) {
-                    "Enviamos un código a ${email.ifBlank { "tu correo electrónico" }}. Revisa la bandeja de entrada y espera el código para continuar."
+                    "Enviamos un código a ${state.sentTo}. Revisa la bandeja de entrada y espera el código para continuar."
                 } else {
                     "Escribe el correo asociado a tu cuenta. Te enviaremos un código para recuperar el acceso."
                 },
@@ -115,20 +130,28 @@ fun PasswordRecoveryScreen(
             )
 
             if (!codeSent) {
+                RequiredLegend(modifier = Modifier.padding(top = 24.dp))
+
                 AuthTextField(
-                    value = email,
-                    onValueChange = { email = it },
+                    value = state.email,
+                    onValueChange = viewModel::onEmailChange,
                     label = "Correo",
                     leadingIcon = Icons.Rounded.Email,
                     placeholder = "tunombre@correo.com",
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = KeyboardType.Email
-                    ),
-                    modifier = Modifier.padding(top = 28.dp)
+                    required = true,
+                    hint = FormTexts.EMAIL_HINT,
+                    error = state.emailError,
+                    isValid = state.isEmailValid,
+                    onFocusLost = viewModel::onEmailFocusLost,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .formTarget(state.focusEmail, viewModel::onFocusHandled)
                 )
 
                 Button(
-                    onClick = { codeSent = true },
+                    onClick = viewModel::onSend,
+                    enabled = !state.isSending,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 24.dp),
@@ -138,7 +161,17 @@ fun PasswordRecoveryScreen(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text("Enviar código", modifier = Modifier.padding(vertical = 8.dp))
+                    if (state.isSending) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .size(22.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text("Enviar código", modifier = Modifier.padding(vertical = 8.dp))
+                    }
                 }
             } else {
                 Row(
@@ -147,14 +180,21 @@ fun PasswordRecoveryScreen(
                         .padding(top = 24.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    TextButton(onClick = { codeSent = false }) {
+                    TextButton(onClick = viewModel::onUseAnotherEmail) {
                         Text("Usar otro correo")
                     }
-                    TextButton(onClick = onNavigateToLogin) {
+                    TextButton(onClick = backToLogin) {
                         Text("Volver al inicio")
                     }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onMessageShown()
         }
     }
 }

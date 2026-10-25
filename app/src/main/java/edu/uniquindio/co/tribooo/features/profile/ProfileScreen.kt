@@ -176,6 +176,10 @@ fun ProfileScreen(
             onCityChange = viewModel::onCityChange,
             onNeighborhoodChange = viewModel::onNeighborhoodChange,
             onBioChange = viewModel::onBioChange,
+            onPhotoSelected = viewModel::onPhotoSelected,
+            onPhotoRemoved = viewModel::onPhotoRemoved,
+            onFieldFocusLost = viewModel::onEditFieldFocusLost,
+            onFocusHandled = viewModel::onEditFocusHandled,
             onSave = viewModel::onSaveEdit,
             onDismiss = viewModel::onDismissEditDialog
         )
@@ -266,7 +270,8 @@ private fun ProfileHeader(user: User, state: ProfileUiState) {
                     content = avatarContent,
                     size = 64.dp,
                     shape = CircleShape,
-                    fontSize = 22.sp
+                    fontSize = 22.sp,
+                    photo = user.photo
                 )
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(user.name, fontSize = 20.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)

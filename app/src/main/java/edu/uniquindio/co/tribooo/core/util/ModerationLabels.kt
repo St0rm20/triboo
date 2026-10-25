@@ -5,7 +5,6 @@ import edu.uniquindio.co.tribooo.domain.model.ModerationCase
 import edu.uniquindio.co.tribooo.domain.model.ModerationReview
 import edu.uniquindio.co.tribooo.domain.model.ModerationTab
 import edu.uniquindio.co.tribooo.domain.model.Report
-import edu.uniquindio.co.tribooo.domain.usecase.moderation.RejectEventUseCase
 import java.time.Instant
 
 /** Máximo de causas de reporte que se listan en una tarjeta; el resto se resume en "y N más". */
@@ -104,9 +103,6 @@ fun moderationEmptyTexts(tab: ModerationTab): Pair<String, String> = when (tab) 
     ModerationTab.RESUELTAS ->
         "Sin casos resueltos" to "Marca un caso como resuelto y quedará archivado aquí."
 }
-
-/** "7/15 mínimo" */
-fun reasonCounterLabel(length: Int): String = "$length/${RejectEventUseCase.MIN_REASON_LENGTH} mínimo"
 
 fun verifiedMessage(title: String) = "“$title” fue verificada y ya aparece en el feed público."
 

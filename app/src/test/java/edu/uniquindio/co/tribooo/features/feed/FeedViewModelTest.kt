@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.feed
 
+import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
 import edu.uniquindio.co.tribooo.core.component.FeedEventItem
 import edu.uniquindio.co.tribooo.data.repository.memory.EventFilterRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
@@ -27,6 +28,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -60,11 +62,15 @@ class FeedViewModelTest {
             ),
             observeModerationCounts = ObserveModerationCountsUseCase(world.events, world.reports, ModerationReviewRepositoryImpl()),
             observeFilters = ObserveEventFiltersUseCase(filters),
+            observeWaitlist = world.observeWaitlist,
             filterEvents = FilterEventsUseCase(),
             updateFilters = UpdateEventFiltersUseCase(filters),
             clearFiltersUseCase = ClearEventFiltersUseCase(filters),
             toggleAttendanceUseCase = world.toggleAttendance,
-            findScheduleConflict = world.findScheduleConflict
+            findScheduleConflict = world.findScheduleConflict,
+            joinWaitlist = world.joinWaitlist,
+            leaveWaitlist = world.leaveWaitlist,
+            messenger = SnackbarMessenger()
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
         return vm
@@ -155,5 +161,49 @@ class FeedViewModelTest {
 
         assertNull(stepOf(vm))
         assertEquals(setOf("a"), world.attendingIds())
+    }
+
+    @Test
+    fun fullEventShowsTheFourWaitlistStates() = runTest {
+        val full = world.publish("full", 10, 12, cupo = 1).also { world.fill(it, 1) }
+        val vm = viewModel()
+        assertTrue(vm.item("full").canJoinWaitlist)
+
+        vm.toggleAttendance(vm.item("full"))
+        assertNull(stepOf(vm))
+        assertEquals(1, vm.item("full").waitlistPosition)
+        assertTrue(vm.item("full").isWaitlisted)
+        assertEquals("Te anotamos en la lista de espera · puesto 1.", vm.uiState.value.message)
+
+        vm.toggleAttendance(vm.item("full"))
+        assertFalse(vm.item("full").isWaitlisted)
+        assertEquals("Saliste de la lista de espera.", vm.uiState.value.message)
+        assertEquals(emptySet<String>(), world.attendingIds())
+        assertEquals(1, world.attendances.attendances.value.count { it.event.id == full.id })
+    }
+
+    @Test
+    fun cancellingAFullEventShowsTheCancelState() = runTest {
+        val event = world.publish("a", 10, 12, cupo = 2).also { world.fill(it, 1); world.confirm(it) }
+        val vm = viewModel()
+        assertTrue(vm.item("a").isAttending)
+        assertFalse(vm.item("a").canJoinWaitlist)
+
+        vm.toggleAttendance(vm.item("a"))
+
+        assertFalse(vm.item("a").isAttending)
+        assertEquals(1, world.attendances.attendances.value.count { it.event.id == event.id })
+    }
+
+    @Test
+    fun ownFullEventCannotJoinItsWaitlist() = runTest {
+        world.publish("mine", 10, 12, organizer = world.me, cupo = 1).also { world.fill(it, 1) }
+        val vm = viewModel()
+
+        vm.toggleAttendance(vm.item("mine"))
+
+        assertFalse(vm.item("mine").canJoinWaitlist)
+        assertNull(vm.uiState.value.message)
+        assertTrue(world.waitlist.entries.value.isEmpty())
     }
 }

@@ -45,9 +45,12 @@ import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.core.util.isFull
 import edu.uniquindio.co.tribooo.core.util.monthShort
 import edu.uniquindio.co.tribooo.core.util.occupancy
+import edu.uniquindio.co.tribooo.core.util.waitlistLabel
 import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.Location
+import edu.uniquindio.co.tribooo.domain.model.WaitlistEntry
+import edu.uniquindio.co.tribooo.domain.usecase.waitlist.waitlistPosition
 
 /** Evento listo para mostrarse en una tarjeta del feed. */
 data class FeedEventItem(
@@ -56,29 +59,39 @@ data class FeedEventItem(
     val attendeeInitials: List<String>,
     val isAttending: Boolean,
     val isMine: Boolean,
-    val distanceKm: Double
+    val distanceKm: Double,
+    val isWaitlisted: Boolean = false,
+    /** Puesto en la lista de espera del evento, desde 1; null si el usuario no está en ella. */
+    val waitlistPosition: Int? = null
 ) {
     val isFull: Boolean get() = event.isFull(attendeesCount)
+
+    /** El cupo está lleno y el usuario puede anotarse en la lista de espera. */
+    val canJoinWaitlist: Boolean get() = isFull && !isAttending && !isWaitlisted && !isMine
     val occupancy: Float get() = event.occupancy(attendeesCount)
 }
 
-/** Arma las tarjetas de [events] (se conserva su orden) con asistentes, asistencia propia y distancia a [location]. */
+/** Arma las tarjetas de [events] (se conserva su orden) con asistentes, asistencia y lista de espera propias y distancia a [location]. */
 fun toCardItems(
     events: List<Event>,
     attendances: List<Attendance>,
+    waitlist: List<WaitlistEntry>,
     currentUserId: String?,
     location: Location
 ): List<FeedEventItem> {
     val attendeesByEvent = attendances.groupBy { it.event.id }
     return events.map { event ->
         val attendees = attendeesByEvent[event.id].orEmpty()
+        val position = currentUserId?.let { waitlistPosition(waitlist, it, event.id) }
         FeedEventItem(
             event = event,
             attendeesCount = attendees.size,
             attendeeInitials = attendees.take(3).map { it.user.name.initials() },
             isAttending = attendees.any { it.user.id == currentUserId },
             isMine = event.organizer.id == currentUserId,
-            distanceKm = location.distanceKmTo(event.location)
+            distanceKm = location.distanceKmTo(event.location),
+            isWaitlisted = position != null,
+            waitlistPosition = position
         )
     }
 }
@@ -280,17 +293,21 @@ private fun CupoBar(item: FeedEventItem) {
 private fun AttendButton(item: FeedEventItem, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val waitlist = item.isFull && !item.isAttending
+    val position = item.waitlistPosition.takeIf { waitlist }
+    val queued = position != null
     Surface(
         onClick = onClick,
-        enabled = !waitlist,
+        enabled = !waitlist || item.canJoinWaitlist || queued,
         shape = RoundedCornerShape(14.dp),
         color = when {
             item.isAttending -> colors.errorContainer
+            queued -> colors.secondaryContainer
             waitlist -> colors.surfaceContainerHigh
             else -> colors.primary
         },
         contentColor = when {
             item.isAttending -> colors.onErrorContainer
+            queued -> colors.onSecondaryContainer
             waitlist -> colors.onSurfaceVariant
             else -> colors.onPrimary
         },
@@ -309,6 +326,7 @@ private fun AttendButton(item: FeedEventItem, onClick: () -> Unit) {
             Text(
                 text = when {
                     item.isAttending -> "Cancelar"
+                    position != null -> waitlistLabel(position)
                     waitlist -> "Lista de espera"
                     else -> "Asistiré"
                 },
