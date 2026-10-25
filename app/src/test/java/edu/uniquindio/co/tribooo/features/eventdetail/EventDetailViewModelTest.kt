@@ -7,10 +7,12 @@ import edu.uniquindio.co.tribooo.data.repository.memory.InterestRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.SavedEventRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Contribution
+import edu.uniquindio.co.tribooo.domain.model.EventStatus
 import edu.uniquindio.co.tribooo.domain.model.ReportReasons
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
 import edu.uniquindio.co.tribooo.domain.usecase.comment.AddCommentUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.ObserveCommentsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.event.FinalizeEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventImagesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.TestWorld
@@ -78,7 +80,8 @@ class EventDetailViewModelTest {
             findScheduleConflict = world.findScheduleConflict,
             submitReportUseCase = SubmitReportUseCase(world.reports, world.getCurrentUser),
             joinWaitlist = world.joinWaitlist,
-            leaveWaitlist = world.leaveWaitlist
+            leaveWaitlist = world.leaveWaitlist,
+            finalizeEventUseCase = FinalizeEventUseCase(world.events, world.getCurrentUser)
         )
     }
 
@@ -268,6 +271,75 @@ class EventDetailViewModelTest {
         val vm = started(viewModel("mine"))
 
         assertFalse(vm.uiState.value.detail!!.canToggleAttendance)
+    }
+
+    @Test
+    fun mainActionDependsOnOwnerAndStatus() = runTest {
+        world.publish("mine", 10, 12, organizer = world.me)
+        world.publish("mine-done", 10, 12, status = EventStatus.FINALIZADO, organizer = world.me)
+        world.publish("mine-pending", 10, 12, status = EventStatus.PENDIENTE, organizer = world.me)
+        world.publish("theirs", 10, 12)
+        world.publish("theirs-done", 10, 12, status = EventStatus.FINALIZADO)
+
+        fun actionOf(id: String) = started(viewModel(id)).uiState.value.detail!!.mainAction
+
+        assertEquals(MainAction.FINALIZE, actionOf("mine"))
+        assertEquals(MainAction.FINALIZED, actionOf("mine-done"))
+        assertEquals(MainAction.ATTENDANCE, actionOf("mine-pending"))
+        assertEquals(MainAction.ATTENDANCE, actionOf("theirs"))
+        assertEquals(MainAction.FINALIZED, actionOf("theirs-done"))
+    }
+
+    @Test
+    fun openingAndDismissingTheFinalizeDialogChangesNothing() = runTest {
+        world.publish("mine", 10, 12, organizer = world.me)
+        val vm = started(viewModel("mine"))
+
+        vm.onAction(EventDetailAction.FinalizeEvent)
+        assertTrue(vm.uiState.value.showFinalizeDialog)
+        vm.onAction(EventDetailAction.DismissFinalize)
+
+        assertFalse(vm.uiState.value.showFinalizeDialog)
+        assertNull(vm.uiState.value.message)
+        assertEquals(EventStatus.ACTIVO, vm.uiState.value.detail!!.event.status)
+    }
+
+    @Test
+    fun confirmingFinalizesTheEventAndShowsTheMessage() = runTest {
+        world.publish("mine", 10, 12, organizer = world.me)
+        val vm = started(viewModel("mine"))
+
+        vm.onAction(EventDetailAction.FinalizeEvent)
+        vm.onAction(EventDetailAction.ConfirmFinalize)
+
+        val state = vm.uiState.value
+        assertFalse(state.showFinalizeDialog)
+        assertFalse(state.isFinalizing)
+        assertEquals("Evento finalizado. Lo encuentras en Mis eventos → Finalizados.", state.message)
+        assertEquals(EventStatus.FINALIZADO, state.detail!!.event.status)
+        assertEquals(MainAction.FINALIZED, state.detail.mainAction)
+    }
+
+    @Test
+    fun doubleTapFinalizesOnlyOnce() = runTest {
+        world.publish("mine", 10, 12, organizer = world.me)
+        val vm = started(viewModel("mine"))
+
+        vm.onAction(EventDetailAction.FinalizeEvent)
+        vm.onAction(EventDetailAction.ConfirmFinalize)
+        vm.onAction(EventDetailAction.ConfirmFinalize)
+
+        assertEquals("Evento finalizado. Lo encuentras en Mis eventos → Finalizados.", vm.uiState.value.message)
+    }
+
+    @Test
+    fun othersCannotOpenTheFinalizeDialog() = runTest {
+        world.publish("theirs", 10, 12)
+        val vm = started(viewModel("theirs"))
+
+        vm.onAction(EventDetailAction.FinalizeEvent)
+
+        assertFalse(vm.uiState.value.showFinalizeDialog)
     }
 
     @Test

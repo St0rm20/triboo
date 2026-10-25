@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import edu.uniquindio.co.tribooo.core.util.FormLimits
 import edu.uniquindio.co.tribooo.core.util.FormTexts
+import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.distanceKmTo
 import edu.uniquindio.co.tribooo.core.util.initials
@@ -32,6 +33,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.attendance.startAttendanceFlow
 import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.AddCommentUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.ObserveCommentsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.event.FinalizeEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventImagesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.interest.ObserveInterestsUseCase
@@ -82,6 +84,9 @@ data class CommentItem(
     val rating: Int?
 )
 
+/** Qué muestra el botón principal de la barra inferior. */
+enum class MainAction { ATTENDANCE, FINALIZE, FINALIZED }
+
 /** Toda la información que pinta la pantalla de detalle de un evento. */
 data class EventDetail(
     val event: Event,
@@ -118,6 +123,13 @@ data class EventDetail(
 
     /** El botón principal hace algo: confirmar, cancelar, o anotarse o salir de la lista de espera. */
     val canToggleAttendance: Boolean get() = !isWaitlistMode || isWaitlisted || !isMine
+
+    val mainAction: MainAction
+        get() = when {
+            event.status == EventStatus.FINALIZADO -> MainAction.FINALIZED
+            isMine && event.status == EventStatus.ACTIVO -> MainAction.FINALIZE
+            else -> MainAction.ATTENDANCE
+        }
 
     val ratingsCount: Int get() = comments.count { it.rating != null }
 
@@ -158,7 +170,10 @@ data class EventDetailUiState(
     /** Null si la hoja de reporte está cerrada. */
     val report: ReportDraft? = null,
     /** Diálogo que el usuario debe aceptar antes de confirmar su asistencia. */
-    val attendanceStep: AttendanceStep? = null
+    val attendanceStep: AttendanceStep? = null,
+    /** Diálogo que pide confirmar que el organizador finaliza su evento. */
+    val showFinalizeDialog: Boolean = false,
+    val isFinalizing: Boolean = false
 )
 
 /** Acciones que el usuario puede hacer desde el detalle. */
@@ -181,6 +196,9 @@ sealed interface EventDetailAction {
     data object ReportFocusHandled : EventDetailAction
     data object ContinueAttendance : EventDetailAction
     data object CancelAttendance : EventDetailAction
+    data object FinalizeEvent : EventDetailAction
+    data object ConfirmFinalize : EventDetailAction
+    data object DismissFinalize : EventDetailAction
 }
 
 /** Interacciones de los usuarios con eventos y personas (se agrupan porque `combine` admite máximo 5 flujos). */
@@ -214,7 +232,8 @@ class EventDetailViewModel @Inject constructor(
     private val findScheduleConflict: FindScheduleConflictUseCase,
     private val submitReportUseCase: SubmitReportUseCase,
     private val joinWaitlist: JoinWaitlistUseCase,
-    private val leaveWaitlist: LeaveWaitlistUseCase
+    private val leaveWaitlist: LeaveWaitlistUseCase,
+    private val finalizeEventUseCase: FinalizeEventUseCase
 ) : ViewModel() {
 
     // El argumento de la ruta EventDetail llega con el nombre de su propiedad
@@ -377,6 +396,14 @@ class EventDetailViewModel @Inject constructor(
             }
 
             EventDetailAction.CancelAttendance -> localState.update { it.copy(attendanceStep = null) }
+
+            EventDetailAction.FinalizeEvent -> {
+                if (detail.mainAction == MainAction.FINALIZE) localState.update { it.copy(showFinalizeDialog = true) }
+            }
+
+            EventDetailAction.DismissFinalize -> localState.update { it.copy(showFinalizeDialog = false) }
+
+            EventDetailAction.ConfirmFinalize -> finalizeEvent(event)
         }
     }
 
@@ -389,6 +416,20 @@ class EventDetailViewModel @Inject constructor(
         viewModelScope.launch {
             val step = startAttendanceFlow(event, findScheduleConflict(event))
             localState.update { it.copy(attendanceStep = step) }
+        }
+    }
+
+    private fun finalizeEvent(event: Event) {
+        val state = localState.value
+        if (!state.showFinalizeDialog || state.isFinalizing) return
+        localState.update { it.copy(showFinalizeDialog = false, isFinalizing = true) }
+        viewModelScope.launch {
+            val message = when (val result = finalizeEventUseCase(event.id)) {
+                is RequestResult.Success -> result.message
+                is RequestResult.Failure -> result.errorMessage
+                RequestResult.Loading -> null
+            }
+            localState.update { it.copy(isFinalizing = false, message = message ?: it.message) }
         }
     }
 

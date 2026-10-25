@@ -61,6 +61,7 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.EventBusy
+import androidx.compose.material.icons.rounded.TaskAlt
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.Place
@@ -117,6 +118,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import edu.uniquindio.co.tribooo.core.component.AttendanceDialogs
+import edu.uniquindio.co.tribooo.core.component.ConfirmAlertDialog
 import edu.uniquindio.co.tribooo.core.component.FieldSupport
 import edu.uniquindio.co.tribooo.core.component.RequiredLegend
 import edu.uniquindio.co.tribooo.core.component.errorSemantics
@@ -181,6 +183,7 @@ fun EventDetailScreen(
         showAttendees = state.showAttendees,
         report = state.report,
         attendanceStep = state.attendanceStep,
+        showFinalizeDialog = state.showFinalizeDialog,
         snackbarHostState = snackbarHostState,
         onBack = onNavigateBack,
         onShare = { context.shareEvent(detail.event) },
@@ -225,6 +228,7 @@ fun EventDetailContent(
     showAttendees: Boolean,
     report: ReportDraft?,
     attendanceStep: AttendanceStep?,
+    showFinalizeDialog: Boolean,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onShare: () -> Unit,
@@ -349,6 +353,18 @@ fun EventDetailContent(
         onCancel = { onAction(EventDetailAction.CancelAttendance) },
         onContinue = { onAction(EventDetailAction.ContinueAttendance) }
     )
+
+    if (showFinalizeDialog) {
+        ConfirmAlertDialog(
+            title = "¿Finalizar este evento?",
+            message = "Dejará de aparecer en el feed y no aceptará nuevas confirmaciones. " +
+                "Quedará archivado en Mis eventos, en Finalizados. Esta acción no se puede deshacer.",
+            confirmLabel = "Finalizar evento",
+            dismissLabel = "Cancelar",
+            onConfirm = { onAction(EventDetailAction.ConfirmFinalize) },
+            onDismiss = { onAction(EventDetailAction.DismissFinalize) }
+        )
+    }
 
     if (showAttendees) {
         AttendeesSheet(
@@ -1133,6 +1149,29 @@ private fun DetailBottomBar(detail: EventDetail, onAction: (EventDetailAction) -
                 }
             }
 
+            if (detail.mainAction == MainAction.FINALIZE) {
+                MainActionButton(
+                    label = "Finalizar evento",
+                    container = colors.secondaryContainer,
+                    content = colors.onSecondaryContainer,
+                    enabled = true,
+                    onClick = { onAction(EventDetailAction.FinalizeEvent) },
+                    modifier = Modifier.weight(1f)
+                )
+                return@Row
+            }
+            if (detail.mainAction == MainAction.FINALIZED) {
+                MainActionButton(
+                    label = "Evento finalizado",
+                    container = colors.surfaceContainerHigh,
+                    content = colors.onSurfaceVariant,
+                    enabled = false,
+                    onClick = {},
+                    modifier = Modifier.weight(1f)
+                )
+                return@Row
+            }
+
             val waitlist = detail.isWaitlistMode
             val position = detail.waitlistPosition.takeIf { waitlist }
             Surface(
@@ -1176,6 +1215,34 @@ private fun DetailBottomBar(detail: EventDetail, onAction: (EventDetailAction) -
                     )
                 }
             }
+        }
+    }
+}
+
+/** Botón principal de la barra inferior para los estados del evento (finalizar / ya finalizado). */
+@Composable
+private fun MainActionButton(
+    label: String,
+    container: Color,
+    content: Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(18.dp),
+        color = container,
+        contentColor = content,
+        modifier = modifier.height(56.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(imageVector = Icons.Rounded.TaskAlt, contentDescription = null, modifier = Modifier.size(20.dp))
+            Text(text = label, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
