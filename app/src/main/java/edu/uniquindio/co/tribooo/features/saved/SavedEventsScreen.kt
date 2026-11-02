@@ -40,6 +40,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -48,9 +49,12 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.iconVector
 import edu.uniquindio.co.tribooo.core.theme.categoryColors
 import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
+import edu.uniquindio.co.tribooo.core.util.localizedName
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.domain.model.Event
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -100,13 +104,14 @@ fun SavedEventsScreen(
     }
 
     // El snackbar con "Deshacer" vive en esta pantalla; cualquier otro mensaje se descarta solo
+    val undoLabel = stringResource(R.string.saved_undo)
     LaunchedEffect(state.message) {
         val message = state.message ?: return@LaunchedEffect
         val undoEvent = message.undoEvent
         val result = withTimeoutOrNull(UNDO_MILLIS) {
             snackbarHostState.showSnackbar(
                 message = message.text,
-                actionLabel = if (undoEvent != null) "Deshacer" else null,
+                actionLabel = if (undoEvent != null) undoLabel else null,
                 duration = SnackbarDuration.Indefinite
             )
         }
@@ -131,9 +136,9 @@ private fun SavedTopBar(summary: String, onBack: () -> Unit) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver", tint = colors.onSurface)
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back), tint = colors.onSurface)
             }
-            Text("Eventos guardados", fontSize = 20.sp, color = colors.onSurface)
+            Text(stringResource(R.string.saved_title), fontSize = 20.sp, color = colors.onSurface)
         }
         Text(
             text = summary,
@@ -146,6 +151,7 @@ private fun SavedTopBar(summary: String, onBack: () -> Unit) {
 
 @Composable
 private fun SavedEventCard(event: Event, onClick: () -> Unit, onRemove: () -> Unit) {
+    val rp = rememberResourceProvider()
     val colors = MaterialTheme.colorScheme
 
     Surface(
@@ -170,13 +176,13 @@ private fun SavedEventCard(event: Event, onClick: () -> Unit, onRemove: () -> Un
                     modifier = Modifier.padding(top = 6.dp)
                 )
                 Text(
-                    text = eventWhenLabel(event.startDate, event.endDate),
+                    text = eventWhenLabel(rp, event.startDate, event.endDate),
                     fontSize = 13.sp,
                     color = colors.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp)
                 )
                 Text(
-                    text = "${event.place} · ${event.neighborhood}",
+                    text = stringResource(R.string.common_dot_join, event.place, event.neighborhood),
                     fontSize = 13.sp,
                     color = colors.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
@@ -192,7 +198,7 @@ private fun SavedEventCard(event: Event, onClick: () -> Unit, onRemove: () -> Un
                 modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.Rounded.Bookmark, contentDescription = "Quitar de guardados", modifier = Modifier.size(22.dp))
+                    Icon(Icons.Rounded.Bookmark, contentDescription = stringResource(R.string.detail_unsave), modifier = Modifier.size(22.dp))
                 }
             }
         }
@@ -248,7 +254,7 @@ private fun CategoryBadge(event: Event) {
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Icon(category.iconVector(), contentDescription = null, tint = tones.content, modifier = Modifier.size(14.dp))
-        Text(category.name, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = tones.content)
+        Text(category.localizedName(), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = tones.content)
     }
 }
 
@@ -263,19 +269,19 @@ private fun EmptySaved(onExplore: () -> Unit) {
     ) {
         Icon(Icons.Rounded.BookmarkBorder, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(48.dp))
         Text(
-            text = "Sin eventos guardados",
+            text = stringResource(R.string.saved_empty_title),
             fontSize = 18.sp,
             fontWeight = FontWeight.Medium,
             color = colors.onSurface,
             modifier = Modifier.padding(top = 12.dp)
         )
         Text(
-            text = "Toca el marcador en el detalle de un evento para guardarlo y volver después.",
+            text = stringResource(R.string.saved_empty_text),
             fontSize = 14.sp,
             color = colors.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 6.dp, bottom = 20.dp)
         )
-        Button(onClick = onExplore) { Text("Explorar eventos") }
+        Button(onClick = onExplore) { Text(stringResource(R.string.saved_explore)) }
     }
 }

@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.eventdetail
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import androidx.lifecycle.SavedStateHandle
 import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
@@ -81,7 +82,8 @@ class EventDetailViewModelTest {
             submitReportUseCase = SubmitReportUseCase(world.reports, world.getCurrentUser),
             joinWaitlist = world.joinWaitlist,
             leaveWaitlist = world.leaveWaitlist,
-            finalizeEventUseCase = FinalizeEventUseCase(world.events, world.getCurrentUser)
+            finalizeEventUseCase = FinalizeEventUseCase(world.events, world.getCurrentUser, testResources),
+            resources = testResources
         )
     }
 

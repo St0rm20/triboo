@@ -76,6 +76,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
@@ -83,6 +85,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.CategoryChip
 import edu.uniquindio.co.tribooo.core.component.WrapRow
 import edu.uniquindio.co.tribooo.core.component.FormErrorText
@@ -91,12 +94,12 @@ import edu.uniquindio.co.tribooo.core.component.RequiredLegend
 import edu.uniquindio.co.tribooo.core.component.formTarget
 import edu.uniquindio.co.tribooo.core.util.APP_ZONE
 import edu.uniquindio.co.tribooo.core.util.FormLimits
-import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.dateTimeLabel
 import edu.uniquindio.co.tribooo.core.util.formatMoney
 import edu.uniquindio.co.tribooo.core.util.label
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.core.util.shortLabelWithYear
 import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
 import edu.uniquindio.co.tribooo.domain.usecase.location.MAX_NEIGHBORHOOD_LENGTH
@@ -144,7 +147,7 @@ fun CreateEventScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             InfoBanner(
-                text = "Todo evento pasa por moderación antes de aparecer en el feed. Suele tardar menos de 24 h.",
+                text = stringResource(R.string.create_event_banner),
                 container = MaterialTheme.colorScheme.secondaryContainer,
                 content = MaterialTheme.colorScheme.onSecondaryContainer
             )
@@ -161,9 +164,9 @@ fun CreateEventScreen(
             FormTextField(
                 value = state.description,
                 onValueChange = viewModel::onDescriptionChange,
-                label = "Descripción",
-                placeholder = "Qué se hará, qué llevar, para quién es…",
-                hint = FormTexts.EVENT_DESCRIPTION_HINT,
+                label = stringResource(R.string.create_event_description_label),
+                placeholder = stringResource(R.string.create_event_description_placeholder),
+                hint = stringResource(R.string.form_event_description_hint),
                 maxLength = FormLimits.EVENT_DESCRIPTION,
                 minLines = 3
             )
@@ -205,7 +208,7 @@ fun CreateEventScreen(
         PickerTarget.START_TIME, PickerTarget.END_TIME -> {
             val isStart = target == PickerTarget.START_TIME
             EventTimePickerDialog(
-                title = if (isStart) "Hora de inicio" else "Hora de fin",
+                title = stringResource(if (isStart) R.string.create_event_start_time else R.string.create_event_end_time),
                 initialTime = if (isStart) state.startTime else state.endTime,
                 onDismiss = viewModel::closePicker,
                 onConfirm = { time ->
@@ -254,7 +257,7 @@ private fun LoadStatus(error: String?, onClose: () -> Unit, modifier: Modifier =
             CircularProgressIndicator()
         } else {
             Text(error, textAlign = TextAlign.Center)
-            Button(onClick = onClose) { Text("Cerrar") }
+            Button(onClick = onClose) { Text(stringResource(R.string.common_close)) }
         }
     }
 }
@@ -267,10 +270,12 @@ private fun CreateEventTopBar(
     onPublish: () -> Unit
 ) {
     val (title, action) = when (mode) {
-        null -> "Crear evento" to "Publicar"
-        EventFormMode.EDIT -> "Editar evento" to "Guardar"
-        EventFormMode.RESUBMIT -> "Reenviar evento" to "Reenviar"
-        EventFormMode.DUPLICATE -> "Duplicar evento" to "Publicar"
+        null -> stringResource(R.string.create_event_title_create) to stringResource(R.string.create_event_action_publish)
+        EventFormMode.EDIT -> stringResource(R.string.create_event_title_edit) to stringResource(R.string.create_event_action_save)
+        EventFormMode.RESUBMIT ->
+            stringResource(R.string.create_event_title_resubmit) to stringResource(R.string.create_event_action_resubmit)
+        EventFormMode.DUPLICATE ->
+            stringResource(R.string.create_event_title_duplicate) to stringResource(R.string.create_event_action_publish)
     }
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Row(
@@ -282,7 +287,7 @@ private fun CreateEventTopBar(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.Rounded.Close, contentDescription = "Cerrar")
+                Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.common_close))
             }
             Text(title, fontSize = 20.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
             Button(
@@ -340,14 +345,15 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
 
 @Composable
 private fun TitleField(state: CreateEventUiState, viewModel: CreateEventViewModel) {
+    val resources = rememberResourceProvider()
     FormTextField(
         value = state.title,
         onValueChange = viewModel::onTitleChange,
-        label = "Nombre del evento",
+        label = stringResource(R.string.create_event_title_label),
         required = true,
-        placeholder = "Ej. Ciclopaseo nocturno por la Av. Bolívar",
-        hint = FormTexts.EVENT_TITLE_HINT,
-        error = state.titleError,
+        placeholder = stringResource(R.string.create_event_title_placeholder),
+        hint = stringResource(R.string.form_event_title_hint),
+        error = state.titleError(resources),
         singleLine = true,
         onFocusLost = { viewModel.onFieldFocusLost(EventField.TITLE) },
         modifier = Modifier.formTarget(state.focusField == EventField.TITLE, viewModel::onFocusHandled)
@@ -356,6 +362,7 @@ private fun TitleField(state: CreateEventUiState, viewModel: CreateEventViewMode
 
 @Composable
 private fun CategoryField(state: CreateEventUiState, viewModel: CreateEventViewModel) {
+    val resources = rememberResourceProvider()
     Column(
         modifier = Modifier.formTarget(
             state.focusField == EventField.CATEGORY,
@@ -363,7 +370,7 @@ private fun CategoryField(state: CreateEventUiState, viewModel: CreateEventViewM
             takesFocus = false
         )
     ) {
-        FieldLabel("Categoría *", isError = state.categoryError != null)
+        FieldLabel(stringResource(R.string.create_event_category_label), isError = state.categoryError(resources) != null)
         WrapRow {
             viewModel.categories.forEach { category ->
                 CategoryChip(
@@ -375,7 +382,7 @@ private fun CategoryField(state: CreateEventUiState, viewModel: CreateEventViewM
                 )
             }
         }
-        state.categoryError?.let { FormErrorText(it, Modifier.padding(start = 4.dp, top = 6.dp)) }
+        state.categoryError(resources)?.let { FormErrorText(it, Modifier.padding(start = 4.dp, top = 6.dp)) }
     }
 }
 
@@ -454,12 +461,13 @@ private fun ScheduleAndPlaceCard(
     onFocusHandled: () -> Unit
 ) {
     val divider = MaterialTheme.colorScheme.surfaceContainer
+    val resources = rememberResourceProvider()
     SectionCard {
         Column(modifier = Modifier.padding(vertical = 6.dp)) {
             ToggleRow(
                 icon = Icons.Rounded.DateRange,
-                title = "Varios días",
-                subtitle = if (state.multiDay) "Fechas y horas de inicio y fin" else "Un solo día con hora de inicio y fin",
+                title = stringResource(R.string.create_event_multi_day),
+                subtitle = stringResource(if (state.multiDay) R.string.create_event_multi_day_on else R.string.create_event_multi_day_off),
                 checked = state.multiDay,
                 onCheckedChange = onMultiDayChange,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -469,31 +477,31 @@ private fun ScheduleAndPlaceCard(
             if (state.multiDay) {
                 PickerRow(
                     icon = Icons.Rounded.Event,
-                    label = "Inicio",
-                    value = dateTimeLabel(state.startDate, state.startTime),
+                    label = stringResource(R.string.create_event_start),
+                    value = dateTimeLabel(resources, state.startDate, state.startTime),
                     onClick = { onOpenPicker(PickerTarget.START_DATE) }
                 )
                 HorizontalDivider(color = divider)
                 PickerRow(
                     icon = Icons.Rounded.EventAvailable,
-                    label = "Fin",
-                    value = dateTimeLabel(state.endDate, state.endTime),
-                    labelIsError = state.scheduleError != null,
+                    label = stringResource(R.string.create_event_end),
+                    value = dateTimeLabel(resources, state.endDate, state.endTime),
+                    labelIsError = state.scheduleError(resources) != null,
                     onClick = { onOpenPicker(PickerTarget.END_DATE) }
                 )
             } else {
                 PickerRow(
                     icon = Icons.Rounded.Event,
-                    label = "Fecha",
-                    value = state.startDate.shortLabelWithYear(),
+                    label = stringResource(R.string.create_event_date),
+                    value = state.startDate.shortLabelWithYear(resources),
                     onClick = { onOpenPicker(PickerTarget.START_DATE) }
                 )
                 HorizontalDivider(color = divider)
                 PickerRow(
                     icon = Icons.Rounded.Schedule,
-                    label = "Horario",
+                    label = stringResource(R.string.create_event_schedule),
                     value = "${state.startTime.label()} – ${state.endTime.label()}",
-                    labelIsError = state.scheduleError != null,
+                    labelIsError = state.scheduleError(resources) != null,
                     onClick = { onOpenPicker(PickerTarget.START_TIME) }
                 )
             }
@@ -504,7 +512,7 @@ private fun ScheduleAndPlaceCard(
                     takesFocus = false
                 )
             ) {
-                state.scheduleError?.let {
+                state.scheduleError(resources)?.let {
                     FormErrorText(it, Modifier.padding(start = 52.dp, end = 16.dp, bottom = 8.dp))
                 }
             }
@@ -512,9 +520,9 @@ private fun ScheduleAndPlaceCard(
 
             PickerRow(
                 icon = Icons.Rounded.AddLocationAlt,
-                label = "Ubicación *",
-                value = state.place?.name ?: "Elegir lugar",
-                labelIsError = state.placeError != null,
+                label = stringResource(R.string.create_event_place_label),
+                value = state.place?.name ?: stringResource(R.string.create_event_place_choose),
+                labelIsError = state.placeError(resources) != null,
                 trailingIcon = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                 onClick = { onOpenPicker(PickerTarget.PLACE) }
             )
@@ -525,7 +533,7 @@ private fun ScheduleAndPlaceCard(
                     takesFocus = false
                 )
             ) {
-                state.placeError?.let {
+                state.placeError(resources)?.let {
                     FormErrorText(it, Modifier.padding(start = 52.dp, end = 16.dp, bottom = 8.dp))
                 }
             }
@@ -539,8 +547,8 @@ private fun CupoCard(state: CreateEventUiState, viewModel: CreateEventViewModel)
         Column(modifier = Modifier.padding(16.dp)) {
             ToggleRow(
                 icon = Icons.Rounded.Groups,
-                title = "Cupo máximo",
-                subtitle = "Opcional · limita las confirmaciones",
+                title = stringResource(R.string.create_event_cupo_title),
+                subtitle = stringResource(R.string.create_event_cupo_subtitle),
                 checked = state.cupoEnabled,
                 onCheckedChange = viewModel::onCupoEnabledChange
             )
@@ -552,7 +560,7 @@ private fun CupoCard(state: CreateEventUiState, viewModel: CreateEventViewModel)
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StepperButton(Icons.Rounded.Remove, "Disminuir cupo", viewModel::decreaseCupo)
+                    StepperButton(Icons.Rounded.Remove, stringResource(R.string.create_event_cupo_decrease), viewModel::decreaseCupo)
                     Row(
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.Center,
@@ -560,13 +568,13 @@ private fun CupoCard(state: CreateEventUiState, viewModel: CreateEventViewModel)
                     ) {
                         Text(state.cupo.toString(), fontSize = 24.sp)
                         Text(
-                            " personas",
+                            " " + stringResource(R.string.create_event_cupo_people),
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 3.dp)
                         )
                     }
-                    StepperButton(Icons.Rounded.Add, "Aumentar cupo", viewModel::increaseCupo)
+                    StepperButton(Icons.Rounded.Add, stringResource(R.string.create_event_cupo_increase), viewModel::increaseCupo)
                 }
             }
         }
@@ -592,16 +600,19 @@ private fun StepperButton(icon: ImageVector, description: String, onClick: () ->
 @Composable
 private fun ContributionCard(state: CreateEventUiState, viewModel: CreateEventViewModel) {
     val colors = MaterialTheme.colorScheme
+    val resources = rememberResourceProvider()
     SectionCard {
         Column(modifier = Modifier.padding(16.dp)) {
             ToggleRow(
                 icon = Icons.Rounded.VolunteerActivism,
-                title = "Aporte con causa",
-                subtitle = if (state.contributionEnabled) {
-                    "Solo eventos benéficos · el monto se paga en el lugar"
-                } else {
-                    "Opcional · solo para eventos benéficos, sin ánimo de lucro"
-                },
+                title = stringResource(R.string.create_event_contribution_title),
+                subtitle = stringResource(
+                    if (state.contributionEnabled) {
+                        R.string.create_event_contribution_on
+                    } else {
+                        R.string.create_event_contribution_off
+                    }
+                ),
                 checked = state.contributionEnabled,
                 onCheckedChange = viewModel::onContributionEnabledChange
             )
@@ -609,13 +620,13 @@ private fun ContributionCard(state: CreateEventUiState, viewModel: CreateEventVi
                 FormTextField(
                     value = if (state.contributionAmount > 0) state.contributionAmount.toString() else "",
                     onValueChange = viewModel::onContributionAmountChange,
-                    label = "Monto del aporte",
+                    label = stringResource(R.string.create_event_amount_label),
                     required = true,
                     placeholder = "5000",
                     prefix = "$ ",
-                    suffix = "COP por persona",
-                    hint = FormTexts.CONTRIBUTION_AMOUNT_HINT,
-                    error = state.contributionError,
+                    suffix = stringResource(R.string.create_event_amount_suffix),
+                    hint = stringResource(R.string.form_contribution_amount_hint),
+                    error = state.contributionError(resources),
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     containerColor = colors.surfaceContainerLow,
@@ -647,11 +658,11 @@ private fun ContributionCard(state: CreateEventUiState, viewModel: CreateEventVi
                 FormTextField(
                     value = state.contributionCause,
                     onValueChange = viewModel::onContributionCauseChange,
-                    label = "¿A qué se destina el aporte?",
+                    label = stringResource(R.string.create_event_cause_label),
                     required = true,
-                    placeholder = "Ej. Becas de la Escuela de Bambuco",
-                    hint = FormTexts.CONTRIBUTION_CAUSE_HINT,
-                    error = state.contributionCauseError,
+                    placeholder = stringResource(R.string.create_event_cause_placeholder),
+                    hint = stringResource(R.string.form_contribution_cause_hint),
+                    error = state.contributionCauseError(resources),
                     maxLength = FormLimits.CONTRIBUTION_CAUSE,
                     singleLine = true,
                     containerColor = colors.surfaceContainerLow,
@@ -662,7 +673,7 @@ private fun ContributionCard(state: CreateEventUiState, viewModel: CreateEventVi
                 )
                 Box(modifier = Modifier.padding(top = 12.dp)) {
                     InfoBanner(
-                        text = "Solo eventos benéficos pueden pedir un aporte. La plataforma no admite eventos con fines lucrativos: moderación puede pedirte el destino de los fondos.",
+                        text = stringResource(R.string.create_event_contribution_banner),
                         container = colors.tertiaryContainer,
                         content = colors.onTertiaryContainer
                     )
@@ -698,16 +709,20 @@ private fun ImagesButton(count: Int, notice: String?, onClick: () -> Unit) {
         Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null, tint = colors.primary, modifier = Modifier.size(23.dp))
         Column {
             Text(
-                text = when (count) {
-                    0 -> "Agregar imágenes"
-                    1 -> "1 imagen seleccionada"
-                    else -> "$count imágenes seleccionadas"
+                text = if (count == 0) {
+                    stringResource(R.string.create_event_images_add)
+                } else {
+                    pluralStringResource(R.plurals.create_event_images_selected, count, count)
                 },
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = if (count == 0) "Hasta 5 fotos · la primera será la portada" else "Toca para cambiar la selección",
+                text = if (count == 0) {
+                    stringResource(R.string.create_event_images_hint, FormLimits.MAX_IMAGES)
+                } else {
+                    stringResource(R.string.create_event_images_change)
+                },
                 fontSize = 12.sp,
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp)
@@ -745,9 +760,9 @@ private fun EventDatePickerDialog(
                             onConfirm(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
                         }
                     }
-                ) { Text("Aceptar") }
+                ) { Text(stringResource(R.string.common_accept)) }
             },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+            dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } }
         ) {
             DatePicker(state = pickerState)
         }
@@ -778,10 +793,10 @@ private fun EventTimePickerDialog(
             },
             confirmButton = {
                 TextButton(onClick = { onConfirm(LocalTime.of(pickerState.hour, pickerState.minute)) }) {
-                    Text("Aceptar")
+                    Text(stringResource(R.string.common_accept))
                 }
             },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+            dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 }
@@ -797,14 +812,15 @@ private fun PlacePickerDialog(
     var neighborhood by remember { mutableStateOf(selected?.neighborhood.orEmpty()) }
     var nameTouched by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
+    val resources = rememberResourceProvider()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Ubicación del evento") },
+        title = { Text(stringResource(R.string.create_event_place_dialog_title)) },
         text = {
             Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "Escribe el punto de encuentro. Los asistentes verán esta ubicación.",
+                    stringResource(R.string.create_event_place_dialog_message),
                     fontSize = 13.sp,
                     color = colors.onSurfaceVariant
                 )
@@ -814,10 +830,10 @@ private fun PlacePickerDialog(
                         name = it
                         nameTouched = true
                     },
-                    label = "Nombre del lugar",
+                    label = stringResource(R.string.create_event_place_name_label),
                     required = true,
-                    hint = FormTexts.PLACE_NAME_HINT,
-                    error = Validators.placeName(name).takeIf { nameTouched },
+                    hint = stringResource(R.string.form_place_name_hint),
+                    error = Validators.placeName(resources, name).takeIf { nameTouched },
                     maxLength = MAX_PLACE_NAME_LENGTH,
                     singleLine = true,
                     containerColor = Color.Transparent,
@@ -826,8 +842,8 @@ private fun PlacePickerDialog(
                 FormTextField(
                     value = neighborhood,
                     onValueChange = { neighborhood = it },
-                    label = "Barrio o sector",
-                    hint = FormTexts.PLACE_NEIGHBORHOOD_HINT,
+                    label = stringResource(R.string.create_event_place_neighborhood_label),
+                    hint = stringResource(R.string.form_place_neighborhood_hint),
                     maxLength = MAX_NEIGHBORHOOD_LENGTH,
                     singleLine = true,
                     containerColor = Color.Transparent
@@ -861,12 +877,12 @@ private fun PlacePickerDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (Validators.placeName(name) == null) onConfirm(name, neighborhood) else nameTouched = true
+                    if (Validators.placeName(resources, name) == null) onConfirm(name, neighborhood) else nameTouched = true
                 }
             ) {
-                Text("Usar este lugar")
+                Text(stringResource(R.string.create_event_place_use))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } }
     )
 }

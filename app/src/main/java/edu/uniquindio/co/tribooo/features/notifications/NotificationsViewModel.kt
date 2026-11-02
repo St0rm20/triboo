@@ -3,6 +3,8 @@ package edu.uniquindio.co.tribooo.features.notifications
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.R
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.core.util.relativeLabel
 import edu.uniquindio.co.tribooo.domain.model.Comment
@@ -46,11 +48,11 @@ data class NotificationsUiState(
     val items: List<NotificationItem> = emptyList(),
     val unreadCount: Int = 0
 ) {
-    val summary: String
-        get() = when (unreadCount) {
-            0 -> "Todo al día"
-            1 -> "1 aviso sin leer"
-            else -> "$unreadCount avisos sin leer"
+    fun summary(resources: ResourceProvider): String =
+        if (unreadCount == 0) {
+            resources.getString(R.string.notifications_all_read)
+        } else {
+            resources.getQuantityString(R.plurals.notifications_unread, unreadCount, unreadCount)
         }
 }
 
@@ -68,7 +70,8 @@ class NotificationsViewModel @Inject constructor(
     observeFollows: ObserveFollowsUseCase,
     observeEvents: ObserveEventsUseCase,
     private val markNotificationRead: MarkNotificationReadUseCase,
-    private val markAllNotificationsRead: MarkAllNotificationsReadUseCase
+    private val markAllNotificationsRead: MarkAllNotificationsReadUseCase,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     private val sources = combine(observeComments(), observeFollows(), observeEvents()) { comments, follows, events ->
@@ -77,7 +80,7 @@ class NotificationsViewModel @Inject constructor(
 
     val uiState: StateFlow<NotificationsUiState> = combine(observeNotifications(), sources) { notifications, sources ->
         NotificationsUiState(
-            items = notifications.mapNotNull { it.toItem(sources) },
+            items = notifications.mapNotNull { it.toItem(sources, resources) },
             unreadCount = notifications.count { !it.read }
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NotificationsUiState())
@@ -92,8 +95,8 @@ class NotificationsViewModel @Inject constructor(
 }
 
 /** Arma la tarjeta; devuelve null si el dato al que apunta ya no existe. */
-private fun Notification.toItem(sources: NotificationSources): NotificationItem? {
-    val ago = date.relativeLabel()
+private fun Notification.toItem(sources: NotificationSources, resources: ResourceProvider): NotificationItem? {
+    val ago = date.relativeLabel(resources)
     return when (type) {
         NotificationType.COMMENT -> {
             val comment = sources.comments.firstOrNull { it.id == reference } ?: return null

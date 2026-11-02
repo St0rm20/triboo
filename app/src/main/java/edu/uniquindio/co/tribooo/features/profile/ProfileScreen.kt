@@ -50,11 +50,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.ConfirmAlertDialog
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
 import edu.uniquindio.co.tribooo.core.component.MainBottomBar
@@ -63,8 +66,6 @@ import edu.uniquindio.co.tribooo.core.component.avatarColors
 import edu.uniquindio.co.tribooo.core.util.atAppZone
 import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.domain.model.User
-import java.time.format.TextStyle
-import java.util.Locale
 
 @Composable
 fun ProfileScreen(
@@ -160,7 +161,7 @@ fun ProfileScreen(
                         .height(52.dp)
                 ) {
                     Icon(Icons.Rounded.DeleteForever, contentDescription = null, modifier = Modifier.size(20.dp))
-                    Text("Eliminar mi cuenta", modifier = Modifier.padding(start = 8.dp))
+                    Text(stringResource(R.string.profile_delete_account), modifier = Modifier.padding(start = 8.dp))
                 }
 
                 Spacer(Modifier.height(8.dp))
@@ -187,10 +188,10 @@ fun ProfileScreen(
 
     if (state.showLogoutDialog) {
         ConfirmAlertDialog(
-            title = "¿Cerrar sesión?",
-            message = "Volverás a la pantalla de inicio de sesión. Tus eventos confirmados y guardados se mantienen en tu cuenta.",
-            confirmLabel = "Cerrar sesión",
-            dismissLabel = "Seguir aquí",
+            title = stringResource(R.string.profile_logout_title),
+            message = stringResource(R.string.profile_logout_message),
+            confirmLabel = stringResource(R.string.profile_logout),
+            dismissLabel = stringResource(R.string.profile_logout_stay),
             onConfirm = viewModel::onConfirmLogout,
             onDismiss = viewModel::onDismissLogoutDialog
         )
@@ -198,10 +199,10 @@ fun ProfileScreen(
 
     if (state.showDeleteDialog) {
         ConfirmAlertDialog(
-            title = "¿Eliminar tu cuenta?",
-            message = "Se borrarán los eventos que organizas y tus confirmaciones de asistencia. Esta acción no se puede deshacer.",
-            confirmLabel = "Eliminar",
-            dismissLabel = "Conservar cuenta",
+            title = stringResource(R.string.profile_delete_title),
+            message = stringResource(R.string.profile_delete_message),
+            confirmLabel = stringResource(R.string.event_status_action_delete),
+            dismissLabel = stringResource(R.string.profile_delete_keep),
             onConfirm = viewModel::onConfirmDeleteAccount,
             onDismiss = viewModel::onDismissDeleteDialog
         )
@@ -237,14 +238,14 @@ private fun ProfileTopBar(onLogoutClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = "Perfil",
+            text = stringResource(R.string.nav_profile),
             fontSize = 26.sp,
             lineHeight = 32.sp,
             color = MaterialTheme.colorScheme.onSurface
         )
         TextButton(onClick = onLogoutClick) {
             Icon(Icons.AutoMirrored.Rounded.Logout, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text("Cerrar sesión", modifier = Modifier.padding(start = 6.dp))
+            Text(stringResource(R.string.profile_logout), modifier = Modifier.padding(start = 6.dp))
         }
     }
 }
@@ -254,7 +255,7 @@ private fun ProfileHeader(user: User, state: ProfileUiState) {
     val colors = MaterialTheme.colorScheme
     val (avatarContainer, avatarContent) = avatarColors(user.id.hashCode())
     val registered = user.dateRegistered.atAppZone()
-    val month = registered.month.getDisplayName(TextStyle.FULL, Locale.forLanguageTag("es"))
+    val month = stringArrayResource(R.array.months_long)[registered.monthValue - 1]
 
     Surface(
         shape = RoundedCornerShape(26.dp),
@@ -276,12 +277,12 @@ private fun ProfileHeader(user: User, state: ProfileUiState) {
                 Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                     Text(user.name, fontSize = 20.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
                     Text(
-                        text = "Barrio ${user.neighborhood} · desde $month ${registered.year}",
+                        text = stringResource(R.string.profile_header_subtitle, user.neighborhood, month, registered.year),
                         fontSize = 13.sp,
                         color = colors.onSurfaceVariant
                     )
                     Text(
-                        text = if (state.isAdmin) "Administrador" else "Usuario",
+                        text = stringResource(if (state.isAdmin) R.string.role_admin else R.string.profile_role_user),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = colors.onSecondaryContainer,
@@ -296,14 +297,14 @@ private fun ProfileHeader(user: User, state: ProfileUiState) {
             val stats = state.stats
             Row(modifier = Modifier.fillMaxWidth()) {
                 if (state.isAdmin) {
-                    StatCell("Por revisar", stats.pendingReview.toString(), Modifier.weight(1f))
-                    StatCell("Rechazadas", stats.rejected.toString(), Modifier.weight(1f))
-                    StatCell("Resueltas", stats.resolved.toString(), Modifier.weight(1f))
+                    StatCell(stringResource(R.string.profile_stat_to_review), stats.pendingReview.toString(), Modifier.weight(1f))
+                    StatCell(stringResource(R.string.profile_stat_rejected), stats.rejected.toString(), Modifier.weight(1f))
+                    StatCell(stringResource(R.string.profile_stat_resolved), stats.resolved.toString(), Modifier.weight(1f))
                 } else {
-                    StatCell("Seguidores", stats.followers.toString(), Modifier.weight(1f))
-                    StatCell("Asistencias", stats.attendances.toString(), Modifier.weight(1f))
-                    StatCell("Creados", stats.created.toString(), Modifier.weight(1f))
-                    StatCell("Calificación", stats.ratingLabel, Modifier.weight(1f))
+                    StatCell(stringResource(R.string.followers_title), stats.followers.toString(), Modifier.weight(1f))
+                    StatCell(stringResource(R.string.profile_stat_attendances), stats.attendances.toString(), Modifier.weight(1f))
+                    StatCell(stringResource(R.string.profile_stat_created), stats.created.toString(), Modifier.weight(1f))
+                    StatCell(stringResource(R.string.profile_stat_rating), stats.ratingLabel, Modifier.weight(1f))
                 }
             }
         }
@@ -334,14 +335,14 @@ private fun AboutCard(user: User, onEditClick: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text("Sobre mí", style = MaterialTheme.typography.titleSmall, color = colors.onSurface)
+                Text(stringResource(R.string.profile_about), style = MaterialTheme.typography.titleSmall, color = colors.onSurface)
                 TextButton(onClick = onEditClick) {
                     Icon(Icons.Rounded.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text("Editar", modifier = Modifier.padding(start = 6.dp))
+                    Text(stringResource(R.string.event_status_action_edit), modifier = Modifier.padding(start = 6.dp))
                 }
             }
             Text(
-                text = user.bio ?: "Aún no has escrito tu biografía.",
+                text = user.bio ?: stringResource(R.string.profile_no_bio),
                 fontSize = 14.sp,
                 lineHeight = 20.sp,
                 color = if (user.bio == null) colors.onSurfaceVariant else colors.onSurface
@@ -372,11 +373,11 @@ private fun UserLinks(
     onNavigateToNotifications: () -> Unit
 ) {
     LinksCard {
-        LinkRow(Icons.Rounded.Event, "Mis eventos", stats.created, onNavigateToMyEvents)
-        LinkRow(Icons.Rounded.Bookmark, "Eventos guardados", stats.saved, onNavigateToSaved)
-        LinkRow(Icons.Rounded.Groups, "Seguidores", stats.followers, onNavigateToFollowers)
-        LinkRow(Icons.Rounded.Person, "Editar datos personales", null, onEditClick)
-        LinkRow(Icons.Rounded.Notifications, "Notificaciones", stats.unreadNotifications, onNavigateToNotifications)
+        LinkRow(Icons.Rounded.Event, stringResource(R.string.my_events_title), stats.created, onNavigateToMyEvents)
+        LinkRow(Icons.Rounded.Bookmark, stringResource(R.string.saved_title), stats.saved, onNavigateToSaved)
+        LinkRow(Icons.Rounded.Groups, stringResource(R.string.followers_title), stats.followers, onNavigateToFollowers)
+        LinkRow(Icons.Rounded.Person, stringResource(R.string.profile_edit_title), null, onEditClick)
+        LinkRow(Icons.Rounded.Notifications, stringResource(R.string.feed_notifications), stats.unreadNotifications, onNavigateToNotifications)
     }
 }
 
@@ -389,10 +390,10 @@ private fun AdminLinks(
     onNavigateToNotifications: () -> Unit
 ) {
     LinksCard {
-        LinkRow(Icons.Rounded.Shield, "Moderar publicaciones", stats.pendingReview, onNavigateToModeration)
-        LinkRow(Icons.Rounded.Flag, "Reportes de la comunidad", stats.reports, onNavigateToCommunityReports)
-        LinkRow(Icons.Rounded.Block, "Publicaciones rechazadas", stats.rejected, onNavigateToRejected)
-        LinkRow(Icons.Rounded.Notifications, "Notificaciones", stats.unreadNotifications, onNavigateToNotifications)
+        LinkRow(Icons.Rounded.Shield, stringResource(R.string.profile_link_moderate), stats.pendingReview, onNavigateToModeration)
+        LinkRow(Icons.Rounded.Flag, stringResource(R.string.profile_link_reports), stats.reports, onNavigateToCommunityReports)
+        LinkRow(Icons.Rounded.Block, stringResource(R.string.profile_link_rejected), stats.rejected, onNavigateToRejected)
+        LinkRow(Icons.Rounded.Notifications, stringResource(R.string.feed_notifications), stats.unreadNotifications, onNavigateToNotifications)
     }
 }
 
@@ -449,7 +450,7 @@ private fun ThemeRow(darkTheme: Boolean, onDarkThemeChange: (Boolean) -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Icon(Icons.Rounded.DarkMode, contentDescription = null, tint = colors.primary, modifier = Modifier.size(22.dp))
-            Text("Tema oscuro", fontSize = 15.sp, color = colors.onSurface, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.profile_dark_theme), fontSize = 15.sp, color = colors.onSurface, modifier = Modifier.weight(1f))
             Switch(checked = darkTheme, onCheckedChange = onDarkThemeChange)
         }
     }

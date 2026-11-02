@@ -36,17 +36,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.FormErrorText
 import edu.uniquindio.co.tribooo.core.component.FormInvalidNotice
 import edu.uniquindio.co.tribooo.core.component.FormTextField
 import edu.uniquindio.co.tribooo.core.component.RequiredLegend
 import edu.uniquindio.co.tribooo.core.component.formTarget
-import edu.uniquindio.co.tribooo.core.util.FormTexts
+import edu.uniquindio.co.tribooo.core.util.reportReasonRes
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.ReportReasons
 import edu.uniquindio.co.tribooo.domain.usecase.report.SubmitReportUseCase
@@ -88,7 +90,7 @@ fun ReportEventSheet(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Column {
-                Text("Reportar este evento", fontSize = 20.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                Text(stringResource(R.string.report_title), fontSize = 20.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
                 Text(
                     event.title,
                     fontSize = 14.sp,
@@ -96,12 +98,12 @@ fun ReportEventSheet(
                     color = colors.onSurface,
                     modifier = Modifier.padding(top = 6.dp)
                 )
-                Text("Organiza ${event.organizer.name}", fontSize = 12.sp, color = colors.onSurfaceVariant)
+                Text(stringResource(R.string.report_organizer, event.organizer.name), fontSize = 12.sp, color = colors.onSurfaceVariant)
             }
 
             RequiredLegend()
 
-            Text("Motivo del reporte *", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.onSurfaceVariant)
+            Text(stringResource(R.string.report_reason_label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.onSurfaceVariant)
             Column(
                 verticalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.formTarget(
@@ -123,9 +125,9 @@ fun ReportEventSheet(
             FormTextField(
                 value = draft.detail,
                 onValueChange = { onAction(EventDetailAction.ReportDetailChange(it)) },
-                label = "Detalle · opcional",
-                placeholder = "Cuéntale a moderación qué viste: fechas, contactos, enlaces sospechosos.",
-                hint = FormTexts.REPORT_DETAIL_HINT,
+                label = stringResource(R.string.report_detail_label),
+                placeholder = stringResource(R.string.report_detail_placeholder),
+                hint = stringResource(R.string.form_report_detail_hint),
                 maxLength = SubmitReportUseCase.MAX_DETAIL_LENGTH,
                 minLines = 3,
                 containerColor = Color.Transparent
@@ -138,7 +140,7 @@ fun ReportEventSheet(
                 horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = close) { Text("Cancelar") }
+                TextButton(onClick = close) { Text(stringResource(R.string.common_cancel)) }
                 Button(
                     onClick = { onAction(EventDetailAction.SendReport) },
                     enabled = !draft.isSending,
@@ -148,7 +150,7 @@ fun ReportEventSheet(
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = colors.onError)
                     } else {
                         Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text("Enviar reporte", modifier = Modifier.padding(start = 8.dp))
+                        Text(stringResource(R.string.report_send), modifier = Modifier.padding(start = 8.dp))
                     }
                 }
             }
@@ -174,7 +176,11 @@ private fun ReasonOption(reason: String, selected: Boolean, onSelect: () -> Unit
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Icon(reasonIcon(reason), contentDescription = null, modifier = Modifier.size(22.dp))
-            Text(reason, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            Text(
+                reportReasonRes(reason)?.let { stringResource(it) } ?: reason,
+                fontSize = 14.sp,
+                modifier = Modifier.weight(1f)
+            )
             RadioButton(selected = selected, onClick = null, modifier = Modifier.padding(12.dp))
         }
     }

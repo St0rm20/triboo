@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.profile
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
@@ -61,7 +62,8 @@ class ProfilePhotoTest {
             observeModerationCounts = ObserveModerationCountsUseCase(world.events, world.reports, ModerationReviewRepositoryImpl()),
             getCities = GetCitiesUseCase(LocationRepositoryImpl()),
             updateProfileUseCase = UpdateProfileUseCase(world.users),
-            logoutUseCase = LogoutUseCase(world.session)
+            logoutUseCase = LogoutUseCase(world.session),
+            resources = testResources
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
         return vm

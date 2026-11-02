@@ -5,7 +5,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.component.FeedEventItem
 import edu.uniquindio.co.tribooo.core.component.toCardItems
-import edu.uniquindio.co.tribooo.core.util.WAITLIST_LEFT_MESSAGE
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
+import edu.uniquindio.co.tribooo.core.util.waitlistLeftMessage
 import edu.uniquindio.co.tribooo.core.util.waitlistJoinedMessage
 import edu.uniquindio.co.tribooo.core.util.MapProjection
 import edu.uniquindio.co.tribooo.domain.model.Category
@@ -90,7 +91,8 @@ class ExploreViewModel @Inject constructor(
     private val toggleAttendanceUseCase: ToggleAttendanceUseCase,
     private val findScheduleConflict: FindScheduleConflictUseCase,
     private val joinWaitlist: JoinWaitlistUseCase,
-    private val leaveWaitlist: LeaveWaitlistUseCase
+    private val leaveWaitlist: LeaveWaitlistUseCase,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     private val local = MutableStateFlow(ExploreLocal())
@@ -155,11 +157,11 @@ class ExploreViewModel @Inject constructor(
             item.isAttending -> confirmAttendance(item.event)
             item.isWaitlisted -> viewModelScope.launch {
                 leaveWaitlist(item.event)
-                local.update { it.copy(message = WAITLIST_LEFT_MESSAGE) }
+                local.update { it.copy(message = waitlistLeftMessage(resources)) }
             }
             item.isFull -> viewModelScope.launch {
                 joinWaitlist(item.event)?.let { position ->
-                    local.update { it.copy(message = waitlistJoinedMessage(position)) }
+                    local.update { it.copy(message = waitlistJoinedMessage(resources, position)) }
                 }
             }
             else -> viewModelScope.launch {

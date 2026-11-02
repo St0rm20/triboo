@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.domain.usecase.event
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Attendance
@@ -26,7 +27,7 @@ class FinalizeEventUseCaseTest {
         repository.save(testEvent("rej", me, EventStatus.RECHAZADO))
         repository.save(testEvent("done", me, EventStatus.FINALIZADO))
         repository.save(testEvent("ajeno", other, EventStatus.ACTIVO))
-        block(FinalizeEventUseCase(repository, currentUserUseCase(userId)), repository)
+        block(FinalizeEventUseCase(repository, currentUserUseCase(userId), testResources), repository)
     }
 
     @Test

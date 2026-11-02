@@ -1,8 +1,11 @@
 package edu.uniquindio.co.tribooo.features.myevents
 
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.R
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.averageRating
 import edu.uniquindio.co.tribooo.core.util.latestRejectionDate
 import edu.uniquindio.co.tribooo.core.util.myEventFooter
@@ -26,11 +29,11 @@ import kotlinx.coroutines.flow.stateIn
 import java.time.Instant
 
 /** Pestañas de la pantalla; cada una muestra los eventos de un estado. */
-enum class MyEventsTab(val label: String, val status: EventStatus) {
-    ACTIVOS("Activos", EventStatus.ACTIVO),
-    PENDIENTES("Pendientes", EventStatus.PENDIENTE),
-    FINALIZADOS("Finalizados", EventStatus.FINALIZADO),
-    RECHAZADOS("Rechazados", EventStatus.RECHAZADO)
+enum class MyEventsTab(@StringRes val label: Int, val status: EventStatus) {
+    ACTIVOS(R.string.my_events_tab_active, EventStatus.ACTIVO),
+    PENDIENTES(R.string.my_events_tab_pending, EventStatus.PENDIENTE),
+    FINALIZADOS(R.string.my_events_tab_finished, EventStatus.FINALIZADO),
+    RECHAZADOS(R.string.my_events_tab_rejected, EventStatus.RECHAZADO)
 }
 
 /** Evento listo para mostrarse en una tarjeta de "Mis eventos". */
@@ -55,6 +58,7 @@ internal fun buildMyEventItems(
     attendances: List<Attendance>,
     comments: List<Comment>,
     reviews: List<ModerationReview>,
+    resources: ResourceProvider,
     now: Instant = Instant.now()
 ): List<MyEventItem> {
     val attendeesByEvent = attendances.groupBy { it.event.id }
@@ -64,13 +68,15 @@ internal fun buildMyEventItems(
         .map { event ->
             MyEventItem(
                 event = event,
-                statusLabel = event.status.myEventsLabel(),
+                statusLabel = event.status.myEventsLabel(resources),
                 summary = myEventSummary(
+                    rp = resources,
                     event = event,
                     attendees = attendeesByEvent[event.id].orEmpty().size,
                     rating = averageRating(event.id, comments)
                 ),
                 footer = myEventFooter(
+                    resources,
                     event,
                     now,
                     rejectedAt = if (event.status == EventStatus.RECHAZADO) latestRejectionDate(event.id, reviews) else null
@@ -84,7 +90,8 @@ class MyEventsViewModel @Inject constructor(
     observeMyEvents: ObserveMyEventsUseCase,
     observeAttendances: ObserveAttendancesUseCase,
     observeComments: ObserveCommentsUseCase,
-    observeModerationReviews: ObserveModerationReviewsUseCase
+    observeModerationReviews: ObserveModerationReviewsUseCase,
+    resources: ResourceProvider
 ) : ViewModel() {
 
     private val selectedTab = MutableStateFlow(MyEventsTab.ACTIVOS)
@@ -98,7 +105,7 @@ class MyEventsViewModel @Inject constructor(
     ) { events, attendances, comments, reviews, tab ->
         MyEventsUiState(
             selectedTab = tab,
-            events = buildMyEventItems(events, tab, attendances, comments, reviews)
+            events = buildMyEventItems(events, tab, attendances, comments, reviews, resources)
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MyEventsUiState())
 

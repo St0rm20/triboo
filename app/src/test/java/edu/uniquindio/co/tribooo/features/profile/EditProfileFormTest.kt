@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.profile
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
@@ -64,7 +65,8 @@ class EditProfileFormTest {
             observeModerationCounts = ObserveModerationCountsUseCase(world.events, world.reports, ModerationReviewRepositoryImpl()),
             getCities = GetCitiesUseCase(LocationRepositoryImpl()),
             updateProfileUseCase = UpdateProfileUseCase(world.users),
-            logoutUseCase = LogoutUseCase(world.session)
+            logoutUseCase = LogoutUseCase(world.session),
+            resources = testResources
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
         return vm
@@ -81,9 +83,9 @@ class EditProfileFormTest {
         val vm = viewModel()
         vm.onEditClick()
 
-        assertNull(vm.uiState.value.nameError)
-        assertNull(vm.uiState.value.neighborhoodError)
-        assertFalse(vm.uiState.value.showInvalidNotice)
+        assertNull(vm.uiState.value.nameError(testResources))
+        assertNull(vm.uiState.value.neighborhoodError(testResources))
+        assertFalse(vm.uiState.value.showInvalidNotice(testResources))
     }
 
     @Test
@@ -94,9 +96,9 @@ class EditProfileFormTest {
         vm.onSaveEdit()
 
         val state = vm.uiState.value
-        assertEquals(FormTexts.NAME_REQUIRED, state.nameError)
-        assertEquals(FormTexts.NEIGHBORHOOD_REQUIRED, state.neighborhoodError)
-        assertTrue(state.showInvalidNotice)
+        assertEquals(FormTexts.NAME_REQUIRED, state.nameError(testResources))
+        assertEquals(FormTexts.NEIGHBORHOOD_REQUIRED, state.neighborhoodError(testResources))
+        assertTrue(state.showInvalidNotice(testResources))
         assertEquals(EditProfileField.NAME, state.editFocusField)
         assertTrue(state.showEditDialog)
         assertNull(state.snackbarMessage)
@@ -109,8 +111,8 @@ class EditProfileFormTest {
 
         vm.onEditFieldFocusLost(EditProfileField.NAME)
 
-        assertEquals(FormTexts.NAME_REQUIRED, vm.uiState.value.nameError)
-        assertNull(vm.uiState.value.neighborhoodError)
+        assertEquals(FormTexts.NAME_REQUIRED, vm.uiState.value.nameError(testResources))
+        assertNull(vm.uiState.value.neighborhoodError(testResources))
     }
 
     @Test
@@ -121,8 +123,8 @@ class EditProfileFormTest {
 
         vm.onNameChange("Daniela Restrepo")
 
-        assertNull(vm.uiState.value.nameError)
-        assertEquals(FormTexts.NEIGHBORHOOD_REQUIRED, vm.uiState.value.neighborhoodError)
+        assertNull(vm.uiState.value.nameError(testResources))
+        assertEquals(FormTexts.NEIGHBORHOOD_REQUIRED, vm.uiState.value.neighborhoodError(testResources))
         vm.onEditFocusHandled()
         vm.onSaveEdit()
         assertEquals(EditProfileField.NEIGHBORHOOD, vm.uiState.value.editFocusField)
@@ -136,7 +138,7 @@ class EditProfileFormTest {
 
         vm.onEditFieldFocusLost(EditProfileField.NAME)
 
-        assertEquals(FormTexts.NAME_TOO_SHORT, vm.uiState.value.nameError)
+        assertEquals(FormTexts.NAME_TOO_SHORT, vm.uiState.value.nameError(testResources))
     }
 
     @Test
@@ -170,7 +172,7 @@ class EditProfileFormTest {
         vm.onDismissEditDialog()
         vm.onEditClick()
 
-        assertNull(vm.uiState.value.nameError)
-        assertFalse(vm.uiState.value.showInvalidNotice)
+        assertNull(vm.uiState.value.nameError(testResources))
+        assertFalse(vm.uiState.value.showInvalidNotice(testResources))
     }
 }

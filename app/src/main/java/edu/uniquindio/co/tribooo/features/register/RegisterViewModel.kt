@@ -3,9 +3,10 @@ package edu.uniquindio.co.tribooo.features.register
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import edu.uniquindio.co.tribooo.core.util.FormTexts
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.util.MessageTarget
 import edu.uniquindio.co.tribooo.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.domain.usecase.auth.RegisterUseCase
@@ -36,45 +37,47 @@ data class RegisterUiState(
     val registerResult: RequestResult? = null,
     val showConfirmDialog: Boolean = false
 ) {
-    private fun rawError(field: RegisterField): String? = when (field) {
-        RegisterField.NAME -> Validators.name(name)
-        RegisterField.CITY -> Validators.city(city)
-        RegisterField.ADDRESS -> Validators.address(address)
-        RegisterField.EMAIL -> Validators.email(email)
-        RegisterField.PASSWORD -> Validators.newPassword(password)
-        RegisterField.CONFIRM_PASSWORD -> Validators.confirmPassword(password, confirmPassword)
-        RegisterField.TERMS -> Validators.terms(termsAccepted)
+    private fun rawError(field: RegisterField, resources: ResourceProvider): String? = when (field) {
+        RegisterField.NAME -> Validators.name(resources, name)
+        RegisterField.CITY -> Validators.city(resources, city)
+        RegisterField.ADDRESS -> Validators.address(resources, address)
+        RegisterField.EMAIL -> Validators.email(resources, email)
+        RegisterField.PASSWORD -> Validators.newPassword(resources, password)
+        RegisterField.CONFIRM_PASSWORD -> Validators.confirmPassword(resources, password, confirmPassword)
+        RegisterField.TERMS -> Validators.terms(resources, termsAccepted)
     }
 
     /** El error del campo solo se ve si el usuario ya lo tocó o intentó enviar el formulario. */
-    private fun shownError(field: RegisterField): String? =
-        rawError(field).takeIf { submitAttempted || field in touched }
+    private fun shownError(field: RegisterField, resources: ResourceProvider): String? =
+        rawError(field, resources).takeIf { submitAttempted || field in touched }
 
-    val nameError: String? get() = shownError(RegisterField.NAME)
-    val cityError: String? get() = shownError(RegisterField.CITY)
-    val addressError: String? get() = shownError(RegisterField.ADDRESS)
-    val emailError: String? get() = shownError(RegisterField.EMAIL)
-    val passwordError: String? get() = shownError(RegisterField.PASSWORD)
-    val confirmPasswordError: String? get() = shownError(RegisterField.CONFIRM_PASSWORD)
-    val termsError: String? get() = shownError(RegisterField.TERMS)
+    fun nameError(resources: ResourceProvider): String? = shownError(RegisterField.NAME, resources)
+    fun cityError(resources: ResourceProvider): String? = shownError(RegisterField.CITY, resources)
+    fun addressError(resources: ResourceProvider): String? = shownError(RegisterField.ADDRESS, resources)
+    fun emailError(resources: ResourceProvider): String? = shownError(RegisterField.EMAIL, resources)
+    fun passwordError(resources: ResourceProvider): String? = shownError(RegisterField.PASSWORD, resources)
+    fun confirmPasswordError(resources: ResourceProvider): String? = shownError(RegisterField.CONFIRM_PASSWORD, resources)
+    fun termsError(resources: ResourceProvider): String? = shownError(RegisterField.TERMS, resources)
 
-    val isEmailValid: Boolean get() = rawError(RegisterField.EMAIL) == null
+    val isEmailValid: Boolean get() = email.isNotBlank() && Validators.isValidEmail(email)
 
     /** Las dos contraseñas coinciden y la primera es válida. */
-    val passwordsMatch: Boolean
-        get() = confirmPassword.isNotEmpty() && rawError(RegisterField.PASSWORD) == null &&
-            rawError(RegisterField.CONFIRM_PASSWORD) == null
+    fun passwordsMatch(resources: ResourceProvider): Boolean =
+        confirmPassword.isNotEmpty() && rawError(RegisterField.PASSWORD, resources) == null &&
+            rawError(RegisterField.CONFIRM_PASSWORD, resources) == null
 
-    val firstInvalidField: RegisterField? get() = RegisterField.entries.firstOrNull { rawError(it) != null }
+    fun firstInvalidField(resources: ResourceProvider): RegisterField? =
+        RegisterField.entries.firstOrNull { rawError(it, resources) != null }
 
-    val isFormValid: Boolean get() = firstInvalidField == null
+    fun isFormValid(resources: ResourceProvider): Boolean = firstInvalidField(resources) == null
 }
 
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
     getCities: GetCitiesUseCase,
     private val registerUseCase: RegisterUseCase,
-    private val messenger: SnackbarMessenger
+    private val messenger: SnackbarMessenger,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     val cities: List<String> = getCities()
@@ -103,10 +106,10 @@ class RegisterViewModel @Inject constructor(
     fun onRegisterClick() {
         val state = _uiState.value
         if (state.registerResult == RequestResult.Loading) return
-        val invalid = state.firstInvalidField
+        val invalid = state.firstInvalidField(resources)
         if (invalid != null) {
             _uiState.update {
-                it.copy(submitAttempted = true, focusField = invalid, message = FormTexts.SUBMIT_INVALID)
+                it.copy(submitAttempted = true, focusField = invalid, message = resources.getString(R.string.form_submit_invalid))
             }
             return
         }
@@ -136,10 +139,10 @@ class RegisterViewModel @Inject constructor(
                 password = state.password
             )
             val result = if (user != null) {
-                messenger.post(MessageTarget.LOGIN, FormTexts.ACCOUNT_CREATED)
-                RequestResult.Success("Registro exitoso")
+                messenger.post(MessageTarget.LOGIN, resources.getString(R.string.form_account_created))
+                RequestResult.Success(resources.getString(R.string.register_success))
             } else {
-                RequestResult.Failure("Ya existe una cuenta con ese email")
+                RequestResult.Failure(resources.getString(R.string.register_error_email_exists))
             }
             _uiState.update { it.copy(registerResult = result) }
         }

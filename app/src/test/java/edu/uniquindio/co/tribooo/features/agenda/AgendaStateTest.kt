@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.agenda
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.APP_ZONE
 import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.model.Category
@@ -33,7 +34,7 @@ class AgendaStateTest {
     )
 
     private fun state(events: List<Event>, going: List<Event>, selection: AgendaSelection = AgendaSelection.of(today)) =
-        buildAgendaState(agendaData(me, going.map { Attendance(me, it) }, events), selection, today)
+        buildAgendaState(agendaData(me, going.map { Attendance(me, it) }, events), selection, today, testResources)
 
     private fun AgendaUiState.cell(day: Int) = cells.filterNotNull().first { it.date.dayOfMonth == day }
 

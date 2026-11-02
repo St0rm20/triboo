@@ -10,7 +10,7 @@ class RelativeLabelTest {
     // Mediodía en Armenia (UTC-5), para que restar minutos u horas no cambie de día
     private val now: Instant = Instant.parse("2026-10-23T17:00:00Z")
 
-    private fun agoMinutes(minutes: Long) = now.minus(Duration.ofMinutes(minutes)).relativeLabel(now)
+    private fun agoMinutes(minutes: Long) = now.minus(Duration.ofMinutes(minutes)).relativeLabel(testResources, now)
 
     @Test
     fun showsMinutes() {
@@ -26,13 +26,13 @@ class RelativeLabelTest {
 
     @Test
     fun showsYesterdayByCalendarDay() {
-        assertEquals("ayer", Instant.parse("2026-10-22T06:00:00Z").relativeLabel(now))
-        assertEquals("ayer", Instant.parse("2026-10-22T23:00:00Z").relativeLabel(now))
+        assertEquals("ayer", Instant.parse("2026-10-22T06:00:00Z").relativeLabel(testResources, now))
+        assertEquals("ayer", Instant.parse("2026-10-22T23:00:00Z").relativeLabel(testResources, now))
     }
 
     @Test
     fun showsDays() {
-        assertEquals("hace 2 días", Instant.parse("2026-10-21T20:00:00Z").relativeLabel(now))
-        assertEquals("hace 4 días", Instant.parse("2026-10-19T15:00:00Z").relativeLabel(now))
+        assertEquals("hace 2 días", Instant.parse("2026-10-21T20:00:00Z").relativeLabel(testResources, now))
+        assertEquals("hace 4 días", Instant.parse("2026-10-19T15:00:00Z").relativeLabel(testResources, now))
     }
 }

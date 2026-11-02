@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.core.component
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -36,19 +37,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.R
 
 enum class MainTab(
-    val label: String,
+    @StringRes val label: Int,
     val icon: ImageVector,
     val selectedIcon: ImageVector
 ) {
-    FEED("Inicio", Icons.Outlined.Home, Icons.Rounded.Home),
-    EXPLORE("Explorar", Icons.Outlined.Map, Icons.Rounded.Map),
-    AGENDA("Agenda", Icons.Outlined.CalendarMonth, Icons.Rounded.CalendarMonth),
-    PROFILE("Perfil", Icons.Outlined.Person, Icons.Rounded.Person)
+    FEED(R.string.nav_home, Icons.Outlined.Home, Icons.Rounded.Home),
+    EXPLORE(R.string.nav_explore, Icons.Outlined.Map, Icons.Rounded.Map),
+    AGENDA(R.string.nav_agenda, Icons.Outlined.CalendarMonth, Icons.Rounded.CalendarMonth),
+    PROFILE(R.string.nav_profile, Icons.Outlined.Person, Icons.Rounded.Person)
 }
 
 /**
@@ -90,7 +93,7 @@ fun MainBottomBar(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             imageVector = if (isAdmin) Icons.Rounded.Gavel else Icons.Rounded.Add,
-                            contentDescription = if (isAdmin) "Moderación" else "Crear evento",
+                            contentDescription = stringResource(if (isAdmin) R.string.nav_moderation else R.string.nav_create_event),
                             modifier = Modifier.size(29.dp)
                         )
                     }
@@ -143,7 +146,7 @@ private fun RowScope.TabItem(
             )
         }
         Text(
-            text = tab.label,
+            text = stringResource(tab.label),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             color = if (isSelected) colors.onSurface else colors.onSurfaceVariant

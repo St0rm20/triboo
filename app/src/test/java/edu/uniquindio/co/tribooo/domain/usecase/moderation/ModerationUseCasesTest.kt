@@ -1,5 +1,7 @@
 package edu.uniquindio.co.tribooo.domain.usecase.moderation
 
+import edu.uniquindio.co.tribooo.R
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Category
@@ -115,10 +117,10 @@ class ModerationUseCasesTest {
         val recorder = ModerationRecorder(reviewRepo, notificationRepo)
         return Env(
             eventRepo, reportRepo, reviewRepo, notificationRepo,
-            VerifyEventUseCase(eventRepo, current, recorder),
-            RejectEventUseCase(eventRepo, current, recorder),
-            RestoreEventUseCase(eventRepo, current, recorder),
-            ResolveReportsUseCase(eventRepo, reportRepo, current, recorder)
+            VerifyEventUseCase(eventRepo, current, recorder, testResources),
+            RejectEventUseCase(eventRepo, current, recorder, testResources),
+            RestoreEventUseCase(eventRepo, current, recorder, testResources),
+            ResolveReportsUseCase(eventRepo, reportRepo, current, recorder, testResources)
         )
     }
 
@@ -171,7 +173,7 @@ class ModerationUseCasesTest {
         // 14 caracteres útiles rodeados de espacios
         val result = env.reject("p", "     12345678901234     ")
 
-        assertEquals(RejectEventUseCase.REASON_TOO_SHORT_MESSAGE, (result as RequestResult.Failure).errorMessage)
+        assertEquals(testResources.getString(R.string.usecase_reject_reason_too_short, RejectEventUseCase.MIN_REASON_LENGTH), (result as RequestResult.Failure).errorMessage)
         assertEquals(EventStatus.PENDIENTE, env.events.findById("p")!!.status)
         assertTrue(env.reviews.reviews.value.isEmpty())
         assertTrue(env.notifications.notifications.value.isEmpty())

@@ -48,12 +48,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
 import edu.uniquindio.co.tribooo.core.component.MainBottomBar
 import edu.uniquindio.co.tribooo.core.component.MainTab
@@ -64,6 +66,7 @@ import edu.uniquindio.co.tribooo.core.theme.categoryColors
 import edu.uniquindio.co.tribooo.core.util.ModerationCardAction
 import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
 import edu.uniquindio.co.tribooo.core.util.initials
+import edu.uniquindio.co.tribooo.core.util.localizedName
 import edu.uniquindio.co.tribooo.core.util.moderationActions
 import edu.uniquindio.co.tribooo.core.util.moderationContext
 import edu.uniquindio.co.tribooo.core.util.moderationCupoLabel
@@ -71,6 +74,7 @@ import edu.uniquindio.co.tribooo.core.util.moderationEmptyTexts
 import edu.uniquindio.co.tribooo.core.util.moderationStatusLabel
 import edu.uniquindio.co.tribooo.core.util.moderationSummary
 import edu.uniquindio.co.tribooo.core.util.moderationTabLabel
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.core.util.reportLines
 import edu.uniquindio.co.tribooo.core.util.reportedByLabel
 import edu.uniquindio.co.tribooo.core.util.rejectionFooter
@@ -90,6 +94,7 @@ fun ModerationScreen(
     viewModel: ModerationViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val rp = rememberResourceProvider()
     val snackbarHostState = remember { SnackbarHostState() }
     val colors = MaterialTheme.colorScheme
 
@@ -122,13 +127,13 @@ fun ModerationScreen(
                 .statusBarsPadding()
         ) {
             if (!state.isAdmin) {
-                CenteredMessage(Icons.Rounded.Lock, "No tienes acceso a esta sección", null)
+                CenteredMessage(Icons.Rounded.Lock, stringResource(R.string.usecase_moderation_not_admin), null)
             } else {
                 ModerationHeader(state.counts)
                 TabRow(selected = state.tab, counts = state.counts, onSelect = viewModel::onTabSelected)
 
                 if (state.cases.isEmpty()) {
-                    val (title, text) = moderationEmptyTexts(state.tab)
+                    val (title, text) = moderationEmptyTexts(rp, state.tab)
                     CenteredMessage(emptyIcon(state.tab), title, text)
                 } else {
                     LazyColumn(
@@ -181,6 +186,7 @@ private fun emptyIcon(tab: ModerationTab): ImageVector = when (tab) {
 @Composable
 private fun ModerationHeader(counts: ModerationCounts) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
 
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
@@ -196,9 +202,9 @@ private fun ModerationHeader(counts: ModerationCounts) {
             )
         }
         Column {
-            Text("Moderación", fontSize = 22.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+            Text(stringResource(R.string.nav_moderation), fontSize = 22.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
             Text(
-                text = moderationSummary(counts.pending, counts.reports),
+                text = moderationSummary(rp, counts.pending, counts.reports),
                 fontSize = 13.sp,
                 color = colors.onSurfaceVariant
             )
@@ -210,6 +216,7 @@ private fun ModerationHeader(counts: ModerationCounts) {
 @Composable
 private fun TabRow(selected: ModerationTab, counts: ModerationCounts, onSelect: (ModerationTab) -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
 
     Row(
         modifier = Modifier
@@ -234,7 +241,7 @@ private fun TabRow(selected: ModerationTab, counts: ModerationCounts, onSelect: 
                 border = if (isSelected) null else BorderStroke(1.dp, colors.outline)
             ) {
                 Text(
-                    text = moderationTabLabel(tab, count),
+                    text = moderationTabLabel(rp, tab, count),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -255,6 +262,7 @@ private fun CaseCard(
     onRestore: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val event = case.event
 
     Surface(shape = RoundedCornerShape(24.dp), color = colors.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
@@ -264,7 +272,7 @@ private fun CaseCard(
                 StatusTag(event.status)
                 CategoryTag(case)
                 if (tab == ModerationTab.RESUELTAS && case.resolution != null) {
-                    Tag(Icons.Rounded.TaskAlt, "Resuelta", colors.secondaryContainer, colors.onSecondaryContainer)
+                    Tag(Icons.Rounded.TaskAlt, stringResource(R.string.moderation_tag_resolved), colors.secondaryContainer, colors.onSecondaryContainer)
                 }
             }
 
@@ -280,14 +288,14 @@ private fun CaseCard(
                 )
                 Column {
                     Text(event.organizer.name, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
-                    Text(moderationContext(case, tab), fontSize = 12.sp, color = colors.onSurfaceVariant)
+                    Text(moderationContext(rp, case, tab), fontSize = 12.sp, color = colors.onSurfaceVariant)
                 }
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                InfoLine(Icons.Rounded.Schedule, eventWhenLabel(event.startDate, event.endDate))
-                InfoLine(Icons.Rounded.Place, "${event.place} · ${event.neighborhood}")
-                InfoLine(Icons.Rounded.Groups, moderationCupoLabel(event.cupo))
+                InfoLine(Icons.Rounded.Schedule, eventWhenLabel(rp, event.startDate, event.endDate))
+                InfoLine(Icons.Rounded.Place, stringResource(R.string.common_dot_join, event.place, event.neighborhood))
+                InfoLine(Icons.Rounded.Groups, moderationCupoLabel(rp, event.cupo))
             }
 
             Text(event.description, fontSize = 14.sp, lineHeight = 20.sp, color = colors.onSurfaceVariant)
@@ -295,8 +303,8 @@ private fun CaseCard(
             if (case.openReports.isNotEmpty() && event.status != EventStatus.RECHAZADO) {
                 NoteBlock(
                     icon = Icons.Rounded.Flag,
-                    title = reportedByLabel(case.openReports),
-                    lines = reportLines(case.openReports),
+                    title = reportedByLabel(rp, case.openReports),
+                    lines = reportLines(rp, case.openReports),
                     container = colors.tertiaryContainer,
                     content = colors.onTertiaryContainer
                 )
@@ -304,8 +312,8 @@ private fun CaseCard(
             if (event.status == EventStatus.RECHAZADO) {
                 NoteBlock(
                     icon = Icons.Rounded.Block,
-                    title = "Motivo enviado al autor",
-                    lines = listOfNotNull(case.rejection?.reason, rejectionFooter(case.rejection)),
+                    title = stringResource(R.string.moderation_rejection_note),
+                    lines = listOfNotNull(case.rejection?.reason, rejectionFooter(rp, case.rejection)),
                     container = colors.errorContainer,
                     content = colors.onErrorContainer
                 )
@@ -313,7 +321,7 @@ private fun CaseCard(
             if (tab == ModerationTab.RESUELTAS && case.resolution != null) {
                 NoteBlock(
                     icon = Icons.Rounded.TaskAlt,
-                    title = resolutionFooter(case.resolution!!),
+                    title = resolutionFooter(rp, case.resolution!!),
                     lines = emptyList(),
                     container = colors.secondaryContainer,
                     content = colors.onSecondaryContainer
@@ -327,7 +335,7 @@ private fun CaseCard(
                         when (action) {
                             ModerationCardAction.VERIFY ->
                                 Button(onClick = onVerify, modifier = Modifier.weight(1f)) {
-                                    ButtonContent(Icons.Rounded.Verified, "Verificar")
+                                    ButtonContent(Icons.Rounded.Verified, stringResource(R.string.moderation_action_verify))
                                 }
                             ModerationCardAction.REJECT ->
                                 OutlinedButton(
@@ -335,14 +343,14 @@ private fun CaseCard(
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.error),
                                     border = BorderStroke(1.dp, colors.error),
                                     modifier = Modifier.weight(1f)
-                                ) { ButtonContent(Icons.Rounded.Block, "Rechazar") }
+                                ) { ButtonContent(Icons.Rounded.Block, stringResource(R.string.moderation_action_reject)) }
                             ModerationCardAction.RESOLVE ->
                                 Button(onClick = onResolve, modifier = Modifier.weight(1f)) {
-                                    ButtonContent(Icons.Rounded.TaskAlt, "Marcar resuelta")
+                                    ButtonContent(Icons.Rounded.TaskAlt, stringResource(R.string.moderation_action_resolve))
                                 }
                             ModerationCardAction.RESTORE ->
                                 Button(onClick = onRestore, modifier = Modifier.weight(1f)) {
-                                    ButtonContent(Icons.Rounded.RestorePage, "Restaurar")
+                                    ButtonContent(Icons.Rounded.RestorePage, stringResource(R.string.moderation_action_restore))
                                 }
                         }
                     }
@@ -361,13 +369,14 @@ private fun ButtonContent(icon: ImageVector, label: String) {
 @Composable
 private fun StatusTag(status: EventStatus) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     when (status) {
         EventStatus.PENDIENTE ->
-            Tag(Icons.Rounded.PendingActions, moderationStatusLabel(status), colors.tertiaryContainer, colors.onTertiaryContainer)
+            Tag(Icons.Rounded.PendingActions, moderationStatusLabel(rp, status), colors.tertiaryContainer, colors.onTertiaryContainer)
         EventStatus.RECHAZADO ->
-            Tag(Icons.Rounded.Block, moderationStatusLabel(status), colors.errorContainer, colors.onErrorContainer)
+            Tag(Icons.Rounded.Block, moderationStatusLabel(rp, status), colors.errorContainer, colors.onErrorContainer)
         else ->
-            Tag(Icons.Rounded.Verified, moderationStatusLabel(status), colors.primaryContainer, colors.onPrimaryContainer)
+            Tag(Icons.Rounded.Verified, moderationStatusLabel(rp, status), colors.primaryContainer, colors.onPrimaryContainer)
     }
 }
 
@@ -375,7 +384,7 @@ private fun StatusTag(status: EventStatus) {
 private fun CategoryTag(case: ModerationCase) {
     val category = case.event.category
     val tones = categoryColors(category)
-    Tag(category.iconVector(), category.name, tones.container, tones.content)
+    Tag(category.iconVector(), category.localizedName(), tones.container, tones.content)
 }
 
 @Composable

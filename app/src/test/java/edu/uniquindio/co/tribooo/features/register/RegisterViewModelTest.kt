@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.register
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.MessageTarget
 import edu.uniquindio.co.tribooo.core.util.RequestResult
@@ -42,7 +43,7 @@ class RegisterViewModelTest {
     private val messenger = SnackbarMessenger()
 
     private fun viewModel() =
-        RegisterViewModel(GetCitiesUseCase(locations), RegisterUseCase(UserRepositoryImpl()), messenger)
+        RegisterViewModel(GetCitiesUseCase(locations), RegisterUseCase(UserRepositoryImpl()), messenger, testResources)
 
     @Test
     fun successfulRegistrationLeavesTheFormBlankWithTheFirstCity() = runTest {
@@ -76,18 +77,18 @@ class RegisterViewModelTest {
         val vm = viewModel()
         vm.fillValidForm()
 
-        assertFalse(vm.uiState.value.isFormValid)
+        assertFalse(vm.uiState.value.isFormValid(testResources))
         // Sin tocar los términos todavía no se muestra el error; al intentar enviar sí
-        assertNull(vm.uiState.value.termsError)
+        assertNull(vm.uiState.value.termsError(testResources))
         vm.onRegisterClick()
-        assertEquals("Debes aceptar los términos para continuar", vm.uiState.value.termsError)
+        assertEquals("Debes aceptar los términos para continuar", vm.uiState.value.termsError(testResources))
         assertEquals(RegisterField.TERMS, vm.uiState.value.focusField)
         assertFalse(vm.uiState.value.showConfirmDialog)
 
         vm.onTermsChange(true)
 
-        assertTrue(vm.uiState.value.isFormValid)
-        assertNull(vm.uiState.value.termsError)
+        assertTrue(vm.uiState.value.isFormValid(testResources))
+        assertNull(vm.uiState.value.termsError(testResources))
         vm.onRegisterClick()
         assertTrue(vm.uiState.value.showConfirmDialog)
     }
@@ -100,8 +101,8 @@ class RegisterViewModelTest {
 
         vm.onTermsChange(false)
 
-        assertFalse(vm.uiState.value.isFormValid)
-        assertNotNull(vm.uiState.value.termsError)
+        assertFalse(vm.uiState.value.isFormValid(testResources))
+        assertNotNull(vm.uiState.value.termsError(testResources))
     }
 
     @Test
@@ -112,18 +113,18 @@ class RegisterViewModelTest {
         vm.resetForm()
 
         assertFalse(vm.uiState.value.termsAccepted)
-        assertNull(vm.uiState.value.termsError)
+        assertNull(vm.uiState.value.termsError(testResources))
     }
 
     @Test
     fun openingTheFormShowsNoErrors() {
         val state = viewModel().uiState.value
-        assertNull(state.nameError)
-        assertNull(state.addressError)
-        assertNull(state.emailError)
-        assertNull(state.passwordError)
-        assertNull(state.confirmPasswordError)
-        assertNull(state.termsError)
+        assertNull(state.nameError(testResources))
+        assertNull(state.addressError(testResources))
+        assertNull(state.emailError(testResources))
+        assertNull(state.passwordError(testResources))
+        assertNull(state.confirmPasswordError(testResources))
+        assertNull(state.termsError(testResources))
         assertNull(state.message)
     }
 
@@ -134,13 +135,13 @@ class RegisterViewModelTest {
         vm.onRegisterClick()
 
         val state = vm.uiState.value
-        assertEquals(FormTexts.NAME_REQUIRED, state.nameError)
-        assertNull(state.cityError)
-        assertEquals(FormTexts.ADDRESS_REQUIRED, state.addressError)
-        assertEquals(FormTexts.EMAIL_REQUIRED, state.emailError)
-        assertEquals(FormTexts.PASSWORD_REQUIRED, state.passwordError)
-        assertEquals(FormTexts.CONFIRM_PASSWORD_REQUIRED, state.confirmPasswordError)
-        assertEquals(FormTexts.TERMS_REQUIRED, state.termsError)
+        assertEquals(FormTexts.NAME_REQUIRED, state.nameError(testResources))
+        assertNull(state.cityError(testResources))
+        assertEquals(FormTexts.ADDRESS_REQUIRED, state.addressError(testResources))
+        assertEquals(FormTexts.EMAIL_REQUIRED, state.emailError(testResources))
+        assertEquals(FormTexts.PASSWORD_REQUIRED, state.passwordError(testResources))
+        assertEquals(FormTexts.CONFIRM_PASSWORD_REQUIRED, state.confirmPasswordError(testResources))
+        assertEquals(FormTexts.TERMS_REQUIRED, state.termsError(testResources))
         assertEquals("Revisa los campos marcados.", state.message)
         assertEquals(RegisterField.NAME, state.focusField)
         assertFalse(state.showConfirmDialog)
@@ -152,25 +153,25 @@ class RegisterViewModelTest {
 
         vm.onFieldFocusLost(RegisterField.NAME)
 
-        assertEquals(FormTexts.NAME_REQUIRED, vm.uiState.value.nameError)
-        assertNull(vm.uiState.value.emailError)
-        assertNull(vm.uiState.value.passwordError)
+        assertEquals(FormTexts.NAME_REQUIRED, vm.uiState.value.nameError(testResources))
+        assertNull(vm.uiState.value.emailError(testResources))
+        assertNull(vm.uiState.value.passwordError(testResources))
     }
 
     @Test
     fun typingInAFieldDoesNotRevealTheOthersAndFixingClearsOnlyItsError() {
         val vm = viewModel()
         vm.onEmailChange("ana")
-        assertNull(vm.uiState.value.nameError)
-        assertNull(vm.uiState.value.emailError)
+        assertNull(vm.uiState.value.nameError(testResources))
+        assertNull(vm.uiState.value.emailError(testResources))
 
         vm.onRegisterClick()
-        assertEquals(FormTexts.EMAIL_INVALID, vm.uiState.value.emailError)
+        assertEquals(FormTexts.EMAIL_INVALID, vm.uiState.value.emailError(testResources))
 
         vm.onEmailChange("ana@mail.co")
 
-        assertNull(vm.uiState.value.emailError)
-        assertEquals(FormTexts.NAME_REQUIRED, vm.uiState.value.nameError)
+        assertNull(vm.uiState.value.emailError(testResources))
+        assertEquals(FormTexts.NAME_REQUIRED, vm.uiState.value.nameError(testResources))
     }
 
     @Test
@@ -180,8 +181,8 @@ class RegisterViewModelTest {
         vm.onPasswordChange("Abc123")
         vm.onRegisterClick()
 
-        assertEquals(FormTexts.NAME_TOO_SHORT, vm.uiState.value.nameError)
-        assertEquals(FormTexts.NEW_PASSWORD_TOO_SHORT, vm.uiState.value.passwordError)
+        assertEquals(FormTexts.NAME_TOO_SHORT, vm.uiState.value.nameError(testResources))
+        assertEquals(FormTexts.NEW_PASSWORD_TOO_SHORT, vm.uiState.value.passwordError(testResources))
     }
 
     @Test
@@ -189,11 +190,11 @@ class RegisterViewModelTest {
         val vm = viewModel()
         vm.onPasswordChange("secreto12")
         vm.onRegisterClick()
-        assertEquals(FormTexts.NEW_PASSWORD_NEEDS_UPPERCASE, vm.uiState.value.passwordError)
+        assertEquals(FormTexts.NEW_PASSWORD_NEEDS_UPPERCASE, vm.uiState.value.passwordError(testResources))
 
         vm.onPasswordChange("Secreto12")
 
-        assertNull(vm.uiState.value.passwordError)
+        assertNull(vm.uiState.value.passwordError(testResources))
     }
 
     @Test
@@ -202,13 +203,13 @@ class RegisterViewModelTest {
         vm.onPasswordChange("Secreto1")
         vm.onConfirmPasswordChange("Secreto2")
         vm.onFieldFocusLost(RegisterField.CONFIRM_PASSWORD)
-        assertFalse(vm.uiState.value.passwordsMatch)
-        assertEquals(FormTexts.PASSWORDS_DIFFER, vm.uiState.value.confirmPasswordError)
+        assertFalse(vm.uiState.value.passwordsMatch(testResources))
+        assertEquals(FormTexts.PASSWORDS_DIFFER, vm.uiState.value.confirmPasswordError(testResources))
 
         vm.onConfirmPasswordChange("Secreto1")
 
-        assertTrue(vm.uiState.value.passwordsMatch)
-        assertNull(vm.uiState.value.confirmPasswordError)
+        assertTrue(vm.uiState.value.passwordsMatch(testResources))
+        assertNull(vm.uiState.value.confirmPasswordError(testResources))
     }
 
     @Test

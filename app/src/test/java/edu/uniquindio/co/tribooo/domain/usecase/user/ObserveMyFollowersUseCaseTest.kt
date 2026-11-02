@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.domain.usecase.user
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.followerSubtitle
 import edu.uniquindio.co.tribooo.core.util.followersSummary
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
@@ -93,14 +94,14 @@ class ObserveMyFollowersUseCaseTest {
 
     @Test
     fun summaryAndSubtitleTexts() {
-        assertEquals("1 persona sigue tus eventos", followersSummary(1))
-        assertEquals("3 personas siguen tus eventos", followersSummary(3))
+        assertEquals("1 persona sigue tus eventos", followersSummary(testResources, 1))
+        assertEquals("3 personas siguen tus eventos", followersSummary(testResources, 3))
 
         val user = User(
             "x", "X", "x@mail.co", "123456", "Armenia", "Granada",
             dateRegistered = Instant.parse("2025-03-15T15:00:00Z")
         )
-        assertEquals("Granada · te sigue y lo sigues", followerSubtitle(user, followedByMe = true))
-        assertEquals("Granada · desde marzo 2025", followerSubtitle(user, followedByMe = false))
+        assertEquals("Granada · te sigue y lo sigues", followerSubtitle(testResources, user, followedByMe = true))
+        assertEquals("Granada · desde marzo 2025", followerSubtitle(testResources, user, followedByMe = false))
     }
 }

@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.myevents
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.averageRating
 import edu.uniquindio.co.tribooo.core.util.latestRejectionDate
 import edu.uniquindio.co.tribooo.core.util.myEventFooter
@@ -45,10 +46,10 @@ class MyEventsTest {
             event("new", EventStatus.ACTIVO, start = "2026-12-01T12:00:00Z")
         )
 
-        val items = buildMyEventItems(events, MyEventsTab.ACTIVOS, emptyList(), emptyList(), emptyList(), now)
+        val items = buildMyEventItems(events, MyEventsTab.ACTIVOS, emptyList(), emptyList(), emptyList(), testResources, now)
 
         assertEquals(listOf("new", "old"), items.map { it.event.id })
-        assertEquals(emptyList<MyEventItem>(), buildMyEventItems(events, MyEventsTab.RECHAZADOS, emptyList(), emptyList(), emptyList(), now))
+        assertEquals(emptyList<MyEventItem>(), buildMyEventItems(events, MyEventsTab.RECHAZADOS, emptyList(), emptyList(), emptyList(), testResources, now))
     }
 
     @Test
@@ -57,7 +58,7 @@ class MyEventsTest {
         val b = event("b", EventStatus.ACTIVO)
         val attendances = listOf(Attendance(fan, a), Attendance(me, a), Attendance(fan, b))
 
-        val items = buildMyEventItems(listOf(a, b), MyEventsTab.ACTIVOS, attendances, emptyList(), emptyList(), now)
+        val items = buildMyEventItems(listOf(a, b), MyEventsTab.ACTIVOS, attendances, emptyList(), emptyList(), testResources, now)
 
         assertEquals("1 confirmados", items.first { it.event.id == "b" }.summary)
         assertEquals("2 de 10 confirmados", items.first { it.event.id == "a" }.summary)
@@ -65,16 +66,16 @@ class MyEventsTest {
 
     @Test
     fun activeSummaryWithAndWithoutCupo() {
-        assertEquals("87 de 120 confirmados", myEventSummary(event("a", EventStatus.ACTIVO, cupo = 120), 87, null))
-        assertEquals("118 confirmados", myEventSummary(event("a", EventStatus.ACTIVO), 118, null))
+        assertEquals("87 de 120 confirmados", myEventSummary(testResources, event("a", EventStatus.ACTIVO, cupo = 120), 87, null))
+        assertEquals("118 confirmados", myEventSummary(testResources, event("a", EventStatus.ACTIVO), 118, null))
     }
 
     @Test
     fun summaryForOtherStatuses() {
-        assertEquals("Esperando moderación", myEventSummary(event("p", EventStatus.PENDIENTE), 0, null))
-        assertEquals("No se publicó en el feed", myEventSummary(event("r", EventStatus.RECHAZADO), 0, null))
-        assertEquals("34 asistentes · calificación 4.8", myEventSummary(event("f", EventStatus.FINALIZADO), 34, 4.8))
-        assertEquals("34 asistentes", myEventSummary(event("f", EventStatus.FINALIZADO), 34, null))
+        assertEquals("Esperando moderación", myEventSummary(testResources, event("p", EventStatus.PENDIENTE), 0, null))
+        assertEquals("No se publicó en el feed", myEventSummary(testResources, event("r", EventStatus.RECHAZADO), 0, null))
+        assertEquals("34 asistentes · calificación 4.8", myEventSummary(testResources, event("f", EventStatus.FINALIZADO), 34, 4.8))
+        assertEquals("34 asistentes", myEventSummary(testResources, event("f", EventStatus.FINALIZADO), 34, null))
     }
 
     @Test
@@ -94,20 +95,20 @@ class MyEventsTest {
 
     @Test
     fun footerTextsPerStatus() {
-        assertEquals("publicado hace 3 días", myEventFooter(event("a", EventStatus.ACTIVO), now))
+        assertEquals("publicado hace 3 días", myEventFooter(testResources, event("a", EventStatus.ACTIVO), now))
         assertEquals(
             "Enviado hace 5 h",
-            myEventFooter(event("p", EventStatus.PENDIENTE, published = "2026-10-23T12:00:00Z"), now)
+            myEventFooter(testResources, event("p", EventStatus.PENDIENTE, published = "2026-10-23T12:00:00Z"), now)
         )
         assertEquals(
             "Enviado hace 2 días",
-            myEventFooter(event("p", EventStatus.PENDIENTE, published = "2026-10-21T12:00:00Z"), now)
+            myEventFooter(testResources, event("p", EventStatus.PENDIENTE, published = "2026-10-21T12:00:00Z"), now)
         )
         assertEquals(
             "Finalizado el 18 jul 2026",
-            myEventFooter(event("f", EventStatus.FINALIZADO, start = "2026-07-18T15:00:00Z"), now)
+            myEventFooter(testResources, event("f", EventStatus.FINALIZADO, start = "2026-07-18T15:00:00Z"), now)
         )
-        assertEquals("Rechazado el 20 oct 2026", myEventFooter(event("r", EventStatus.RECHAZADO), now))
+        assertEquals("Rechazado el 20 oct 2026", myEventFooter(testResources, event("r", EventStatus.RECHAZADO), now))
     }
 
     private fun review(eventId: String, action: ModerationAction, date: String, status: EventStatus = EventStatus.RECHAZADO) =
@@ -131,8 +132,8 @@ class MyEventsTest {
     @Test
     fun rejectedFooterUsesTheReviewDateAndFallsBackToPublication() {
         val rejected = event("r", EventStatus.RECHAZADO)
-        assertEquals("Rechazado el 22 oct 2026", myEventFooter(rejected, now, rejectedAt = Instant.parse("2026-10-22T15:00:00Z")))
-        assertEquals("Rechazado el 20 oct 2026", myEventFooter(rejected, now, rejectedAt = null))
+        assertEquals("Rechazado el 22 oct 2026", myEventFooter(testResources, rejected, now, rejectedAt = Instant.parse("2026-10-22T15:00:00Z")))
+        assertEquals("Rechazado el 20 oct 2026", myEventFooter(testResources, rejected, now, rejectedAt = null))
     }
 
     @Test
@@ -144,8 +145,8 @@ class MyEventsTest {
             review("a", ModerationAction.RECHAZAR, "2026-10-22T15:00:00Z", status = EventStatus.ACTIVO)
         )
 
-        val rejectedItems = buildMyEventItems(listOf(rejected, active), MyEventsTab.RECHAZADOS, emptyList(), emptyList(), reviews, now)
-        val activeItems = buildMyEventItems(listOf(rejected, active), MyEventsTab.ACTIVOS, emptyList(), emptyList(), reviews, now)
+        val rejectedItems = buildMyEventItems(listOf(rejected, active), MyEventsTab.RECHAZADOS, emptyList(), emptyList(), reviews, testResources, now)
+        val activeItems = buildMyEventItems(listOf(rejected, active), MyEventsTab.ACTIVOS, emptyList(), emptyList(), reviews, testResources, now)
 
         assertEquals("Rechazado el 22 oct 2026", rejectedItems.single().footer)
         assertEquals("publicado hace 3 días", activeItems.single().footer)

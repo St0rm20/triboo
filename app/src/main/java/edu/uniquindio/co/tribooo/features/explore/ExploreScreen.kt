@@ -41,6 +41,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -49,6 +51,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.AttendanceDialogs
 import edu.uniquindio.co.tribooo.core.component.CategoryChip
 import edu.uniquindio.co.tribooo.core.component.EventCard
@@ -59,6 +62,7 @@ import edu.uniquindio.co.tribooo.core.component.MainBottomBar
 import edu.uniquindio.co.tribooo.core.component.MainTab
 import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
 import edu.uniquindio.co.tribooo.core.util.kmLabel
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.core.util.waitlistLabel
 
 @Composable
@@ -182,7 +186,7 @@ private fun TopBar(state: ExploreUiState, viewModel: ExploreViewModel, modifier:
                     modifier = Modifier.weight(1f),
                     decorationBox = { inner ->
                         if (state.filters.query.isEmpty()) {
-                            Text("Buscar en el mapa", fontSize = 15.sp, color = colors.onSurfaceVariant)
+                            Text(stringResource(R.string.explore_search_placeholder), fontSize = 15.sp, color = colors.onSurfaceVariant)
                         }
                         inner()
                     }
@@ -196,7 +200,7 @@ private fun TopBar(state: ExploreUiState, viewModel: ExploreViewModel, modifier:
                     modifier = Modifier.size(52.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.Tune, contentDescription = "Filtros", tint = colors.onSurface)
+                        Icon(Icons.Rounded.Tune, contentDescription = stringResource(R.string.filters_title), tint = colors.onSurface)
                     }
                 }
                 if (state.filters.activeCount > 0) {
@@ -206,8 +210,8 @@ private fun TopBar(state: ExploreUiState, viewModel: ExploreViewModel, modifier:
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ViewOption("Mapa", state.view == ExploreView.MAP) { viewModel.onViewChange(ExploreView.MAP) }
-            ViewOption("Lista", state.view == ExploreView.LIST) { viewModel.onViewChange(ExploreView.LIST) }
+            ViewOption(stringResource(R.string.explore_view_map), state.view == ExploreView.MAP) { viewModel.onViewChange(ExploreView.MAP) }
+            ViewOption(stringResource(R.string.explore_view_list), state.view == ExploreView.LIST) { viewModel.onViewChange(ExploreView.LIST) }
         }
     }
 }
@@ -239,7 +243,7 @@ private fun RecenterButton(onClick: () -> Unit) {
         modifier = Modifier.padding(end = 16.dp, bottom = 12.dp).size(48.dp)
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.MyLocation, contentDescription = "Mi ubicación", tint = colors.primary)
+            Icon(Icons.Rounded.MyLocation, contentDescription = stringResource(R.string.explore_my_location), tint = colors.primary)
         }
     }
 }
@@ -248,6 +252,7 @@ private fun RecenterButton(onClick: () -> Unit) {
 @Composable
 private fun SelectedEventSheet(item: FeedEventItem, onOpenDetail: () -> Unit, onToggleAttendance: () -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val event = item.event
 
     Surface(
@@ -271,14 +276,18 @@ private fun SelectedEventSheet(item: FeedEventItem, onOpenDetail: () -> Unit, on
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "${eventWhenLabel(event.startDate, event.endDate)} · ${item.distanceKm.kmLabel().replace('.', ',')}",
+                        text = stringResource(
+                            R.string.common_dot_join,
+                            eventWhenLabel(rp, event.startDate, event.endDate),
+                            item.distanceKm.kmLabel().replace('.', stringResource(R.string.decimal_separator).single())
+                        ),
                         fontSize = 13.sp,
                         color = colors.onSurfaceVariant
                     )
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = onOpenDetail, modifier = Modifier.weight(1f).height(44.dp)) { Text("Ver detalle") }
+                OutlinedButton(onClick = onOpenDetail, modifier = Modifier.weight(1f).height(44.dp)) { Text(stringResource(R.string.explore_view_detail)) }
                 AttendanceButton(item = item, onClick = onToggleAttendance, modifier = Modifier.weight(1f))
             }
         }
@@ -288,6 +297,7 @@ private fun SelectedEventSheet(item: FeedEventItem, onOpenDetail: () -> Unit, on
 /** "Voy", "Ya voy" (tonal), "Lista de espera" o "En lista · puesto N" (tonal) cuando el cupo está lleno. */
 @Composable
 private fun AttendanceButton(item: FeedEventItem, onClick: () -> Unit, modifier: Modifier) {
+    val rp = rememberResourceProvider()
     val colors = MaterialTheme.colorScheme
     val full = item.isFull && !item.isAttending
     val position = item.waitlistPosition.takeIf { full }
@@ -318,10 +328,10 @@ private fun AttendanceButton(item: FeedEventItem, onClick: () -> Unit, modifier:
             }
             Text(
                 text = when {
-                    item.isAttending -> "Ya voy"
-                    position != null -> waitlistLabel(position)
-                    full -> "Lista de espera"
-                    else -> "Voy"
+                    item.isAttending -> stringResource(R.string.explore_attending)
+                    position != null -> waitlistLabel(rp, position)
+                    full -> stringResource(R.string.event_card_waitlist)
+                    else -> stringResource(R.string.explore_attend)
                 },
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
@@ -345,7 +355,7 @@ private fun EventList(
     ) {
         item {
             Text(
-                text = if (events.size == 1) "1 evento cerca" else "${events.size} eventos cerca",
+                text = pluralStringResource(R.plurals.feed_events_nearby, events.size, events.size),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurface,
                 modifier = Modifier.padding(horizontal = 2.dp, vertical = 8.dp)
@@ -371,13 +381,13 @@ private fun EmptyResults(onClearFilters: () -> Unit, modifier: Modifier) {
     Column(modifier = modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(Icons.Rounded.EventBusy, contentDescription = null, tint = colors.outline, modifier = Modifier.size(44.dp))
         Text(
-            "No hay eventos con estos filtros",
+            stringResource(R.string.explore_empty_title),
             fontSize = 17.sp,
             fontWeight = FontWeight.Medium,
             color = colors.onSurface,
             textAlign = TextAlign.Center,
             modifier = Modifier.padding(top = 12.dp, bottom = 16.dp)
         )
-        OutlinedButton(onClick = onClearFilters, shape = RoundedCornerShape(14.dp)) { Text("Limpiar filtros") }
+        OutlinedButton(onClick = onClearFilters, shape = RoundedCornerShape(14.dp)) { Text(stringResource(R.string.feed_clear_filters)) }
     }
 }

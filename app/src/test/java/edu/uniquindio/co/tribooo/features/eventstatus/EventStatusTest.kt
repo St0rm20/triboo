@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.eventstatus
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.finishedFooter
 import edu.uniquindio.co.tribooo.core.util.pendingFooter
 import edu.uniquindio.co.tribooo.core.util.removeDialogTexts
@@ -42,19 +43,19 @@ class EventStatusTest {
 
     @Test
     fun pendingFooterWithAndWithoutTimeLeft() {
-        assertTrue(pendingFooter(now.minusSeconds(19 * 3600), now).endsWith("quedan ~5 h de revisión"))
-        assertTrue(pendingFooter(now.minusSeconds(30 * 3600), now).endsWith("la revisión lleva más de 24 h"))
+        assertTrue(pendingFooter(testResources, now.minusSeconds(19 * 3600), now).endsWith("quedan ~5 h de revisión"))
+        assertTrue(pendingFooter(testResources, now.minusSeconds(30 * 3600), now).endsWith("la revisión lleva más de 24 h"))
     }
 
     @Test
     fun textsPerStatus() {
-        assertEquals("Moderación no registró un motivo.", statusParagraph(EventStatus.RECHAZADO, null))
-        assertEquals("Por una rifa.", statusParagraph(EventStatus.RECHAZADO, "Por una rifa."))
-        assertTrue(finishedFooter(Instant.parse("2026-07-18T15:00:00Z")).endsWith("19 jul 2026, 10:00"))
-        assertEquals("¿Retirar el envío?", removeDialogTexts(EventStatus.PENDIENTE).title)
-        assertEquals("Evento rechazado eliminado.", removeDialogTexts(EventStatus.RECHAZADO).doneMessage)
-        assertEquals(3, statusSteps(EventStatus.FINALIZADO, 2).size)
-        assertEquals(2, statusSteps(EventStatus.FINALIZADO, 0).size)
+        assertEquals("Moderación no registró un motivo.", statusParagraph(testResources, EventStatus.RECHAZADO, null))
+        assertEquals("Por una rifa.", statusParagraph(testResources, EventStatus.RECHAZADO, "Por una rifa."))
+        assertTrue(finishedFooter(testResources, Instant.parse("2026-07-18T15:00:00Z")).endsWith("19 jul 2026, 10:00"))
+        assertEquals("¿Retirar el envío?", removeDialogTexts(testResources, EventStatus.PENDIENTE).title)
+        assertEquals("Evento rechazado eliminado.", removeDialogTexts(testResources, EventStatus.RECHAZADO).doneMessage)
+        assertEquals(3, statusSteps(testResources, EventStatus.FINALIZADO, 2).size)
+        assertEquals(2, statusSteps(testResources, EventStatus.FINALIZADO, 0).size)
     }
 
     @Test
@@ -82,14 +83,14 @@ class EventStatusTest {
             comments = listOf(review, Comment("r1-r", finished, me, "gracias", date = now, parentComment = review))
         )
 
-        val state = buildEventStatusState("f", me, sources, now)
+        val state = buildEventStatusState("f", me, sources, testResources, now)
         assertEquals(1, state.reviews.size)
         assertEquals("4.0", state.ratingLabel)
         assertEquals("gracias", state.reviews.first().reply?.text)
 
-        assertNull(buildEventStatusState("a", me, sources, now).event) // activo
-        assertNull(buildEventStatusState("o", me, sources, now).event) // ajeno
-        assertNull(buildEventStatusState("zzz", me, sources, now).event) // no existe
-        assertNotNull(buildEventStatusState("f", me, sources, now).event)
+        assertNull(buildEventStatusState("a", me, sources, testResources, now).event) // activo
+        assertNull(buildEventStatusState("o", me, sources, testResources, now).event) // ajeno
+        assertNull(buildEventStatusState("zzz", me, sources, testResources, now).event) // no existe
+        assertNotNull(buildEventStatusState("f", me, sources, testResources, now).event)
     }
 }

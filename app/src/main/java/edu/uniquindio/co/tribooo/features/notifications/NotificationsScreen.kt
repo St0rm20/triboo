@@ -42,16 +42,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
 import edu.uniquindio.co.tribooo.core.component.avatarColors
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.domain.model.NotificationType
 
 @Composable
@@ -64,6 +67,7 @@ fun NotificationsScreen(
     viewModel: NotificationsViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val resources = rememberResourceProvider()
     val snackbarHostState = remember { SnackbarHostState() }
     val colors = MaterialTheme.colorScheme
 
@@ -77,7 +81,7 @@ fun NotificationsScreen(
                 .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             NotificationsTopBar(
-                summary = state.summary,
+                summary = state.summary(resources),
                 hasUnread = state.unreadCount > 0,
                 onBack = onNavigateBack,
                 onMarkAllRead = viewModel::onMarkAllRead
@@ -138,12 +142,12 @@ private fun NotificationsTopBar(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver", tint = colors.onSurface)
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back), tint = colors.onSurface)
             }
-            Text("Notificaciones", fontSize = 20.sp, color = colors.onSurface, modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.feed_notifications), fontSize = 20.sp, color = colors.onSurface, modifier = Modifier.weight(1f))
             if (hasUnread) {
                 TextButton(onClick = onMarkAllRead) {
-                    Text("Marcar leídas", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.notifications_mark_read), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }
@@ -264,32 +268,37 @@ private fun EmptyNotifications() {
         verticalArrangement = Arrangement.Center
     ) {
         Icon(Icons.Rounded.NotificationsNone, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(48.dp))
-        Text("Aún no tienes avisos", fontSize = 15.sp, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp))
+        Text(stringResource(R.string.notifications_empty), fontSize = 15.sp, color = colors.onSurfaceVariant, modifier = Modifier.padding(top = 12.dp))
     }
 }
 
 private fun moderationIcon(type: NotificationType): ImageVector =
     if (type == NotificationType.REJECTION) Icons.Rounded.Block else Icons.Rounded.Verified
 
-private fun callToAction(type: NotificationType): String = when (type) {
-    NotificationType.COMMENT -> "Ver comentario"
-    NotificationType.FOLLOWER -> "Ver perfil"
-    NotificationType.APPROVAL, NotificationType.REJECTION -> "Ver evento"
-}
+@Composable
+private fun callToAction(type: NotificationType): String = stringResource(
+    when (type) {
+        NotificationType.COMMENT -> R.string.notifications_see_comment
+        NotificationType.FOLLOWER -> R.string.notifications_see_profile
+        NotificationType.APPROVAL, NotificationType.REJECTION -> R.string.notifications_see_event
+    }
+)
 
 /** Línea principal: nombre en negrita + acción. */
-private fun headline(item: NotificationItem) = buildAnnotatedString {
-    val bold = SpanStyle(fontWeight = FontWeight.Medium)
-    when (item.type) {
-        NotificationType.COMMENT -> {
-            withStyle(bold) { append(item.who.orEmpty()) }
-            append(" comentó en tu evento “${item.eventTitle}”")
-        }
-        NotificationType.FOLLOWER -> {
-            withStyle(bold) { append(item.who.orEmpty()) }
-            append(" empezó a seguirte")
-        }
-        NotificationType.APPROVAL -> append("Tu evento “${item.eventTitle}” fue aprobado y ya está en el feed")
-        NotificationType.REJECTION -> append("Tu evento “${item.eventTitle}” fue rechazado")
+@Composable
+private fun headline(item: NotificationItem): AnnotatedString {
+    val who = item.who.orEmpty()
+    val title = item.eventTitle.orEmpty()
+    val text = when (item.type) {
+        NotificationType.COMMENT -> stringResource(R.string.notifications_headline_comment, who, title)
+        NotificationType.FOLLOWER -> stringResource(R.string.notifications_headline_follower, who)
+        NotificationType.APPROVAL -> stringResource(R.string.notifications_headline_approved, title)
+        NotificationType.REJECTION -> stringResource(R.string.notifications_headline_rejected, title)
+    }
+    // El nombre de quien generó el aviso va en negrita
+    return buildAnnotatedString {
+        append(text)
+        val start = if (who.isEmpty()) -1 else text.indexOf(who)
+        if (start >= 0) addStyle(SpanStyle(fontWeight = FontWeight.Medium), start, start + who.length)
     }
 }

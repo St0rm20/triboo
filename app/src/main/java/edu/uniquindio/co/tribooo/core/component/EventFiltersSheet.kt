@@ -33,9 +33,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.EventFilters
 import edu.uniquindio.co.tribooo.domain.model.MAX_DISTANCE_KM
@@ -43,9 +45,9 @@ import edu.uniquindio.co.tribooo.domain.model.MIN_DISTANCE_KM
 import edu.uniquindio.co.tribooo.domain.model.WhenFilter
 
 private val WHEN_OPTIONS = listOf(
-    WhenFilter.ANY to "Cualquiera",
-    WhenFilter.WEEK to "Esta semana",
-    WhenFilter.MONTH to "Este mes"
+    WhenFilter.ANY to R.string.filters_when_any,
+    WhenFilter.WEEK to R.string.filters_when_week,
+    WhenFilter.MONTH to R.string.filters_when_month
 )
 
 /**
@@ -82,11 +84,11 @@ fun EventFiltersSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Filtros", fontSize = 20.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
-                TextButton(onClick = { draft = EventFilters(query = draft.query) }) { Text("Limpiar") }
+                Text(stringResource(R.string.filters_title), fontSize = 20.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                TextButton(onClick = { draft = EventFilters(query = draft.query) }) { Text(stringResource(R.string.filters_clear)) }
             }
 
-            SectionTitle("Categorías")
+            SectionTitle(stringResource(R.string.filters_categories))
             WrapRow {
                 categories.forEach { category ->
                     CategoryChip(
@@ -102,10 +104,10 @@ fun EventFiltersSheet(
                 }
             }
 
-            SectionTitle("Cuándo")
+            SectionTitle(stringResource(R.string.filters_when))
             WrapRow {
                 WHEN_OPTIONS.forEach { (option, label) ->
-                    WhenOption(label = label, selected = draft.whenFilter == option) {
+                    WhenOption(label = stringResource(label), selected = draft.whenFilter == option) {
                         draft = draft.copy(whenFilter = option)
                     }
                 }
@@ -116,8 +118,8 @@ fun EventFiltersSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                SectionTitle("Distancia")
-                Text("Hasta ${draft.maxDistanceKm} km", fontSize = 14.sp, fontWeight = FontWeight.Medium, color = colors.primary)
+                SectionTitle(stringResource(R.string.filters_distance))
+                Text(stringResource(R.string.filters_distance_up_to, draft.maxDistanceKm), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = colors.primary)
             }
             Slider(
                 value = draft.maxDistanceKm.toFloat(),
@@ -131,15 +133,15 @@ fun EventFiltersSheet(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Solo con cupo disponible", fontSize = 15.sp, color = colors.onSurface)
-                    Text("Oculta eventos llenos", fontSize = 13.sp, color = colors.onSurfaceVariant)
+                    Text(stringResource(R.string.filters_only_available), fontSize = 15.sp, color = colors.onSurface)
+                    Text(stringResource(R.string.filters_only_available_hint), fontSize = 13.sp, color = colors.onSurfaceVariant)
                 }
                 Switch(checked = draft.onlyAvailable, onCheckedChange = { draft = draft.copy(onlyAvailable = it) })
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text("Cancelar") }
-                Button(onClick = { onApply(draft) }, modifier = Modifier.weight(1f)) { Text("Aplicar") }
+                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.common_cancel)) }
+                Button(onClick = { onApply(draft) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.common_apply)) }
             }
         }
     }

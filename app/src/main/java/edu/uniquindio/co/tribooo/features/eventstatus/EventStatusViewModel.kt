@@ -5,8 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.util.FormLimits
-import edu.uniquindio.co.tribooo.core.util.FormTexts
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.averageRating
 import edu.uniquindio.co.tribooo.core.util.initials
@@ -80,7 +81,8 @@ data class EventStatusUiState(
 ) {
     val status: EventStatus? get() = event?.status
 
-    val replyError: String? get() = Validators.reply(replyDraft).takeIf { replyTouched || replySubmitAttempted }
+    fun replyError(resources: ResourceProvider): String? =
+        Validators.reply(resources, replyDraft).takeIf { replyTouched || replySubmitAttempted }
 }
 
 /** Datos de los repositorios que alimentan la pantalla (se agrupan porque `combine` admite máximo 5 flujos). */
@@ -96,6 +98,7 @@ internal fun buildEventStatusState(
     eventId: String,
     currentUser: User?,
     sources: EventStatusSources,
+    resources: ResourceProvider,
     now: Instant = Instant.now()
 ): EventStatusUiState {
     val event = sources.events.firstOrNull { it.id == eventId }
@@ -112,7 +115,7 @@ internal fun buildEventStatusState(
                 authorId = review.author.id,
                 authorName = review.author.name,
                 initials = review.author.name.initials(),
-                ago = review.date.relativeLabel(now),
+                ago = review.date.relativeLabel(resources, now),
                 rating = review.rating ?: 0,
                 text = review.text,
                 reply = reply?.let { ReplyItem(it.id, it.text) }
@@ -144,7 +147,8 @@ class EventStatusViewModel @Inject constructor(
     observeCurrentUser: ObserveCurrentUserUseCase,
     private val replyToReviewUseCase: ReplyToReviewUseCase,
     private val deleteReplyUseCase: DeleteReplyUseCase,
-    private val deleteEventUseCase: DeleteEventUseCase
+    private val deleteEventUseCase: DeleteEventUseCase,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     private val eventId = savedStateHandle.toRoute<MainRoutes.EventStatus>().eventId
@@ -165,7 +169,7 @@ class EventStatusViewModel @Inject constructor(
         sources,
         local
     ) { currentUser, sources, local ->
-        buildEventStatusState(eventId, currentUser, sources).copy(
+        buildEventStatusState(eventId, currentUser, sources, resources).copy(
             editingReviewId = local.editingReviewId,
             replyDraft = local.replyDraft,
             replyTouched = local.replyTouched,
@@ -205,9 +209,9 @@ class EventStatusViewModel @Inject constructor(
     fun onReplyPublish(review: ReviewItem) {
         val state = local.value
         if (state.isPublishingReply) return
-        if (Validators.reply(state.replyDraft) != null) {
+        if (Validators.reply(resources, state.replyDraft) != null) {
             local.update {
-                it.copy(replySubmitAttempted = true, replyFocusRequested = true, message = FormTexts.SUBMIT_INVALID)
+                it.copy(replySubmitAttempted = true, replyFocusRequested = true, message = resources.getString(R.string.form_submit_invalid))
             }
             return
         }
@@ -222,10 +226,10 @@ class EventStatusViewModel @Inject constructor(
                         replyTouched = false,
                         replySubmitAttempted = false,
                         isPublishingReply = false,
-                        message = "Respuesta publicada como organizador."
+                        message = resources.getString(R.string.event_status_reply_published)
                     )
                 } else {
-                    it.copy(isPublishingReply = false, message = "No se pudo publicar la respuesta.")
+                    it.copy(isPublishingReply = false, message = resources.getString(R.string.event_status_reply_failed))
                 }
             }
         }
@@ -241,7 +245,7 @@ class EventStatusViewModel @Inject constructor(
                     replyDraft = "",
                     replyTouched = false,
                     replySubmitAttempted = false,
-                    message = "Respuesta eliminada."
+                    message = resources.getString(R.string.event_status_reply_deleted)
                 )
             }
         }
@@ -260,15 +264,15 @@ class EventStatusViewModel @Inject constructor(
             val removed = deleteEventUseCase(eventId)
             local.update {
                 if (removed) {
-                    it.copy(exitMessage = removeDialogTexts(status).doneMessage)
+                    it.copy(exitMessage = removeDialogTexts(resources, status).doneMessage)
                 } else {
-                    it.copy(message = "No se pudo eliminar el evento.")
+                    it.copy(message = resources.getString(R.string.event_status_remove_failed))
                 }
             }
         }
     }
 
-    fun onDownloadAttendance() = showMessage("Descargando la lista de asistencia (CSV).")
+    fun onDownloadAttendance() = showMessage(resources.getString(R.string.event_status_downloading))
 
     fun onMessageShown() = local.update { it.copy(message = null) }
 

@@ -3,9 +3,10 @@ package edu.uniquindio.co.tribooo.features.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import edu.uniquindio.co.tribooo.core.util.FormTexts
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.util.MessageTarget
 import edu.uniquindio.co.tribooo.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.domain.usecase.auth.LoginUseCase
@@ -33,25 +34,28 @@ data class LoginUiState(
 ) {
     private fun visible(field: LoginField) = submitAttempted || field in touched
 
-    val emailError: String? get() = Validators.email(email).takeIf { visible(LoginField.EMAIL) }
-    val passwordError: String? get() = Validators.password(password).takeIf { visible(LoginField.PASSWORD) }
+    fun emailError(resources: ResourceProvider): String? =
+        Validators.email(resources, email).takeIf { visible(LoginField.EMAIL) }
 
-    val isEmailValid: Boolean get() = Validators.email(email) == null
+    fun passwordError(resources: ResourceProvider): String? =
+        Validators.password(resources, password).takeIf { visible(LoginField.PASSWORD) }
 
-    val firstInvalidField: LoginField?
-        get() = LoginField.entries.firstOrNull {
-            when (it) {
-                LoginField.EMAIL -> Validators.email(email) != null
-                LoginField.PASSWORD -> Validators.password(password) != null
-            }
+    val isEmailValid: Boolean get() = email.isNotBlank() && Validators.isValidEmail(email)
+
+    fun firstInvalidField(resources: ResourceProvider): LoginField? = LoginField.entries.firstOrNull {
+        when (it) {
+            LoginField.EMAIL -> Validators.email(resources, email) != null
+            LoginField.PASSWORD -> Validators.password(resources, password) != null
         }
+    }
 }
 
 @HiltViewModel
 class LoginViewModel @Inject constructor(
     private val loginUseCase: LoginUseCase,
     private val loginWithGoogleUseCase: LoginWithGoogleUseCase,
-    private val messenger: SnackbarMessenger
+    private val messenger: SnackbarMessenger,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
@@ -69,10 +73,10 @@ class LoginViewModel @Inject constructor(
     fun login() {
         val state = _uiState.value
         if (state.loginResult == RequestResult.Loading) return
-        val invalid = state.firstInvalidField
+        val invalid = state.firstInvalidField(resources)
         if (invalid != null) {
             _uiState.update {
-                it.copy(submitAttempted = true, focusField = invalid, message = FormTexts.SUBMIT_INVALID)
+                it.copy(submitAttempted = true, focusField = invalid, message = resources.getString(R.string.form_submit_invalid))
             }
             return
         }
@@ -81,10 +85,11 @@ class LoginViewModel @Inject constructor(
             _uiState.update { it.copy(loginResult = RequestResult.Loading) }
             val user = loginUseCase(email = state.email, password = state.password)
             val result = if (user != null) {
-                messenger.post(MessageTarget.FEED, FormTexts.LOGIN_SUCCESS)
-                RequestResult.Success(FormTexts.LOGIN_SUCCESS)
+                val success = resources.getString(R.string.form_login_success)
+                messenger.post(MessageTarget.FEED, success)
+                RequestResult.Success(success)
             } else {
-                RequestResult.Failure("Email o contraseña incorrectos")
+                RequestResult.Failure(resources.getString(R.string.login_error_invalid_credentials))
             }
             _uiState.update { it.copy(loginResult = result) }
         }
@@ -97,10 +102,11 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(loginResult = RequestResult.Loading) }
             val result = if (loginWithGoogleUseCase() != null) {
-                messenger.post(MessageTarget.FEED, FormTexts.LOGIN_SUCCESS)
-                RequestResult.Success(FormTexts.LOGIN_SUCCESS)
+                val success = resources.getString(R.string.form_login_success)
+                messenger.post(MessageTarget.FEED, success)
+                RequestResult.Success(success)
             } else {
-                RequestResult.Failure("No se pudo iniciar sesión con Google")
+                RequestResult.Failure(resources.getString(R.string.login_error_google))
             }
             _uiState.update { it.copy(loginResult = result) }
         }

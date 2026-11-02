@@ -44,12 +44,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.AttendanceDialogs
 import edu.uniquindio.co.tribooo.core.component.CategoryChip
 import edu.uniquindio.co.tribooo.core.component.EventCard
@@ -58,6 +61,7 @@ import edu.uniquindio.co.tribooo.core.component.MainBottomBar
 import edu.uniquindio.co.tribooo.core.component.MainTab
 import edu.uniquindio.co.tribooo.core.util.APP_ZONE
 import edu.uniquindio.co.tribooo.core.util.longLabel
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.domain.model.Category
 import java.time.LocalDate
 
@@ -129,12 +133,12 @@ fun FeedScreen(
                     ) {
                         val count = state.events.size
                         Text(
-                            text = if (count == 1) "1 evento cerca" else "$count eventos cerca",
+                            text = pluralStringResource(R.plurals.feed_events_nearby, count, count),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Más cercanos primero",
+                            text = stringResource(R.string.feed_nearest_first),
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -203,6 +207,7 @@ private fun FeedHeader(
     onNavigateToNotifications: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
 
     Column(modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 8.dp)) {
         Row(
@@ -211,14 +216,14 @@ private fun FeedHeader(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = LocalDate.now(APP_ZONE).longLabel().uppercase(),
+                    text = LocalDate.now(APP_ZONE).longLabel(rp).uppercase(),
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 0.5.sp,
                     color = colors.primary
                 )
                 Text(
-                    text = "Cerca de ti",
+                    text = stringResource(R.string.feed_near_you),
                     fontSize = 26.sp,
                     lineHeight = 32.sp,
                     color = colors.onSurface,
@@ -249,7 +254,7 @@ private fun FeedHeader(
                 modifier = Modifier.weight(1f),
                 decorationBox = { inner ->
                     if (query.isEmpty()) {
-                        Text("Buscar eventos, barrios, lugares", fontSize = 15.sp, color = colors.onSurfaceVariant)
+                        Text(stringResource(R.string.feed_search_placeholder), fontSize = 15.sp, color = colors.onSurfaceVariant)
                     }
                     inner()
                 }
@@ -293,7 +298,7 @@ private fun FiltersChip(count: Int, onClick: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Icon(Icons.Rounded.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(if (active) "Filtros · $count" else "Filtros", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(if (active) stringResource(R.string.feed_filters_count, count) else stringResource(R.string.filters_title), fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -309,21 +314,21 @@ private fun EmptyFeed(onClearFilters: () -> Unit) {
     ) {
         Icon(Icons.Rounded.EventBusy, contentDescription = null, tint = colors.outlineVariant, modifier = Modifier.size(44.dp))
         Text(
-            "Sin eventos con esos filtros",
+            stringResource(R.string.feed_empty_title),
             fontSize = 17.sp,
             fontWeight = FontWeight.Medium,
             color = colors.onSurface,
             modifier = Modifier.padding(top = 12.dp)
         )
         Text(
-            "Prueba con otra búsqueda o quitando categorías.",
+            stringResource(R.string.feed_empty_text),
             fontSize = 14.sp,
             color = colors.onSurfaceVariant,
             modifier = Modifier.padding(top = 6.dp)
         )
         Spacer(Modifier.height(18.dp))
         OutlinedButton(onClick = onClearFilters, shape = RoundedCornerShape(14.dp)) {
-            Text("Limpiar filtros")
+            Text(stringResource(R.string.feed_clear_filters))
         }
     }
 }
@@ -336,7 +341,7 @@ private fun NotificationsBell(count: Int, onClick: () -> Unit) {
     Box {
         Surface(onClick = onClick, shape = CircleShape, color = colors.surfaceContainer, modifier = Modifier.size(44.dp)) {
             Box(contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.Notifications, contentDescription = "Notificaciones", tint = colors.onSurface)
+                Icon(Icons.Rounded.Notifications, contentDescription = stringResource(R.string.feed_notifications), tint = colors.onSurface)
             }
         }
         if (count > 0) {

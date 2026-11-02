@@ -10,102 +10,102 @@ class ValidatorsTest {
 
     @Test
     fun nameNeedsThreeCharactersAfterTrimming() {
-        assertEquals(FormTexts.NAME_REQUIRED, Validators.name(""))
-        assertEquals(FormTexts.NAME_REQUIRED, Validators.name("   "))
-        assertEquals(FormTexts.NAME_TOO_SHORT, Validators.name("Al"))
-        assertEquals(FormTexts.NAME_TOO_SHORT, Validators.name("  Al  "))
-        assertNull(Validators.name("Ana"))
-        assertNull(Validators.name("Ana Ruiz"))
+        assertEquals(FormTexts.NAME_REQUIRED, Validators.name(testResources, ""))
+        assertEquals(FormTexts.NAME_REQUIRED, Validators.name(testResources, "   "))
+        assertEquals(FormTexts.NAME_TOO_SHORT, Validators.name(testResources, "Al"))
+        assertEquals(FormTexts.NAME_TOO_SHORT, Validators.name(testResources, "  Al  "))
+        assertNull(Validators.name(testResources, "Ana"))
+        assertNull(Validators.name(testResources, "Ana Ruiz"))
     }
 
     @Test
     fun emailMustBeFilledAndWellFormed() {
-        assertEquals(FormTexts.EMAIL_REQUIRED, Validators.email(""))
-        assertEquals(FormTexts.EMAIL_REQUIRED, Validators.email("  "))
-        assertEquals(FormTexts.EMAIL_INVALID, Validators.email("ana"))
-        assertEquals(FormTexts.EMAIL_INVALID, Validators.email("ana@"))
-        assertEquals(FormTexts.EMAIL_INVALID, Validators.email("ana@mail"))
-        assertEquals(FormTexts.EMAIL_INVALID, Validators.email("ana@mail.c"))
-        assertNull(Validators.email("ana@mail.co"))
-        assertNull(Validators.email("ana.ruiz+tribu@mail.co"))
+        assertEquals(FormTexts.EMAIL_REQUIRED, Validators.email(testResources, ""))
+        assertEquals(FormTexts.EMAIL_REQUIRED, Validators.email(testResources, "  "))
+        assertEquals(FormTexts.EMAIL_INVALID, Validators.email(testResources, "ana"))
+        assertEquals(FormTexts.EMAIL_INVALID, Validators.email(testResources, "ana@"))
+        assertEquals(FormTexts.EMAIL_INVALID, Validators.email(testResources, "ana@mail"))
+        assertEquals(FormTexts.EMAIL_INVALID, Validators.email(testResources, "ana@mail.c"))
+        assertNull(Validators.email(testResources, "ana@mail.co"))
+        assertNull(Validators.email(testResources, "ana.ruiz+tribu@mail.co"))
     }
 
     @Test
     fun passwordNeedsSixCharacters() {
-        assertEquals(FormTexts.PASSWORD_REQUIRED, Validators.password(""))
-        assertEquals(FormTexts.PASSWORD_TOO_SHORT, Validators.password("12345"))
-        assertNull(Validators.password("123456"))
-        assertNull(Validators.password("una clave larga"))
+        assertEquals(FormTexts.PASSWORD_REQUIRED, Validators.password(testResources, ""))
+        assertEquals(FormTexts.PASSWORD_TOO_SHORT, Validators.password(testResources, "12345"))
+        assertNull(Validators.password(testResources, "123456"))
+        assertNull(Validators.password(testResources, "una clave larga"))
     }
 
     @Test
     fun newPasswordNeedsEightCharactersAndAnUppercase() {
-        assertEquals(FormTexts.PASSWORD_REQUIRED, Validators.newPassword(""))
-        assertEquals(FormTexts.NEW_PASSWORD_TOO_SHORT, Validators.newPassword("Abc123"))
-        assertEquals(FormTexts.NEW_PASSWORD_TOO_SHORT, Validators.newPassword("Abcdef1"))
-        assertEquals(FormTexts.NEW_PASSWORD_NEEDS_UPPERCASE, Validators.newPassword("abcdefg1"))
-        assertNull(Validators.newPassword("Abcdefg1"))
-        assertNull(Validators.newPassword("ABCDEFGH"))
+        assertEquals(FormTexts.PASSWORD_REQUIRED, Validators.newPassword(testResources, ""))
+        assertEquals(FormTexts.NEW_PASSWORD_TOO_SHORT, Validators.newPassword(testResources, "Abc123"))
+        assertEquals(FormTexts.NEW_PASSWORD_TOO_SHORT, Validators.newPassword(testResources, "Abcdef1"))
+        assertEquals(FormTexts.NEW_PASSWORD_NEEDS_UPPERCASE, Validators.newPassword(testResources, "abcdefg1"))
+        assertNull(Validators.newPassword(testResources, "Abcdefg1"))
+        assertNull(Validators.newPassword(testResources, "ABCDEFGH"))
     }
 
     @Test
     fun confirmationMustBeFilledAndEqual() {
-        assertEquals(FormTexts.CONFIRM_PASSWORD_REQUIRED, Validators.confirmPassword("123456", ""))
-        assertEquals(FormTexts.PASSWORDS_DIFFER, Validators.confirmPassword("123456", "123457"))
-        assertNull(Validators.confirmPassword("123456", "123456"))
+        assertEquals(FormTexts.CONFIRM_PASSWORD_REQUIRED, Validators.confirmPassword(testResources, "123456", ""))
+        assertEquals(FormTexts.PASSWORDS_DIFFER, Validators.confirmPassword(testResources, "123456", "123457"))
+        assertNull(Validators.confirmPassword(testResources, "123456", "123456"))
     }
 
     @Test
     fun requiredTextFieldsRejectBlank() {
-        assertEquals(FormTexts.CITY_REQUIRED, Validators.city(" "))
-        assertEquals(FormTexts.ADDRESS_REQUIRED, Validators.address(""))
-        assertEquals(FormTexts.NEIGHBORHOOD_REQUIRED, Validators.neighborhood(""))
-        assertEquals(FormTexts.EVENT_TITLE_REQUIRED, Validators.eventTitle("  "))
-        assertEquals(FormTexts.PLACE_NAME_REQUIRED, Validators.placeName(""))
-        assertEquals(FormTexts.CONTRIBUTION_CAUSE_REQUIRED, Validators.contributionCause(" "))
-        assertEquals(FormTexts.COMMENT_REQUIRED, Validators.comment(""))
-        assertEquals(FormTexts.REPLY_REQUIRED, Validators.reply("   "))
+        assertEquals(FormTexts.CITY_REQUIRED, Validators.city(testResources, " "))
+        assertEquals(FormTexts.ADDRESS_REQUIRED, Validators.address(testResources, ""))
+        assertEquals(FormTexts.NEIGHBORHOOD_REQUIRED, Validators.neighborhood(testResources, ""))
+        assertEquals(FormTexts.EVENT_TITLE_REQUIRED, Validators.eventTitle(testResources, "  "))
+        assertEquals(FormTexts.PLACE_NAME_REQUIRED, Validators.placeName(testResources, ""))
+        assertEquals(FormTexts.CONTRIBUTION_CAUSE_REQUIRED, Validators.contributionCause(testResources, " "))
+        assertEquals(FormTexts.COMMENT_REQUIRED, Validators.comment(testResources, ""))
+        assertEquals(FormTexts.REPLY_REQUIRED, Validators.reply(testResources, "   "))
         listOf(
-            Validators.city("Armenia"), Validators.address("Calle 1"), Validators.neighborhood("Centro"),
-            Validators.eventTitle("Bazar"), Validators.placeName("Parque"), Validators.contributionCause("Becas"),
-            Validators.comment("Genial"), Validators.reply("Gracias")
+            Validators.city(testResources, "Armenia"), Validators.address(testResources, "Calle 1"), Validators.neighborhood(testResources, "Centro"),
+            Validators.eventTitle(testResources, "Bazar"), Validators.placeName(testResources, "Parque"), Validators.contributionCause(testResources, "Becas"),
+            Validators.comment(testResources, "Genial"), Validators.reply(testResources, "Gracias")
         ).forEach { assertNull(it) }
     }
 
     @Test
     fun selectionsAndFlagsReportTheirOwnMessage() {
-        assertEquals(FormTexts.TERMS_REQUIRED, Validators.terms(false))
-        assertNull(Validators.terms(true))
-        assertEquals(FormTexts.CATEGORY_REQUIRED, Validators.category(false))
-        assertNull(Validators.category(true))
-        assertEquals(FormTexts.PLACE_REQUIRED, Validators.place(false))
-        assertNull(Validators.place(true))
-        assertEquals(FormTexts.SCHEDULE_INVALID, Validators.schedule(false))
-        assertNull(Validators.schedule(true))
-        assertEquals(FormTexts.REPORT_REASON_REQUIRED, Validators.reportReason(null))
-        assertNull(Validators.reportReason("Spam"))
+        assertEquals(FormTexts.TERMS_REQUIRED, Validators.terms(testResources, false))
+        assertNull(Validators.terms(testResources, true))
+        assertEquals(FormTexts.CATEGORY_REQUIRED, Validators.category(testResources, false))
+        assertNull(Validators.category(testResources, true))
+        assertEquals(FormTexts.PLACE_REQUIRED, Validators.place(testResources, false))
+        assertNull(Validators.place(testResources, true))
+        assertEquals(FormTexts.SCHEDULE_INVALID, Validators.schedule(testResources, false))
+        assertNull(Validators.schedule(testResources, true))
+        assertEquals(FormTexts.REPORT_REASON_REQUIRED, Validators.reportReason(testResources, null))
+        assertNull(Validators.reportReason(testResources, "Spam"))
     }
 
     @Test
     fun contributionAmountMustBePositive() {
-        assertEquals(FormTexts.CONTRIBUTION_AMOUNT_REQUIRED, Validators.contributionAmount(0))
-        assertEquals(FormTexts.CONTRIBUTION_AMOUNT_REQUIRED, Validators.contributionAmount(-1))
-        assertNull(Validators.contributionAmount(1))
+        assertEquals(FormTexts.CONTRIBUTION_AMOUNT_REQUIRED, Validators.contributionAmount(testResources, 0))
+        assertEquals(FormTexts.CONTRIBUTION_AMOUNT_REQUIRED, Validators.contributionAmount(testResources, -1))
+        assertNull(Validators.contributionAmount(testResources, 1))
     }
 
     @Test
     fun rejectReasonNeedsFifteenCharacters() {
-        assertEquals(FormTexts.REJECT_REASON_REQUIRED, Validators.rejectReason(""))
-        assertNotNull(Validators.rejectReason("corto"))
-        assertNotNull(Validators.rejectReason("  " + "x".repeat(14) + "  "))
-        assertNull(Validators.rejectReason("x".repeat(15)))
+        assertEquals(FormTexts.REJECT_REASON_REQUIRED, Validators.rejectReason(testResources, ""))
+        assertNotNull(Validators.rejectReason(testResources, "corto"))
+        assertNotNull(Validators.rejectReason(testResources, "  " + "x".repeat(14) + "  "))
+        assertNull(Validators.rejectReason(testResources, "x".repeat(15)))
     }
 
     @Test
     fun imageNoticeAppearsOnlyAboveTheLimit() {
-        assertNull(Validators.imageLimitNotice(0))
-        assertNull(Validators.imageLimitNotice(FormLimits.MAX_IMAGES))
-        assertEquals("Máximo 5 imágenes; se usaron las primeras 5", Validators.imageLimitNotice(6))
+        assertNull(Validators.imageLimitNotice(testResources, 0))
+        assertNull(Validators.imageLimitNotice(testResources, FormLimits.MAX_IMAGES))
+        assertEquals("Máximo 5 imágenes; se usaron las primeras 5", Validators.imageLimitNotice(testResources, 6))
     }
 
     @Test

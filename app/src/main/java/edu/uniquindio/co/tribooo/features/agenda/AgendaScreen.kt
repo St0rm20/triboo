@@ -33,6 +33,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -40,10 +42,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.EventThumbnail
 import edu.uniquindio.co.tribooo.core.component.MainBottomBar
 import edu.uniquindio.co.tribooo.core.component.MainTab
-import edu.uniquindio.co.tribooo.core.util.WEEKDAY_LETTERS
 import edu.uniquindio.co.tribooo.core.util.eventHoursLabel
 import java.time.LocalDate
 
@@ -89,7 +91,7 @@ fun AgendaScreen(
         ) {
             item {
                 Column(modifier = Modifier.padding(horizontal = 4.dp)) {
-                    Text("Mi agenda", fontSize = 24.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                    Text(stringResource(R.string.agenda_title), fontSize = 24.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
                     Text(state.summary, fontSize = 13.sp, color = colors.onSurfaceVariant)
                 }
             }
@@ -139,7 +141,7 @@ private fun CalendarCard(
         Column(modifier = Modifier.padding(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onPreviousMonth) {
-                    Icon(Icons.Rounded.ChevronLeft, contentDescription = "Mes anterior", tint = colors.onSurface)
+                    Icon(Icons.Rounded.ChevronLeft, contentDescription = stringResource(R.string.agenda_previous_month), tint = colors.onSurface)
                 }
                 Text(
                     text = state.monthLabel,
@@ -150,12 +152,12 @@ private fun CalendarCard(
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onNextMonth) {
-                    Icon(Icons.Rounded.ChevronRight, contentDescription = "Mes siguiente", tint = colors.onSurface)
+                    Icon(Icons.Rounded.ChevronRight, contentDescription = stringResource(R.string.agenda_next_month), tint = colors.onSurface)
                 }
             }
 
             Row(modifier = Modifier.fillMaxWidth()) {
-                WEEKDAY_LETTERS.forEach { letter ->
+                stringArrayResource(R.array.weekday_letters).forEach { letter ->
                     Text(
                         text = letter,
                         fontSize = 12.sp,
@@ -252,7 +254,7 @@ private fun AgendaEventCard(item: AgendaEventItem, onClick: () -> Unit) {
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = "${event.place} · ${event.neighborhood}",
+                    text = stringResource(R.string.common_dot_join, event.place, event.neighborhood),
                     fontSize = 13.sp,
                     color = colors.onSurfaceVariant,
                     maxLines = 1,
@@ -273,7 +275,7 @@ private fun AgendaEventCard(item: AgendaEventItem, onClick: () -> Unit) {
                             tint = colors.onPrimaryContainer,
                             modifier = Modifier.size(14.dp)
                         )
-                        Text("Vas", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colors.onPrimaryContainer)
+                        Text(stringResource(R.string.agenda_going), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colors.onPrimaryContainer)
                     }
                 }
             }
@@ -289,9 +291,9 @@ private fun EmptyDay() {
         modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("Nada agendado este día.", fontSize = 15.sp, color = colors.onSurface)
+        Text(stringResource(R.string.agenda_empty_day), fontSize = 15.sp, color = colors.onSurface)
         Text(
-            "Los días con punto tienen eventos cerca.",
+            stringResource(R.string.agenda_empty_day_hint),
             fontSize = 13.sp,
             color = colors.onSurfaceVariant,
             modifier = Modifier.padding(top = 4.dp)

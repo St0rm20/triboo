@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.util.CommunityRole
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.communityRole
 import edu.uniquindio.co.tribooo.core.util.countOrDash
 import edu.uniquindio.co.tribooo.core.util.ratingOrDash
@@ -103,7 +105,8 @@ class UserProfileViewModel @Inject constructor(
     observeAttendances: ObserveAttendancesUseCase,
     observeFollows: ObserveFollowsUseCase,
     observeComments: ObserveCommentsUseCase,
-    private val toggleFollowUseCase: ToggleFollowUseCase
+    private val toggleFollowUseCase: ToggleFollowUseCase,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     private val userId = savedStateHandle.toRoute<MainRoutes.UserProfile>().userId
@@ -135,15 +138,15 @@ class UserProfileViewModel @Inject constructor(
 
         viewModelScope.launch { toggleFollowUseCase(user) }
         message.value = if (state.isFollowing) {
-            "Dejaste de seguir a ${user.name}."
+            resources.getString(R.string.detail_message_unfollowed, user.name)
         } else {
-            "Ahora sigues a ${user.name} · verás sus eventos en tu feed."
+            resources.getString(R.string.detail_message_followed, user.name)
         }
     }
 
     fun onReport() {
         if (!uiState.value.canInteract) return
-        message.value = "Perfil reportado a moderación."
+        message.value = resources.getString(R.string.user_profile_reported)
     }
 
     fun onMessageShown() = message.update { null }

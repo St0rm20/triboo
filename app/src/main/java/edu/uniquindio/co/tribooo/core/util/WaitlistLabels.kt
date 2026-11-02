@@ -1,9 +1,12 @@
 package edu.uniquindio.co.tribooo.core.util
 
+import edu.uniquindio.co.tribooo.R
+
 /** "En lista · puesto 2" */
-fun waitlistLabel(position: Int): String = "En lista · puesto $position"
+fun waitlistLabel(rp: ResourceProvider, position: Int): String = rp.getString(R.string.waitlist_label, position)
 
 /** Aviso tras anotarse en la lista de espera. */
-fun waitlistJoinedMessage(position: Int): String = "Te anotamos en la lista de espera · puesto $position."
+fun waitlistJoinedMessage(rp: ResourceProvider, position: Int): String =
+    rp.getString(R.string.waitlist_joined_message, position)
 
-const val WAITLIST_LEFT_MESSAGE = "Saliste de la lista de espera."
+fun waitlistLeftMessage(rp: ResourceProvider): String = rp.getString(R.string.waitlist_left_message)

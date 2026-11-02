@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.domain.usecase.saved
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Event
@@ -119,8 +120,8 @@ class ObserveMySavedEventsUseCaseTest {
 
     @Test
     fun summaryTexts() {
-        assertEquals("Tu lista para decidir después", savedSummary(0))
-        assertEquals("1 evento guardado", savedSummary(1))
-        assertEquals("3 eventos guardados", savedSummary(3))
+        assertEquals("Tu lista para decidir después", savedSummary(testResources, 0))
+        assertEquals("1 evento guardado", savedSummary(testResources, 1))
+        assertEquals("3 eventos guardados", savedSummary(testResources, 3))
     }
 }

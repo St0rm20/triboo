@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import edu.uniquindio.co.tribooo.core.theme.categoryColors
+import edu.uniquindio.co.tribooo.core.util.localizedName
 import edu.uniquindio.co.tribooo.domain.model.Category
 
 /** Chip seleccionable de categoría: con borde cuando no está seleccionado y tono de la categoría cuando sí. */
@@ -47,7 +48,7 @@ fun CategoryChip(
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Icon(category.iconVector(), contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(category.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(category.localizedName(), fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     }
 }

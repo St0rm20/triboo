@@ -3,6 +3,8 @@ package edu.uniquindio.co.tribooo.features.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.R
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.model.Comment
@@ -102,21 +104,22 @@ data class ProfileUiState(
     val snackbarMessage: String? = null,
     val loggedOut: Boolean = false
 ) {
-    private fun rawError(field: EditProfileField): String? = when (field) {
-        EditProfileField.NAME -> Validators.name(editName)
-        EditProfileField.NEIGHBORHOOD -> Validators.neighborhood(editNeighborhood)
+    private fun rawError(field: EditProfileField, resources: ResourceProvider): String? = when (field) {
+        EditProfileField.NAME -> Validators.name(resources, editName)
+        EditProfileField.NEIGHBORHOOD -> Validators.neighborhood(resources, editNeighborhood)
     }
 
-    private fun shownError(field: EditProfileField): String? =
-        rawError(field).takeIf { editSubmitAttempted || field in editTouched }
+    private fun shownError(field: EditProfileField, resources: ResourceProvider): String? =
+        rawError(field, resources).takeIf { editSubmitAttempted || field in editTouched }
 
-    val nameError: String? get() = shownError(EditProfileField.NAME)
-    val neighborhoodError: String? get() = shownError(EditProfileField.NEIGHBORHOOD)
+    fun nameError(resources: ResourceProvider): String? = shownError(EditProfileField.NAME, resources)
+    fun neighborhoodError(resources: ResourceProvider): String? = shownError(EditProfileField.NEIGHBORHOOD, resources)
 
-    val firstInvalidEditField: EditProfileField? get() = EditProfileField.entries.firstOrNull { rawError(it) != null }
+    fun firstInvalidEditField(resources: ResourceProvider): EditProfileField? =
+        EditProfileField.entries.firstOrNull { rawError(it, resources) != null }
 
     /** Se intentó guardar y aún quedan campos inválidos. */
-    val showInvalidNotice: Boolean get() = editSubmitAttempted && firstInvalidEditField != null
+    fun showInvalidNotice(resources: ResourceProvider): Boolean = editSubmitAttempted && firstInvalidEditField(resources) != null
 }
 
 /** Datos de los repositorios que alimentan las cifras (se agrupan porque `combine` admite máximo 5 flujos). */
@@ -140,7 +143,8 @@ class ProfileViewModel @Inject constructor(
     observeModerationCounts: ObserveModerationCountsUseCase,
     getCities: GetCitiesUseCase,
     private val updateProfileUseCase: UpdateProfileUseCase,
-    private val logoutUseCase: LogoutUseCase
+    private val logoutUseCase: LogoutUseCase,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     val cities: List<String> = getCities()
@@ -227,7 +231,7 @@ class ProfileViewModel @Inject constructor(
         val form = local.value
         if (form.isSaving) return
 
-        val invalid = form.firstInvalidEditField
+        val invalid = form.firstInvalidEditField(resources)
         if (invalid != null) {
             local.update { it.copy(editSubmitAttempted = true, editFocusField = invalid) }
             return
@@ -236,7 +240,7 @@ class ProfileViewModel @Inject constructor(
         local.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             updateProfileUseCase(user, form.editName, form.editCity, form.editNeighborhood, form.editBio, form.editPhoto)
-            local.update { it.copy(showEditDialog = false, isSaving = false, snackbarMessage = "Datos personales actualizados.") }
+            local.update { it.copy(showEditDialog = false, isSaving = false, snackbarMessage = resources.getString(R.string.profile_updated)) }
         }
     }
 
@@ -262,7 +266,7 @@ class ProfileViewModel @Inject constructor(
 
     fun onConfirmDeleteAccount() {
         local.update {
-            it.copy(showDeleteDialog = false, snackbarMessage = "Cuenta marcada para eliminación en 14 días.")
+            it.copy(showDeleteDialog = false, snackbarMessage = resources.getString(R.string.profile_delete_scheduled))
         }
     }
 

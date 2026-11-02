@@ -17,9 +17,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.R
 
 /** Separación entre las líneas de la cuadrícula que simula las calles. */
 private val GridStep = 34.dp
@@ -31,7 +33,7 @@ private val GridStep = 34.dp
 @Composable
 fun MapPlaceholder(
     modifier: Modifier = Modifier,
-    label: String = "mapa — solo lectura"
+    label: String = stringResource(R.string.map_read_only)
 ) {
     val colors = MaterialTheme.colorScheme
     val lineColor = colors.surfaceContainerHigh

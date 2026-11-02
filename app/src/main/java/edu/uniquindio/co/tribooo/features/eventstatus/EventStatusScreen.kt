@@ -59,6 +59,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -66,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.ConfirmAlertDialog
 import edu.uniquindio.co.tribooo.core.component.EventThumbnail
 import edu.uniquindio.co.tribooo.core.component.FormTextField
@@ -75,13 +77,14 @@ import edu.uniquindio.co.tribooo.core.component.avatarColors
 import edu.uniquindio.co.tribooo.core.component.formTarget
 import edu.uniquindio.co.tribooo.core.component.iconVector
 import edu.uniquindio.co.tribooo.core.util.FormLimits
-import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.theme.categoryColors
 import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
 import edu.uniquindio.co.tribooo.core.util.finishedFooter
 import edu.uniquindio.co.tribooo.core.util.formatThousands
+import edu.uniquindio.co.tribooo.core.util.localizedName
 import edu.uniquindio.co.tribooo.core.util.pendingFooter
 import edu.uniquindio.co.tribooo.core.util.rejectedFooter
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.core.util.removeDialogTexts
 import edu.uniquindio.co.tribooo.core.util.statusBannerText
 import edu.uniquindio.co.tribooo.core.util.statusBannerTitle
@@ -108,6 +111,7 @@ fun EventStatusScreen(
     onSnackbarShown: () -> Unit,
     viewModel: EventStatusViewModel = hiltViewModel()
 ) {
+    val rp = rememberResourceProvider()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val colors = MaterialTheme.colorScheme
@@ -157,7 +161,7 @@ fun EventStatusScreen(
                 .padding(bottom = innerPadding.calculateBottomPadding())
         ) {
             StatusTopBar(
-                title = event?.let { statusScreenTitle(it.status) } ?: "Evento",
+                title = event?.let { statusScreenTitle(rp, it.status) } ?: stringResource(R.string.event_status_fallback_title),
                 onBack = onNavigateBack
             )
 
@@ -178,7 +182,7 @@ fun EventStatusScreen(
                     if (event.status == EventStatus.FINALIZADO && state.reviews.isNotEmpty()) {
                         item(key = "reviews-title") {
                             Text(
-                                text = "Reseñas de asistentes · ${state.reviews.size}",
+                                text = stringResource(R.string.event_status_reviews_title, state.reviews.size),
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = colors.onSurface,
@@ -190,7 +194,7 @@ fun EventStatusScreen(
                                 review = review,
                                 isEditing = state.editingReviewId == review.comment.id,
                                 draft = state.replyDraft,
-                                error = state.replyError,
+                                error = state.replyError(rp),
                                 isPublishing = state.isPublishingReply,
                                 focusRequested = state.replyFocusRequested,
                                 onOpenProfile = { onNavigateToUser(review.authorId) },
@@ -211,12 +215,12 @@ fun EventStatusScreen(
     }
 
     if (state.showRemoveDialog && event != null) {
-        val texts = removeDialogTexts(event.status)
+        val texts = removeDialogTexts(rp, event.status)
         ConfirmAlertDialog(
             title = texts.title,
             message = texts.message,
             confirmLabel = texts.confirmLabel,
-            dismissLabel = "Cancelar",
+            dismissLabel = stringResource(R.string.common_cancel),
             onConfirm = viewModel::onConfirmRemove,
             onDismiss = viewModel::onDismissRemoveDialog
         )
@@ -236,7 +240,7 @@ private fun StatusTopBar(title: String, onBack: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver", tint = colors.onSurface)
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back), tint = colors.onSurface)
         }
         Text(title, fontSize = 20.sp, color = colors.onSurface)
     }
@@ -246,6 +250,7 @@ private fun StatusTopBar(title: String, onBack: () -> Unit) {
 @Composable
 private fun StatusBanner(event: Event, state: EventStatusUiState) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val status = event.status
 
     val container: Color
@@ -277,9 +282,9 @@ private fun StatusBanner(event: Event, state: EventStatusUiState) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Icon(icon, contentDescription = null, tint = content, modifier = Modifier.size(36.dp))
                 Column {
-                    Text(statusBannerTitle(status), fontSize = 17.sp, fontWeight = FontWeight.Medium, color = content)
+                    Text(statusBannerTitle(rp, status), fontSize = 17.sp, fontWeight = FontWeight.Medium, color = content)
                     Text(
-                        text = statusBannerText(status),
+                        text = statusBannerText(rp, status),
                         fontSize = 13.sp,
                         lineHeight = 19.sp,
                         color = content,
@@ -298,10 +303,10 @@ private fun StatusBanner(event: Event, state: EventStatusUiState) {
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     Icon(pillIcon, contentDescription = null, tint = pillContent, modifier = Modifier.size(15.dp))
-                    Text(statusPillLabel(status), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = pillContent)
+                    Text(statusPillLabel(rp, status), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = pillContent)
                 }
                 Text(
-                    text = statusContextLabel(status, event.publicationDate, event.endDate, state.rejection?.date),
+                    text = statusContextLabel(rp, status, event.publicationDate, event.endDate, state.rejection?.date),
                     fontSize = 12.sp,
                     color = content,
                     textAlign = TextAlign.End,
@@ -315,6 +320,7 @@ private fun StatusBanner(event: Event, state: EventStatusUiState) {
 @Composable
 private fun EventSummaryCard(event: Event) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val tones = categoryColors(event.category)
 
     Surface(shape = RoundedCornerShape(24.dp), color = colors.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
@@ -327,7 +333,7 @@ private fun EventSummaryCard(event: Event) {
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(event.category.iconVector(), contentDescription = null, tint = tones.content, modifier = Modifier.size(14.dp))
-                    Text(event.category.name, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = tones.content)
+                    Text(event.category.localizedName(), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = tones.content)
                 }
                 Text(
                     text = event.title,
@@ -340,13 +346,13 @@ private fun EventSummaryCard(event: Event) {
                     modifier = Modifier.padding(top = 6.dp)
                 )
                 Text(
-                    text = eventWhenLabel(event.startDate, event.endDate),
+                    text = eventWhenLabel(rp, event.startDate, event.endDate),
                     fontSize = 13.sp,
                     color = colors.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp)
                 )
                 Text(
-                    text = "${event.place} · ${event.neighborhood}",
+                    text = stringResource(R.string.common_dot_join, event.place, event.neighborhood),
                     fontSize = 13.sp,
                     color = colors.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
@@ -359,9 +365,9 @@ private fun EventSummaryCard(event: Event) {
 @Composable
 private fun StatsRow(state: EventStatusUiState) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-        StatTile(state.attendees.formatThousands(), "asistentes", Modifier.weight(1f))
-        StatTile(state.ratingLabel, "calificación", Modifier.weight(1f))
-        StatTile(state.reviews.size.toString(), "reseñas", Modifier.weight(1f))
+        StatTile(state.attendees.formatThousands(), stringResource(R.string.event_status_stat_attendees), Modifier.weight(1f))
+        StatTile(state.ratingLabel, stringResource(R.string.event_status_stat_rating), Modifier.weight(1f))
+        StatTile(state.reviews.size.toString(), stringResource(R.string.event_status_stat_reviews), Modifier.weight(1f))
     }
 }
 
@@ -384,6 +390,7 @@ private fun StatTile(value: String, label: String, modifier: Modifier = Modifier
 @Composable
 private fun MainSection(event: Event, state: EventStatusUiState) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val status = event.status
     val icon = when (status) {
         EventStatus.RECHAZADO -> Icons.Rounded.Gavel
@@ -391,15 +398,15 @@ private fun MainSection(event: Event, state: EventStatusUiState) {
         else -> Icons.Rounded.EventAvailable
     }
     val footer = when (status) {
-        EventStatus.RECHAZADO -> rejectedFooter(state.rejection?.admin?.name, state.rejection?.date)
-        EventStatus.PENDIENTE -> pendingFooter(event.publicationDate)
-        else -> finishedFooter(event.endDate)
+        EventStatus.RECHAZADO -> rejectedFooter(rp, state.rejection?.admin?.name, state.rejection?.date)
+        EventStatus.PENDIENTE -> pendingFooter(rp, event.publicationDate)
+        else -> finishedFooter(rp, event.endDate)
     }
 
     Column {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Icon(icon, contentDescription = null, tint = colors.primary, modifier = Modifier.size(22.dp))
-            Text(statusSectionTitle(status), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+            Text(statusSectionTitle(rp, status), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
         }
         Surface(
             shape = RoundedCornerShape(20.dp),
@@ -407,9 +414,9 @@ private fun MainSection(event: Event, state: EventStatusUiState) {
             modifier = Modifier.fillMaxWidth().padding(top = 8.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(statusPolicyLine(status), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.primary)
+                Text(statusPolicyLine(rp, status), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.primary)
                 Text(
-                    text = statusParagraph(status, state.rejection?.reason),
+                    text = statusParagraph(rp, status, state.rejection?.reason),
                     fontSize = 14.sp,
                     lineHeight = 21.sp,
                     color = colors.onSurface,
@@ -508,7 +515,7 @@ private fun ReviewCard(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Icon(Icons.Rounded.WorkspacePremium, contentDescription = null, tint = colors.primary, modifier = Modifier.size(16.dp))
-                        Text("Respuesta del organizador", fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colors.primary)
+                        Text(stringResource(R.string.event_status_organizer_reply), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colors.primary)
                     }
                     Text(reply.text, fontSize = 13.sp, lineHeight = 19.sp, color = colors.onSurface, modifier = Modifier.padding(top = 4.dp))
                 }
@@ -519,10 +526,10 @@ private fun ReviewCard(
                 FormTextField(
                     value = draft,
                     onValueChange = onDraftChange,
-                    label = "Tu respuesta",
+                    label = stringResource(R.string.event_status_reply_label),
                     required = true,
-                    placeholder = "Responde como organizador del evento…",
-                    hint = FormTexts.REPLY_HINT,
+                    placeholder = stringResource(R.string.event_status_reply_placeholder),
+                    hint = stringResource(R.string.form_reply_hint),
                     error = error,
                     maxLength = FormLimits.REPLY,
                     minLines = 3,
@@ -539,16 +546,16 @@ private fun ReviewCard(
                 ) {
                     if (review.reply != null) {
                         TextButton(onClick = onDelete, colors = ButtonDefaults.textButtonColors(contentColor = colors.error)) {
-                            Text("Eliminar")
+                            Text(stringResource(R.string.event_status_action_delete))
                         }
                     }
-                    TextButton(onClick = onCancel) { Text("Cancelar") }
+                    TextButton(onClick = onCancel) { Text(stringResource(R.string.common_cancel)) }
                     Button(onClick = onPublish, enabled = !isPublishing) {
                         if (isPublishing) {
                             CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = colors.onPrimary)
                         } else {
                             Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Text("Publicar", modifier = Modifier.padding(start = 6.dp))
+                            Text(stringResource(R.string.create_event_action_publish), modifier = Modifier.padding(start = 6.dp))
                         }
                     }
                 }
@@ -556,7 +563,7 @@ private fun ReviewCard(
                 TextButton(onClick = onReplyClick, modifier = Modifier.padding(top = 4.dp)) {
                     Icon(Icons.AutoMirrored.Rounded.Reply, contentDescription = null, modifier = Modifier.size(18.dp))
                     Text(
-                        text = if (review.reply == null) "Responder" else "Editar respuesta",
+                        text = stringResource(if (review.reply == null) R.string.event_status_reply else R.string.event_status_reply_edit),
                         modifier = Modifier.padding(start = 6.dp)
                     )
                 }
@@ -568,6 +575,7 @@ private fun ReviewCard(
 @Composable
 private fun StepsSection(status: EventStatus, reviewsCount: Int) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val icons = when (status) {
         EventStatus.RECHAZADO -> listOf(Icons.Rounded.EditNote, Icons.AutoMirrored.Rounded.Send)
         EventStatus.PENDIENTE -> listOf(Icons.Rounded.EditNote, Icons.Rounded.NotificationsActive)
@@ -575,8 +583,8 @@ private fun StepsSection(status: EventStatus, reviewsCount: Int) {
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(statusStepsTitle(status), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
-        statusSteps(status, reviewsCount).forEachIndexed { index, step ->
+        Text(statusStepsTitle(rp, status), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+        statusSteps(rp, status, reviewsCount).forEachIndexed { index, step ->
             Surface(shape = RoundedCornerShape(20.dp), color = colors.surfaceContainerLow, modifier = Modifier.fillMaxWidth()) {
                 Row(modifier = Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                     Icon(icons[index], contentDescription = null, tint = colors.primary, modifier = Modifier.size(24.dp))
@@ -612,16 +620,16 @@ private fun ActionBar(
     val onSecondary: () -> Unit
     when (status) {
         EventStatus.RECHAZADO -> {
-            secondary = Triple(Icons.Rounded.Delete, "Eliminar", colors.error); onSecondary = onRemove
-            primary = Triple(Icons.Rounded.Edit, "Reenviar", onResubmit)
+            secondary = Triple(Icons.Rounded.Delete, stringResource(R.string.event_status_action_delete), colors.error); onSecondary = onRemove
+            primary = Triple(Icons.Rounded.Edit, stringResource(R.string.create_event_action_resubmit), onResubmit)
         }
         EventStatus.PENDIENTE -> {
-            secondary = Triple(Icons.AutoMirrored.Rounded.Undo, "Retirar", colors.onSurfaceVariant); onSecondary = onRemove
-            primary = Triple(Icons.Rounded.Edit, "Editar", onEdit)
+            secondary = Triple(Icons.AutoMirrored.Rounded.Undo, stringResource(R.string.event_status_action_withdraw), colors.onSurfaceVariant); onSecondary = onRemove
+            primary = Triple(Icons.Rounded.Edit, stringResource(R.string.event_status_action_edit), onEdit)
         }
         else -> {
-            secondary = Triple(Icons.Rounded.Download, "Asistencia", colors.primary); onSecondary = onDownload
-            primary = Triple(Icons.Rounded.ContentCopy, "Duplicar", onDuplicate)
+            secondary = Triple(Icons.Rounded.Download, stringResource(R.string.event_status_action_attendance), colors.primary); onSecondary = onDownload
+            primary = Triple(Icons.Rounded.ContentCopy, stringResource(R.string.event_status_action_duplicate), onDuplicate)
         }
     }
 
@@ -653,11 +661,11 @@ private fun EventUnavailable(onBack: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Text(
-            text = "Este evento ya no está disponible aquí",
+            text = stringResource(R.string.event_status_unavailable),
             fontSize = 16.sp,
             color = colors.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-        Button(onClick = onBack, modifier = Modifier.padding(top = 16.dp)) { Text("Volver") }
+        Button(onClick = onBack, modifier = Modifier.padding(top = 16.dp)) { Text(stringResource(R.string.common_back)) }
     }
 }

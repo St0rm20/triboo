@@ -30,17 +30,19 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.FormInvalidNotice
 import edu.uniquindio.co.tribooo.core.component.FormTextField
 import edu.uniquindio.co.tribooo.core.component.RequiredLegend
 import edu.uniquindio.co.tribooo.core.component.WrapRow
 import edu.uniquindio.co.tribooo.core.component.formTarget
 import edu.uniquindio.co.tribooo.core.util.FormLimits
-import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.REJECTION_QUICK_REASONS
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 
 /**
  * Hoja "Motivo del rechazo". Sin estado propio: el texto y su error viven en [sheet]
@@ -57,6 +59,7 @@ fun RejectSheet(
     onDismiss: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
+    val resources = rememberResourceProvider()
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -75,10 +78,10 @@ fun RejectSheet(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(Icons.Rounded.Block, contentDescription = null, tint = colors.error, modifier = Modifier.size(24.dp))
-                Text("Motivo del rechazo", fontSize = 20.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                Text(stringResource(R.string.reject_title), fontSize = 20.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
             }
             Text(
-                "El autor recibe este texto y la publicación deja de aparecer en el feed público.",
+                stringResource(R.string.reject_intro),
                 fontSize = 13.sp,
                 lineHeight = 19.sp,
                 color = colors.onSurfaceVariant
@@ -92,9 +95,10 @@ fun RejectSheet(
                 }
             }
 
-            Text("Motivos frecuentes", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.onSurfaceVariant)
+            Text(stringResource(R.string.reject_quick_title), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.onSurfaceVariant)
             WrapRow {
-                REJECTION_QUICK_REASONS.forEach { reason ->
+                REJECTION_QUICK_REASONS.forEach { reasonRes ->
+                    val reason = stringResource(reasonRes)
                     Surface(
                         onClick = { onReasonChange(reason) },
                         shape = RoundedCornerShape(10.dp),
@@ -114,11 +118,11 @@ fun RejectSheet(
             FormTextField(
                 value = sheet.reason,
                 onValueChange = onReasonChange,
-                label = "Motivo del rechazo",
+                label = stringResource(R.string.reject_title),
                 required = true,
-                placeholder = "Explica al autor qué debe corregir para volver a enviarlo.",
-                hint = FormTexts.REJECT_REASON_HINT,
-                error = sheet.error,
+                placeholder = stringResource(R.string.reject_placeholder),
+                hint = stringResource(R.string.form_reject_reason_hint),
+                error = sheet.error(resources),
                 maxLength = FormLimits.REJECT_REASON,
                 minLines = 4,
                 containerColor = Color.Transparent,
@@ -128,10 +132,10 @@ fun RejectSheet(
                     .formTarget(sheet.focusRequested, onReasonFocusHandled)
             )
 
-            if (sheet.submitAttempted && sheet.error != null) FormInvalidNotice()
+            if (sheet.submitAttempted && sheet.error(resources) != null) FormInvalidNotice()
 
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text("Cancelar") }
+                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.common_cancel)) }
                 Button(
                     onClick = onConfirm,
                     enabled = !sheet.isSubmitting,
@@ -142,7 +146,7 @@ fun RejectSheet(
                         CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = colors.onError)
                     } else {
                         Icon(Icons.Rounded.Block, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text("Rechazar publicación", modifier = Modifier.padding(start = 6.dp), maxLines = 1)
+                        Text(stringResource(R.string.reject_submit), modifier = Modifier.padding(start = 6.dp), maxLines = 1)
                     }
                 }
             }

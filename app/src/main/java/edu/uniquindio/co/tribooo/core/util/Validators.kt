@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.core.util
 
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.domain.usecase.moderation.RejectEventUseCase
 
 /** Máximos de caracteres de los campos de texto de los formularios que aún no tenían uno. */
@@ -13,8 +14,8 @@ object FormLimits {
 }
 
 /**
- * Reglas de validación de los formularios. Cada función retorna el mensaje de error de
- * [FormTexts] o null si el valor es válido; no conocen la pantalla ni cuándo mostrar el error.
+ * Reglas de validación de los formularios. Cada función retorna el mensaje de error (de los recursos de
+ * `form_*`) o null si el valor es válido; no conocen la pantalla ni cuándo mostrar el error.
  */
 object Validators {
     const val MIN_NAME_LENGTH = 3
@@ -25,75 +26,75 @@ object Validators {
 
     fun isValidEmail(email: String): Boolean = EMAIL_REGEX.matches(email)
 
-    fun name(value: String): String? = when {
-        value.isBlank() -> FormTexts.NAME_REQUIRED
-        value.trim().length < MIN_NAME_LENGTH -> FormTexts.NAME_TOO_SHORT
+    fun name(rp: ResourceProvider, value: String): String? = when {
+        value.isBlank() -> rp.getString(R.string.form_name_required)
+        value.trim().length < MIN_NAME_LENGTH -> rp.getString(R.string.form_name_too_short)
         else -> null
     }
 
-    fun city(value: String): String? = required(value, FormTexts.CITY_REQUIRED)
+    fun city(rp: ResourceProvider, value: String): String? = required(value, rp.getString(R.string.form_city_required))
 
-    fun address(value: String): String? = required(value, FormTexts.ADDRESS_REQUIRED)
+    fun address(rp: ResourceProvider, value: String): String? = required(value, rp.getString(R.string.form_address_required))
 
-    fun neighborhood(value: String): String? = required(value, FormTexts.NEIGHBORHOOD_REQUIRED)
+    fun neighborhood(rp: ResourceProvider, value: String): String? = required(value, rp.getString(R.string.form_neighborhood_required))
 
-    fun email(value: String): String? = when {
-        value.isBlank() -> FormTexts.EMAIL_REQUIRED
-        !isValidEmail(value) -> FormTexts.EMAIL_INVALID
+    fun email(rp: ResourceProvider, value: String): String? = when {
+        value.isBlank() -> rp.getString(R.string.form_email_required)
+        !isValidEmail(value) -> rp.getString(R.string.form_email_invalid)
         else -> null
     }
 
-    fun password(value: String): String? = when {
-        value.isBlank() -> FormTexts.PASSWORD_REQUIRED
-        value.length < MIN_PASSWORD_LENGTH -> FormTexts.PASSWORD_TOO_SHORT
+    fun password(rp: ResourceProvider, value: String): String? = when {
+        value.isBlank() -> rp.getString(R.string.form_password_required)
+        value.length < MIN_PASSWORD_LENGTH -> rp.getString(R.string.form_password_too_short)
         else -> null
     }
 
     /** Contraseña que se crea al registrarse: más exigente que la de [password], que solo valida el inicio de sesión. */
-    fun newPassword(value: String): String? = when {
-        value.isBlank() -> FormTexts.PASSWORD_REQUIRED
-        value.length < MIN_NEW_PASSWORD_LENGTH -> FormTexts.NEW_PASSWORD_TOO_SHORT
-        value.none { it.isUpperCase() } -> FormTexts.NEW_PASSWORD_NEEDS_UPPERCASE
+    fun newPassword(rp: ResourceProvider, value: String): String? = when {
+        value.isBlank() -> rp.getString(R.string.form_password_required)
+        value.length < MIN_NEW_PASSWORD_LENGTH -> rp.getString(R.string.form_new_password_too_short)
+        value.none { it.isUpperCase() } -> rp.getString(R.string.form_new_password_needs_uppercase)
         else -> null
     }
 
-    fun confirmPassword(password: String, confirmation: String): String? = when {
-        confirmation.isBlank() -> FormTexts.CONFIRM_PASSWORD_REQUIRED
-        confirmation != password -> FormTexts.PASSWORDS_DIFFER
+    fun confirmPassword(rp: ResourceProvider, password: String, confirmation: String): String? = when {
+        confirmation.isBlank() -> rp.getString(R.string.form_confirm_password_required)
+        confirmation != password -> rp.getString(R.string.form_passwords_differ)
         else -> null
     }
 
-    fun terms(accepted: Boolean): String? = if (accepted) null else FormTexts.TERMS_REQUIRED
+    fun terms(rp: ResourceProvider, accepted: Boolean): String? = if (accepted) null else rp.getString(R.string.form_terms_required)
 
-    fun eventTitle(value: String): String? = required(value, FormTexts.EVENT_TITLE_REQUIRED)
+    fun eventTitle(rp: ResourceProvider, value: String): String? = required(value, rp.getString(R.string.form_event_title_required))
 
-    fun category(isSelected: Boolean): String? = if (isSelected) null else FormTexts.CATEGORY_REQUIRED
+    fun category(rp: ResourceProvider, isSelected: Boolean): String? = if (isSelected) null else rp.getString(R.string.form_category_required)
 
-    fun place(isSelected: Boolean): String? = if (isSelected) null else FormTexts.PLACE_REQUIRED
+    fun place(rp: ResourceProvider, isSelected: Boolean): String? = if (isSelected) null else rp.getString(R.string.form_place_required)
 
-    fun placeName(value: String): String? = required(value, FormTexts.PLACE_NAME_REQUIRED)
+    fun placeName(rp: ResourceProvider, value: String): String? = required(value, rp.getString(R.string.form_place_name_required))
 
-    fun schedule(isRangeValid: Boolean): String? = if (isRangeValid) null else FormTexts.SCHEDULE_INVALID
+    fun schedule(rp: ResourceProvider, isRangeValid: Boolean): String? = if (isRangeValid) null else rp.getString(R.string.form_schedule_invalid)
 
-    fun contributionAmount(amount: Long): String? = if (amount > 0) null else FormTexts.CONTRIBUTION_AMOUNT_REQUIRED
+    fun contributionAmount(rp: ResourceProvider, amount: Long): String? = if (amount > 0) null else rp.getString(R.string.form_contribution_amount_required)
 
-    fun contributionCause(value: String): String? = required(value, FormTexts.CONTRIBUTION_CAUSE_REQUIRED)
+    fun contributionCause(rp: ResourceProvider, value: String): String? = required(value, rp.getString(R.string.form_contribution_cause_required))
 
-    fun comment(value: String): String? = required(value, FormTexts.COMMENT_REQUIRED)
+    fun comment(rp: ResourceProvider, value: String): String? = required(value, rp.getString(R.string.form_comment_required))
 
-    fun reply(value: String): String? = required(value, FormTexts.REPLY_REQUIRED)
+    fun reply(rp: ResourceProvider, value: String): String? = required(value, rp.getString(R.string.form_reply_required))
 
-    fun reportReason(reason: String?): String? = if (reason == null) FormTexts.REPORT_REASON_REQUIRED else null
+    fun reportReason(rp: ResourceProvider, reason: String?): String? = if (reason == null) rp.getString(R.string.form_report_reason_required) else null
 
-    fun rejectReason(value: String): String? = when {
-        value.isBlank() -> FormTexts.REJECT_REASON_REQUIRED
-        value.trim().length < RejectEventUseCase.MIN_REASON_LENGTH -> RejectEventUseCase.REASON_TOO_SHORT_MESSAGE
+    fun rejectReason(rp: ResourceProvider, value: String): String? = when {
+        value.isBlank() -> rp.getString(R.string.form_reject_reason_required)
+        value.trim().length < RejectEventUseCase.MIN_REASON_LENGTH -> rp.getString(R.string.usecase_reject_reason_too_short, RejectEventUseCase.MIN_REASON_LENGTH)
         else -> null
     }
 
     /** Aviso (no error) cuando se eligieron más imágenes de las permitidas; null si caben todas. */
-    fun imageLimitNotice(selected: Int): String? =
-        if (selected > FormLimits.MAX_IMAGES) FormTexts.imageLimitExceeded(FormLimits.MAX_IMAGES) else null
+    fun imageLimitNotice(rp: ResourceProvider, selected: Int): String? =
+        if (selected > FormLimits.MAX_IMAGES) rp.getString(R.string.form_image_limit_exceeded, FormLimits.MAX_IMAGES) else null
 
     private fun required(value: String, message: String): String? = if (value.isBlank()) message else null
 }

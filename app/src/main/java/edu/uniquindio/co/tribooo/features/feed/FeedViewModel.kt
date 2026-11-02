@@ -4,10 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.util.MessageTarget
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
 import edu.uniquindio.co.tribooo.core.component.FeedEventItem
 import edu.uniquindio.co.tribooo.core.component.toCardItems
-import edu.uniquindio.co.tribooo.core.util.WAITLIST_LEFT_MESSAGE
+import edu.uniquindio.co.tribooo.core.util.waitlistLeftMessage
 import edu.uniquindio.co.tribooo.core.util.waitlistJoinedMessage
 import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Event
@@ -75,7 +76,8 @@ class FeedViewModel @Inject constructor(
     private val findScheduleConflict: FindScheduleConflictUseCase,
     private val joinWaitlist: JoinWaitlistUseCase,
     private val leaveWaitlist: LeaveWaitlistUseCase,
-    messenger: SnackbarMessenger
+    messenger: SnackbarMessenger,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     /** Avisos enviados al feed desde otra pantalla (por ejemplo, "Inicio de sesión exitoso"). */
@@ -144,10 +146,10 @@ class FeedViewModel @Inject constructor(
             item.isAttending -> confirmAttendance(item.event)
             item.isWaitlisted -> viewModelScope.launch {
                 leaveWaitlist(item.event)
-                message.value = WAITLIST_LEFT_MESSAGE
+                message.value = waitlistLeftMessage(resources)
             }
             item.isFull -> viewModelScope.launch {
-                joinWaitlist(item.event)?.let { message.value = waitlistJoinedMessage(it) }
+                joinWaitlist(item.event)?.let { message.value = waitlistJoinedMessage(resources, it) }
             }
             else -> viewModelScope.launch {
                 attendanceStep.value = startAttendanceFlow(item.event, findScheduleConflict(item.event))

@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
 import edu.uniquindio.co.tribooo.core.component.avatarColors
 
@@ -118,9 +120,9 @@ private fun FollowersTopBar(summary: String, onBack: () -> Unit) {
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver", tint = colors.onSurface)
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back), tint = colors.onSurface)
             }
-            Text("Seguidores", fontSize = 20.sp, color = colors.onSurface)
+            Text(stringResource(R.string.followers_title), fontSize = 20.sp, color = colors.onSurface)
         }
         Text(
             text = summary,
@@ -193,7 +195,7 @@ private fun FollowerCard(
                         contentColor = colors.onSecondaryContainer
                     ),
                     modifier = Modifier.height(36.dp)
-                ) { Text("Siguiendo", fontSize = 13.sp, fontWeight = FontWeight.Medium) }
+                ) { Text(stringResource(R.string.detail_following), fontSize = 13.sp, fontWeight = FontWeight.Medium) }
             } else {
                 OutlinedButton(
                     onClick = onToggleFollow,
@@ -201,7 +203,7 @@ private fun FollowerCard(
                     border = BorderStroke(1.dp, colors.primary),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),
                     modifier = Modifier.height(36.dp)
-                ) { Text("Seguir", fontSize = 13.sp, fontWeight = FontWeight.Medium) }
+                ) { Text(stringResource(R.string.detail_follow), fontSize = 13.sp, fontWeight = FontWeight.Medium) }
             }
         }
     }
@@ -218,14 +220,14 @@ private fun EmptyFollowers() {
     ) {
         Icon(Icons.Rounded.Groups, contentDescription = null, tint = colors.onSurfaceVariant, modifier = Modifier.size(48.dp))
         Text(
-            text = "Aún no tienes seguidores",
+            text = stringResource(R.string.followers_empty_title),
             fontSize = 18.sp,
             fontWeight = FontWeight.Medium,
             color = colors.onSurface,
             modifier = Modifier.padding(top = 12.dp)
         )
         Text(
-            text = "Cuando alguien siga tus eventos, aparecerá aquí.",
+            text = stringResource(R.string.followers_empty_text),
             fontSize = 14.sp,
             color = colors.onSurfaceVariant,
             textAlign = TextAlign.Center,
