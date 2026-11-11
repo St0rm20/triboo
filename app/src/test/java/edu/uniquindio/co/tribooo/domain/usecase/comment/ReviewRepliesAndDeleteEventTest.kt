@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.domain.usecase.comment
 
+import edu.uniquindio.co.tribooo.data.repository.memory.NotificationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Comment
@@ -74,7 +75,7 @@ class ReviewRepliesAndDeleteEventTest {
     @Test
     fun firstReplyIsCreatedAndSecondReplacesIt() = runBlocking {
         val repository = FakeCommentRepository(listOf(review))
-        val reply = ReplyToReviewUseCase(repository, getCurrentUser)
+        val reply = ReplyToReviewUseCase(repository, NotificationRepositoryImpl(), getCurrentUser)
 
         assertTrue(reply(review, "  Gracias  "))
         assertEquals(listOf("Gracias"), repliesTo(repository).map { it.text })
@@ -87,7 +88,7 @@ class ReviewRepliesAndDeleteEventTest {
     @Test
     fun blankReplyOrReplyFromNonOrganizerIsRejected() = runBlocking {
         val repository = FakeCommentRepository(listOf(review))
-        val reply = ReplyToReviewUseCase(repository, getCurrentUser)
+        val reply = ReplyToReviewUseCase(repository, NotificationRepositoryImpl(), getCurrentUser)
         val foreignReview = Comment("r2", event("e2", EventStatus.FINALIZADO, organizer = other), other, "x", rating = 4)
 
         assertFalse(reply(review, "   "))

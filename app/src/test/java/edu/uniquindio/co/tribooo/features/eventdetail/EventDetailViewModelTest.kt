@@ -6,6 +6,7 @@ import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.InterestRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.memory.NotificationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.SavedEventRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Contribution
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
@@ -75,9 +76,9 @@ class EventDetailViewModelTest {
             toggleAttendanceUseCase = world.toggleAttendance,
             toggleInterestUseCase = ToggleInterestUseCase(InterestRepositoryImpl(), world.getCurrentUser),
             toggleSavedEventUseCase = ToggleSavedEventUseCase(savedEvents, world.getCurrentUser),
-            toggleFollowUseCase = ToggleFollowUseCase(FollowRepositoryImpl(), world.getCurrentUser),
+            toggleFollowUseCase = ToggleFollowUseCase(FollowRepositoryImpl(), NotificationRepositoryImpl(), world.getCurrentUser),
             observeReportedEventIds = ObserveReportedEventIdsUseCase(world.reports, world.observeCurrentUser),
-            addCommentUseCase = AddCommentUseCase(CommentRepositoryImpl(), world.getCurrentUser),
+            addCommentUseCase = AddCommentUseCase(CommentRepositoryImpl(), NotificationRepositoryImpl(), world.getCurrentUser),
             findScheduleConflict = world.findScheduleConflict,
             submitReportUseCase = SubmitReportUseCase(world.reports, world.getCurrentUser),
             joinWaitlist = world.joinWaitlist,

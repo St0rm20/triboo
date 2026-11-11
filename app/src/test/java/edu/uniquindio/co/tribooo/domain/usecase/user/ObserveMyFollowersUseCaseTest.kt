@@ -3,6 +3,7 @@ package edu.uniquindio.co.tribooo.domain.usecase.user
 import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.followerSubtitle
 import edu.uniquindio.co.tribooo.core.util.followersSummary
+import edu.uniquindio.co.tribooo.data.repository.memory.NotificationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Follow
 import edu.uniquindio.co.tribooo.domain.model.User
@@ -84,7 +85,7 @@ class ObserveMyFollowersUseCaseTest {
     fun togglingKeepsFollowerAndChangesIndicator() = runBlocking {
         val repository = FakeFollowRepository(listOf(Follow(maria, me)))
         val observeFollowers = observe(emptyList(), repository)
-        val toggle = ToggleFollowUseCase(repository, GetCurrentUserUseCase(session, users))
+        val toggle = ToggleFollowUseCase(repository, NotificationRepositoryImpl(), GetCurrentUserUseCase(session, users))
 
         toggle(maria)
         assertEquals(listOf(true), observeFollowers().first().map { it.followedByMe })
