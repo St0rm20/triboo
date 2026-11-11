@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.domain.usecase.event
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Contribution
@@ -26,7 +27,7 @@ class EditEventUseCasesTest {
             repository.save(testEvent("ajeno", other, EventStatus.PENDIENTE))
             repository.save(testEvent("ajeno-rej", other, EventStatus.RECHAZADO))
             val user = currentUserUseCase(userId)
-            block(UpdateEventUseCase(repository, user), ResubmitEventUseCase(repository, user), repository)
+            block(UpdateEventUseCase(repository, user, testResources), ResubmitEventUseCase(repository, user, testResources), repository)
         }
 
     @Test

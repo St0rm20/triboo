@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.createevent
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import androidx.lifecycle.SavedStateHandle
 import edu.uniquindio.co.tribooo.core.util.FormLimits
 import edu.uniquindio.co.tribooo.core.util.FormTexts
@@ -73,11 +74,12 @@ class CreateEventViewModelTest {
             getCurrentUserUseCase = user,
             createEventUseCase = CreateEventUseCase(repository),
             getEventUseCase = GetEventUseCase(repository),
-            updateEventUseCase = UpdateEventUseCase(repository, user),
-            resubmitEventUseCase = ResubmitEventUseCase(repository, user),
+            updateEventUseCase = UpdateEventUseCase(repository, user, testResources),
+            resubmitEventUseCase = ResubmitEventUseCase(repository, user, testResources),
             resolvePlaceUseCase = ResolvePlaceUseCase(LocationRepositoryImpl(), user),
             observeEventImages = ObserveEventImagesUseCase(repository),
-            savedStateHandle = SavedStateHandle(args)
+            savedStateHandle = SavedStateHandle(args),
+            resources = testResources
         )
     }
 
@@ -187,8 +189,8 @@ class CreateEventViewModelTest {
         vm.publish()
 
         assertTrue(vm.uiState.value.publishResult is RequestResult.Failure)
-        assertNotNull(vm.uiState.value.titleError)
-        assertNotNull(vm.uiState.value.contributionError)
+        assertNotNull(vm.uiState.value.titleError(testResources))
+        assertNotNull(vm.uiState.value.contributionError(testResources))
         assertEquals("Pendiente", repository.findById("pend")!!.title)
     }
 
@@ -235,8 +237,8 @@ class CreateEventViewModelTest {
         vm.publish()
 
         assertTrue(vm.uiState.value.publishResult is RequestResult.Failure)
-        assertEquals("Indica a qué se destina el aporte", vm.uiState.value.contributionCauseError)
-        assertNull(vm.uiState.value.contributionError)
+        assertEquals("Indica a qué se destina el aporte", vm.uiState.value.contributionCauseError(testResources))
+        assertNull(vm.uiState.value.contributionError(testResources))
         assertTrue(repository.events.value.none { it.title == "Bazar benéfico" })
     }
 
@@ -261,12 +263,12 @@ class CreateEventViewModelTest {
         vm.onContributionEnabledChange(true)
         vm.onContributionAmountChange("5000")
         vm.publish()
-        assertNotNull(vm.uiState.value.contributionCauseError)
+        assertNotNull(vm.uiState.value.contributionCauseError(testResources))
 
         vm.onContributionCauseChange("x".repeat(200))
 
         assertEquals(120, vm.uiState.value.contributionCause.length)
-        assertNull(vm.uiState.value.contributionCauseError)
+        assertNull(vm.uiState.value.contributionCauseError(testResources))
     }
 
     @Test
@@ -283,12 +285,12 @@ class CreateEventViewModelTest {
     @Test
     fun openingTheFormShowsNoErrors() {
         val state = viewModel().uiState.value
-        assertNull(state.titleError)
-        assertNull(state.categoryError)
-        assertNull(state.placeError)
-        assertNull(state.scheduleError)
-        assertNull(state.contributionError)
-        assertNull(state.contributionCauseError)
+        assertNull(state.titleError(testResources))
+        assertNull(state.categoryError(testResources))
+        assertNull(state.placeError(testResources))
+        assertNull(state.scheduleError(testResources))
+        assertNull(state.contributionError(testResources))
+        assertNull(state.contributionCauseError(testResources))
     }
 
     @Test
@@ -298,9 +300,9 @@ class CreateEventViewModelTest {
         vm.publish()
 
         val state = vm.uiState.value
-        assertEquals(FormTexts.EVENT_TITLE_REQUIRED, state.titleError)
-        assertEquals("Elige una categoría", state.categoryError)
-        assertEquals("Elige o escribe el lugar del evento", state.placeError)
+        assertEquals(FormTexts.EVENT_TITLE_REQUIRED, state.titleError(testResources))
+        assertEquals("Elige una categoría", state.categoryError(testResources))
+        assertEquals("Elige o escribe el lugar del evento", state.placeError(testResources))
         assertEquals(RequestResult.Failure("Revisa los campos marcados."), state.publishResult)
         assertEquals(EventField.TITLE, state.focusField)
         assertTrue(repository.events.value.none { it.title.isBlank() })
@@ -312,9 +314,9 @@ class CreateEventViewModelTest {
 
         vm.onFieldFocusLost(EventField.TITLE)
 
-        assertEquals(FormTexts.EVENT_TITLE_REQUIRED, vm.uiState.value.titleError)
-        assertNull(vm.uiState.value.categoryError)
-        assertNull(vm.uiState.value.placeError)
+        assertEquals(FormTexts.EVENT_TITLE_REQUIRED, vm.uiState.value.titleError(testResources))
+        assertNull(vm.uiState.value.categoryError(testResources))
+        assertNull(vm.uiState.value.placeError(testResources))
     }
 
     @Test
@@ -324,9 +326,9 @@ class CreateEventViewModelTest {
 
         vm.onTitleChange("Bazar")
 
-        assertNull(vm.uiState.value.titleError)
-        assertNotNull(vm.uiState.value.categoryError)
-        assertNotNull(vm.uiState.value.placeError)
+        assertNull(vm.uiState.value.titleError(testResources))
+        assertNotNull(vm.uiState.value.categoryError(testResources))
+        assertNotNull(vm.uiState.value.placeError(testResources))
     }
 
     @Test
@@ -347,7 +349,7 @@ class CreateEventViewModelTest {
         vm.onStartTimeChange(LocalTime.of(20, 0))
         vm.onEndTimeChange(LocalTime.of(18, 0))
 
-        assertEquals("La hora de fin debe ser posterior a la de inicio", vm.uiState.value.scheduleError)
+        assertEquals("La hora de fin debe ser posterior a la de inicio", vm.uiState.value.scheduleError(testResources))
         vm.publish()
 
         assertEquals(EventField.SCHEDULE, vm.uiState.value.focusField)
@@ -366,8 +368,8 @@ class CreateEventViewModelTest {
         other.onContributionEnabledChange(true)
         other.publish()
 
-        assertEquals(FormTexts.CONTRIBUTION_AMOUNT_REQUIRED, other.uiState.value.contributionError)
-        assertEquals(FormTexts.CONTRIBUTION_CAUSE_REQUIRED, other.uiState.value.contributionCauseError)
+        assertEquals(FormTexts.CONTRIBUTION_AMOUNT_REQUIRED, other.uiState.value.contributionError(testResources))
+        assertEquals(FormTexts.CONTRIBUTION_CAUSE_REQUIRED, other.uiState.value.contributionCauseError(testResources))
         assertEquals(EventField.CONTRIBUTION_AMOUNT, other.uiState.value.focusField)
     }
 
@@ -399,10 +401,10 @@ class CreateEventViewModelTest {
     fun editModeValidatesLikeCreateAndKeepsTheLoadedValuesValid() = runTest {
         val vm = viewModel("pend", EventFormMode.EDIT)
 
-        assertNull(vm.uiState.value.titleError)
+        assertNull(vm.uiState.value.titleError(testResources))
         vm.onTitleChange("")
         vm.onFieldFocusLost(EventField.TITLE)
 
-        assertEquals(FormTexts.EVENT_TITLE_REQUIRED, vm.uiState.value.titleError)
+        assertEquals(FormTexts.EVENT_TITLE_REQUIRED, vm.uiState.value.titleError(testResources))
     }
 }

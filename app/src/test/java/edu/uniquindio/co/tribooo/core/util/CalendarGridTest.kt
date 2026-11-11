@@ -83,18 +83,18 @@ class CalendarGridTest {
 
     @Test
     fun summaryUsesSingularAndPlural() {
-        assertEquals("1 evento confirmado · 1 esta semana", agendaSummary(1, 1))
-        assertEquals("0 eventos confirmados · 0 esta semana", agendaSummary(0, 0))
-        assertEquals("3 eventos confirmados · 2 esta semana", agendaSummary(3, 2))
+        assertEquals("1 evento confirmado · 1 esta semana", agendaSummary(testResources, 1, 1))
+        assertEquals("0 eventos confirmados · 0 esta semana", agendaSummary(testResources, 0, 0))
+        assertEquals("3 eventos confirmados · 2 esta semana", agendaSummary(testResources, 3, 2))
     }
 
     @Test
     fun selectedDayLabelCountsEvents() {
         val day = LocalDate.of(2026, 10, 5)
 
-        assertEquals("Lunes 5 de octubre · sin eventos", selectedDayLabel(day, 0))
-        assertEquals("Lunes 5 de octubre · 1 evento", selectedDayLabel(day, 1))
-        assertEquals("Lunes 5 de octubre · 2 eventos", selectedDayLabel(day, 2))
-        assertEquals("octubre 2026", YearMonth.of(2026, 10).label())
+        assertEquals("Lunes 5 de octubre · sin eventos", selectedDayLabel(testResources, day, 0))
+        assertEquals("Lunes 5 de octubre · 1 evento", selectedDayLabel(testResources, day, 1))
+        assertEquals("Lunes 5 de octubre · 2 eventos", selectedDayLabel(testResources, day, 2))
+        assertEquals("octubre 2026", YearMonth.of(2026, 10).label(testResources))
     }
 }

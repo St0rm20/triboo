@@ -44,7 +44,7 @@ class PasswordStrengthTest {
         assertEquals(listOf(0f, 0.34f, 0.58f, 0.8f, 1f), (0..4).map(::passwordStrengthFraction))
         assertEquals(
             listOf("Seguridad", "Débil", "Aceptable", "Buena", "Excelente"),
-            (0..4).map(::passwordStrengthLabel)
+            (0..4).map { passwordStrengthLabel(testResources, it) }
         )
     }
 }

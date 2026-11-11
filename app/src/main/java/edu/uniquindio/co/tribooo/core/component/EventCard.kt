@@ -29,11 +29,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.theme.categoryColors
 import edu.uniquindio.co.tribooo.core.util.CUPO_WARNING
 import edu.uniquindio.co.tribooo.core.util.atAppZone
@@ -43,8 +45,10 @@ import edu.uniquindio.co.tribooo.core.util.formatThousands
 import edu.uniquindio.co.tribooo.core.util.distanceKmTo
 import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.core.util.isFull
+import edu.uniquindio.co.tribooo.core.util.localizedName
 import edu.uniquindio.co.tribooo.core.util.monthShort
 import edu.uniquindio.co.tribooo.core.util.occupancy
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.core.util.waitlistLabel
 import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.model.Event
@@ -100,6 +104,7 @@ fun toCardItems(
 @Composable
 fun EventCard(item: FeedEventItem, onClick: () -> Unit, onToggleAttendance: () -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val event = item.event
     val start = event.startDate.atAppZone().toLocalDate()
 
@@ -139,7 +144,7 @@ fun EventCard(item: FeedEventItem, onClick: () -> Unit, onToggleAttendance: () -
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(event.category.iconVector(), null, tint = tones.content, modifier = Modifier.size(16.dp))
-                    Text(event.category.name, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = tones.content)
+                    Text(event.category.localizedName(), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = tones.content)
                 }
 
                 Column(
@@ -153,7 +158,7 @@ fun EventCard(item: FeedEventItem, onClick: () -> Unit, onToggleAttendance: () -
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        start.monthShort().uppercase(),
+                        start.monthShort(rp).uppercase(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium,
                         letterSpacing = 0.6.sp,
@@ -169,7 +174,7 @@ fun EventCard(item: FeedEventItem, onClick: () -> Unit, onToggleAttendance: () -
 
                 if (item.isMine) {
                     Text(
-                        text = "Tú organizas",
+                        text = stringResource(R.string.event_card_organizer),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         color = colors.onTertiaryContainer,
@@ -195,7 +200,7 @@ fun EventCard(item: FeedEventItem, onClick: () -> Unit, onToggleAttendance: () -
                     modifier = Modifier.padding(top = 9.dp),
                     verticalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
-                    InfoRow(Icons.Rounded.Schedule, eventWhenLabel(event.startDate, event.endDate))
+                    InfoRow(Icons.Rounded.Schedule, eventWhenLabel(rp, event.startDate, event.endDate))
                     InfoRow(Icons.Rounded.Place, "${event.place} · ${event.neighborhood}")
                 }
 
@@ -230,7 +235,7 @@ fun EventCard(item: FeedEventItem, onClick: () -> Unit, onToggleAttendance: () -
                             }
                         }
                         Text(
-                            text = "${item.attendeesCount.formatThousands()} asistirán",
+                            text = stringResource(R.string.event_card_attendees, item.attendeesCount.formatThousands()),
                             fontSize = 13.sp,
                             color = colors.onSurfaceVariant,
                             maxLines = 1,
@@ -256,8 +261,9 @@ private fun InfoRow(icon: ImageVector, text: String) {
 @Composable
 private fun CupoBar(item: FeedEventItem) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val tight = item.occupancy >= CUPO_WARNING
-    val label = item.event.cupoLabel(item.attendeesCount)
+    val label = item.event.cupoLabel(rp, item.attendeesCount)
     val accent = if (tight) colors.error else colors.primary
 
     Column(modifier = Modifier.padding(top = 12.dp)) {
@@ -269,7 +275,7 @@ private fun CupoBar(item: FeedEventItem) {
         ) {
             val fg = if (tight) colors.error else colors.onSurfaceVariant
             Text(label, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = fg)
-            Text("${(item.occupancy * 100).toInt()}% ocupado", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = fg)
+            Text(stringResource(R.string.event_card_occupancy, (item.occupancy * 100).toInt()), fontSize = 11.sp, fontWeight = FontWeight.Medium, color = fg)
         }
         Box(
             modifier = Modifier
@@ -292,6 +298,7 @@ private fun CupoBar(item: FeedEventItem) {
 @Composable
 private fun AttendButton(item: FeedEventItem, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val waitlist = item.isFull && !item.isAttending
     val position = item.waitlistPosition.takeIf { waitlist }
     val queued = position != null
@@ -325,10 +332,10 @@ private fun AttendButton(item: FeedEventItem, onClick: () -> Unit) {
             )
             Text(
                 text = when {
-                    item.isAttending -> "Cancelar"
-                    position != null -> waitlistLabel(position)
-                    waitlist -> "Lista de espera"
-                    else -> "Asistiré"
+                    item.isAttending -> stringResource(R.string.common_cancel)
+                    position != null -> waitlistLabel(rp, position)
+                    waitlist -> stringResource(R.string.event_card_waitlist)
+                    else -> stringResource(R.string.event_card_attend)
                 },
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium

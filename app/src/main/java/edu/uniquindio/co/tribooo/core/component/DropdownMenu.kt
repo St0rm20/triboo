@@ -23,7 +23,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import edu.uniquindio.co.tribooo.R
 import java.text.Normalizer
 
 /** Altura máxima del menú; con más opciones se hace scroll. */
@@ -116,7 +118,7 @@ fun DropdownMenu(
         ) {
             if (filtered.isEmpty()) {
                 DropdownMenuItem(
-                    text = { Text("Sin resultados") },
+                    text = { Text(stringResource(R.string.common_no_results)) },
                     onClick = {},
                     enabled = false
                 )

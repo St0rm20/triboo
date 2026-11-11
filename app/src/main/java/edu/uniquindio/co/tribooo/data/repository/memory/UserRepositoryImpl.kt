@@ -24,6 +24,10 @@ class UserRepositoryImpl @Inject constructor() : UserRepository {
         _users.update { current -> current.map { if (it.id == user.id) user else it } }
     }
 
+    override suspend fun delete(id: String) {
+        _users.update { current -> current.filterNot { it.id == id } }
+    }
+
     override suspend fun findById(id: String): User? {
         return _users.value.firstOrNull { it.id == id }
     }

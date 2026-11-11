@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.profile
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
@@ -15,6 +16,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.moderation.ObserveModerationCoun
 import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveNotificationsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveUnreadNotificationsCountUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ObserveSavedEventsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.user.DeleteAccountUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.UpdateProfileUseCase
 import kotlinx.coroutines.Dispatchers
@@ -61,7 +63,12 @@ class ProfilePhotoTest {
             observeModerationCounts = ObserveModerationCountsUseCase(world.events, world.reports, ModerationReviewRepositoryImpl()),
             getCities = GetCitiesUseCase(LocationRepositoryImpl()),
             updateProfileUseCase = UpdateProfileUseCase(world.users),
-            logoutUseCase = LogoutUseCase(world.session)
+            logoutUseCase = LogoutUseCase(world.session),
+            deleteAccountUseCase = DeleteAccountUseCase(
+                world.users, world.events, world.attendances, SavedEventRepositoryImpl(), world.waitlist,
+                FollowRepositoryImpl(), CommentRepositoryImpl(), world.session, world.getCurrentUser
+            ),
+            resources = testResources
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
         return vm

@@ -3,9 +3,10 @@ package edu.uniquindio.co.tribooo.features.login
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import edu.uniquindio.co.tribooo.core.util.FormTexts
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.util.MessageTarget
 import edu.uniquindio.co.tribooo.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.domain.usecase.auth.RequestPasswordRecoveryUseCase
@@ -27,15 +28,17 @@ data class PasswordRecoveryUiState(
     /** Aviso de una sola vez para el snackbar. */
     val message: String? = null
 ) {
-    val emailError: String? get() = Validators.email(email).takeIf { submitAttempted || emailTouched }
+    fun emailError(resources: ResourceProvider): String? =
+        Validators.email(resources, email).takeIf { submitAttempted || emailTouched }
 
-    val isEmailValid: Boolean get() = Validators.email(email) == null
+    val isEmailValid: Boolean get() = email.isNotBlank() && Validators.isValidEmail(email)
 }
 
 @HiltViewModel
 class PasswordRecoveryViewModel @Inject constructor(
     private val requestRecovery: RequestPasswordRecoveryUseCase,
-    private val messenger: SnackbarMessenger
+    private val messenger: SnackbarMessenger,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(PasswordRecoveryUiState())
@@ -49,7 +52,7 @@ class PasswordRecoveryViewModel @Inject constructor(
         val state = _uiState.value
         if (state.isSending) return
         if (!state.isEmailValid) {
-            _uiState.update { it.copy(submitAttempted = true, focusEmail = true, message = FormTexts.SUBMIT_INVALID) }
+            _uiState.update { it.copy(submitAttempted = true, focusEmail = true, message = resources.getString(R.string.form_submit_invalid)) }
             return
         }
 
@@ -71,7 +74,7 @@ class PasswordRecoveryViewModel @Inject constructor(
 
     /** Al volver al inicio de sesión se recuerda a qué correo se envió el código. */
     fun onBackToLogin() {
-        _uiState.value.sentTo?.let { messenger.post(MessageTarget.LOGIN, FormTexts.recoveryReminder(it)) }
+        _uiState.value.sentTo?.let { messenger.post(MessageTarget.LOGIN, resources.getString(R.string.form_recovery_reminder, it)) }
     }
 
     fun onFocusHandled() = _uiState.update { it.copy(focusEmail = false) }

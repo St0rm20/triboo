@@ -7,6 +7,7 @@ import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.util.FormLimits
 import edu.uniquindio.co.tribooo.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.rejectedMessage
 import edu.uniquindio.co.tribooo.core.util.resolvedMessage
@@ -51,7 +52,8 @@ data class RejectSheetState(
     /** Motivo por el que moderación no pudo rechazar la publicación. */
     val failure: String? = null
 ) {
-    val error: String? get() = Validators.rejectReason(reason).takeIf { touched || submitAttempted } ?: failure
+    fun error(resources: ResourceProvider): String? =
+        Validators.rejectReason(resources, reason).takeIf { touched || submitAttempted } ?: failure
 }
 
 data class ModerationUiState(
@@ -80,7 +82,8 @@ class ModerationViewModel @Inject constructor(
     private val verifyEvent: VerifyEventUseCase,
     private val rejectEvent: RejectEventUseCase,
     private val restoreEvent: RestoreEventUseCase,
-    private val resolveReports: ResolveReportsUseCase
+    private val resolveReports: ResolveReportsUseCase,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     private val local = MutableStateFlow(
@@ -108,11 +111,11 @@ class ModerationViewModel @Inject constructor(
 
     fun onTabSelected(tab: ModerationTab) = local.update { it.copy(tab = tab) }
 
-    fun onVerify(case: ModerationCase) = act(verifiedMessage(case.event.title)) { verifyEvent(case.event.id) }
+    fun onVerify(case: ModerationCase) = act(verifiedMessage(resources, case.event.title)) { verifyEvent(case.event.id) }
 
-    fun onRestore(case: ModerationCase) = act(restoredMessage(case.event.title)) { restoreEvent(case.event.id) }
+    fun onRestore(case: ModerationCase) = act(restoredMessage(resources, case.event.title)) { restoreEvent(case.event.id) }
 
-    fun onResolve(case: ModerationCase) = act(resolvedMessage(case.event.title)) { resolveReports(case.event.id) }
+    fun onResolve(case: ModerationCase) = act(resolvedMessage(resources, case.event.title)) { resolveReports(case.event.id) }
 
     /** Ejecuta la acción y muestra [successMessage] o, si falló, el motivo. */
     private fun act(successMessage: String, action: suspend () -> RequestResult) {
@@ -148,7 +151,7 @@ class ModerationViewModel @Inject constructor(
     fun onConfirmReject() {
         val sheet = local.value.rejectSheet ?: return
         if (sheet.isSubmitting) return
-        if (Validators.rejectReason(sheet.reason) != null) {
+        if (Validators.rejectReason(resources, sheet.reason) != null) {
             local.update { it.copy(rejectSheet = it.rejectSheet?.copy(submitAttempted = true, focusRequested = true)) }
             return
         }
@@ -160,7 +163,7 @@ class ModerationViewModel @Inject constructor(
                     it.copy(rejectSheet = it.rejectSheet?.copy(isSubmitting = false, failure = result.errorMessage))
                 }
                 else -> local.update {
-                    it.copy(rejectSheet = null, tab = ModerationTab.RECHAZADAS, message = rejectedMessage(sheet.title))
+                    it.copy(rejectSheet = null, tab = ModerationTab.RECHAZADAS, message = rejectedMessage(resources, sheet.title))
                 }
             }
         }

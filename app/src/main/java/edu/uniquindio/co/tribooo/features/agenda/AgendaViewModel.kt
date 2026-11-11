@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.util.APP_ZONE
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.agendaSummary
 import edu.uniquindio.co.tribooo.core.util.countThisWeek
 import edu.uniquindio.co.tribooo.core.util.label
@@ -62,7 +63,12 @@ data class AgendaSelection(val month: YearMonth, val day: LocalDate) {
 }
 
 /** Arma el estado de la pantalla a partir de los datos y la selección. */
-internal fun buildAgendaState(data: AgendaData, selection: AgendaSelection, today: LocalDate): AgendaUiState {
+internal fun buildAgendaState(
+    data: AgendaData,
+    selection: AgendaSelection,
+    today: LocalDate,
+    resources: ResourceProvider
+): AgendaUiState {
     val confirmedIds = data.confirmed.map { it.id }.toSet()
     val cells = monthCells(selection.month).map { date ->
         date?.let {
@@ -82,17 +88,18 @@ internal fun buildAgendaState(data: AgendaData, selection: AgendaSelection, toda
         .map { AgendaEventItem(it, it.id in confirmedIds) }
 
     return AgendaUiState(
-        monthLabel = selection.month.label(),
+        monthLabel = selection.month.label(resources),
         cells = cells,
-        selectedDayLabel = selectedDayLabel(selection.day, events.size),
+        selectedDayLabel = selectedDayLabel(resources, selection.day, events.size),
         events = events,
-        summary = agendaSummary(data.confirmed.size, countThisWeek(data.confirmed, today))
+        summary = agendaSummary(resources, data.confirmed.size, countThisWeek(data.confirmed, today))
     )
 }
 
 @HiltViewModel
 class AgendaViewModel @Inject constructor(
-    observeAgenda: ObserveAgendaUseCase
+    observeAgenda: ObserveAgendaUseCase,
+    resources: ResourceProvider
 ) : ViewModel() {
 
     // Se usa la fecha real: los eventos de prueba son relativos a hoy
@@ -101,7 +108,7 @@ class AgendaViewModel @Inject constructor(
     private val selection = MutableStateFlow(AgendaSelection.of(today))
 
     val uiState: StateFlow<AgendaUiState> = combine(observeAgenda(), selection) { data, selection ->
-        buildAgendaState(data, selection, today)
+        buildAgendaState(data, selection, today, resources)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AgendaUiState())
 
     fun onPreviousMonth() = selection.update { it.shiftMonth(-1, today) }

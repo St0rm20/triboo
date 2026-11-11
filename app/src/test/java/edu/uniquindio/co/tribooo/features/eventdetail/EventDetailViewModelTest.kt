@@ -1,10 +1,12 @@
 package edu.uniquindio.co.tribooo.features.eventdetail
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import androidx.lifecycle.SavedStateHandle
 import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.InterestRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.memory.NotificationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.SavedEventRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Contribution
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
@@ -74,14 +76,15 @@ class EventDetailViewModelTest {
             toggleAttendanceUseCase = world.toggleAttendance,
             toggleInterestUseCase = ToggleInterestUseCase(InterestRepositoryImpl(), world.getCurrentUser),
             toggleSavedEventUseCase = ToggleSavedEventUseCase(savedEvents, world.getCurrentUser),
-            toggleFollowUseCase = ToggleFollowUseCase(FollowRepositoryImpl(), world.getCurrentUser),
+            toggleFollowUseCase = ToggleFollowUseCase(FollowRepositoryImpl(), NotificationRepositoryImpl(), world.getCurrentUser),
             observeReportedEventIds = ObserveReportedEventIdsUseCase(world.reports, world.observeCurrentUser),
-            addCommentUseCase = AddCommentUseCase(CommentRepositoryImpl(), world.getCurrentUser),
+            addCommentUseCase = AddCommentUseCase(CommentRepositoryImpl(), NotificationRepositoryImpl(), world.getCurrentUser),
             findScheduleConflict = world.findScheduleConflict,
             submitReportUseCase = SubmitReportUseCase(world.reports, world.getCurrentUser),
             joinWaitlist = world.joinWaitlist,
             leaveWaitlist = world.leaveWaitlist,
-            finalizeEventUseCase = FinalizeEventUseCase(world.events, world.getCurrentUser)
+            finalizeEventUseCase = FinalizeEventUseCase(world.events, world.getCurrentUser, testResources),
+            resources = testResources
         )
     }
 

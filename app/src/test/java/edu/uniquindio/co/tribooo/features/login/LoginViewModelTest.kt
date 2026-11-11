@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.login
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.MessageTarget
 import edu.uniquindio.co.tribooo.core.util.RequestResult
@@ -56,14 +57,14 @@ class LoginViewModelTest {
     private fun viewModel(): LoginViewModel {
         val users = UserRepositoryImpl()
         val session = FakeSession()
-        return LoginViewModel(LoginUseCase(users, session), LoginWithGoogleUseCase(users, session), messenger)
+        return LoginViewModel(LoginUseCase(users, session), LoginWithGoogleUseCase(users, session), messenger, testResources)
     }
 
     @Test
     fun openingTheFormShowsNoErrors() {
         val state = viewModel().uiState.value
-        assertNull(state.emailError)
-        assertNull(state.passwordError)
+        assertNull(state.emailError(testResources))
+        assertNull(state.passwordError(testResources))
         assertNull(state.message)
     }
 
@@ -71,8 +72,8 @@ class LoginViewModelTest {
     fun typingInOneFieldDoesNotRevealTheOthers() {
         val vm = viewModel()
         vm.onEmailChange("ana")
-        assertNull(vm.uiState.value.emailError)
-        assertNull(vm.uiState.value.passwordError)
+        assertNull(vm.uiState.value.emailError(testResources))
+        assertNull(vm.uiState.value.passwordError(testResources))
     }
 
     @Test
@@ -80,8 +81,8 @@ class LoginViewModelTest {
         val vm = viewModel()
         vm.onFieldFocusLost(LoginField.EMAIL)
 
-        assertEquals(FormTexts.EMAIL_REQUIRED, vm.uiState.value.emailError)
-        assertNull(vm.uiState.value.passwordError)
+        assertEquals(FormTexts.EMAIL_REQUIRED, vm.uiState.value.emailError(testResources))
+        assertNull(vm.uiState.value.passwordError(testResources))
     }
 
     @Test
@@ -91,8 +92,8 @@ class LoginViewModelTest {
         vm.login()
 
         val state = vm.uiState.value
-        assertEquals(FormTexts.EMAIL_REQUIRED, state.emailError)
-        assertEquals(FormTexts.PASSWORD_REQUIRED, state.passwordError)
+        assertEquals(FormTexts.EMAIL_REQUIRED, state.emailError(testResources))
+        assertEquals(FormTexts.PASSWORD_REQUIRED, state.passwordError(testResources))
         assertEquals("Revisa los campos marcados.", state.message)
         assertEquals(LoginField.EMAIL, state.focusField)
         assertNull(state.loginResult)
@@ -117,8 +118,8 @@ class LoginViewModelTest {
 
         vm.onEmailChange("ana@mail.co")
 
-        assertNull(vm.uiState.value.emailError)
-        assertEquals(FormTexts.PASSWORD_REQUIRED, vm.uiState.value.passwordError)
+        assertNull(vm.uiState.value.emailError(testResources))
+        assertEquals(FormTexts.PASSWORD_REQUIRED, vm.uiState.value.passwordError(testResources))
     }
 
     @Test

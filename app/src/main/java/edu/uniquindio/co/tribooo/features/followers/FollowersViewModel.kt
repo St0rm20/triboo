@@ -3,6 +3,8 @@ package edu.uniquindio.co.tribooo.features.followers
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.R
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.followerSubtitle
 import edu.uniquindio.co.tribooo.core.util.followersSummary
 import edu.uniquindio.co.tribooo.core.util.initials
@@ -28,41 +30,44 @@ data class FollowerItem(
 )
 
 data class FollowersUiState(
-    val summary: String = followersSummary(0),
+    val summary: String = "",
     val followers: List<FollowerItem> = emptyList(),
     val message: String? = null
 )
 
-internal fun MyFollower.toItem() = FollowerItem(
+internal fun MyFollower.toItem(resources: ResourceProvider) = FollowerItem(
     user = user,
     initials = user.name.initials(),
-    subtitle = followerSubtitle(user, followedByMe),
+    subtitle = followerSubtitle(resources, user, followedByMe),
     isFollowing = followedByMe
 )
 
 @HiltViewModel
 class FollowersViewModel @Inject constructor(
     observeMyFollowers: ObserveMyFollowersUseCase,
-    private val toggleFollowUseCase: ToggleFollowUseCase
+    private val toggleFollowUseCase: ToggleFollowUseCase,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     private val message = MutableStateFlow<String?>(null)
 
     val uiState: StateFlow<FollowersUiState> = combine(observeMyFollowers(), message) { followers, message ->
         FollowersUiState(
-            summary = followersSummary(followers.size),
-            followers = followers.map { it.toItem() },
+            summary = followersSummary(resources, followers.size),
+            followers = followers.map { it.toItem(resources) },
             message = message
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FollowersUiState())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000),
+        FollowersUiState(summary = followersSummary(resources, 0))
+    )
 
     /** Sigue o deja de seguir a la persona; sigue en la lista porque continúa siendo seguidor. */
     fun onToggleFollow(item: FollowerItem) {
         viewModelScope.launch { toggleFollowUseCase(item.user) }
         message.value = if (item.isFollowing) {
-            "Dejaste de seguir a ${item.user.name}."
+            resources.getString(R.string.detail_message_unfollowed, item.user.name)
         } else {
-            "Ahora sigues a ${item.user.name} · verás sus eventos en tu feed."
+            resources.getString(R.string.detail_message_followed, item.user.name)
         }
     }
 

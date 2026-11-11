@@ -24,13 +24,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.theme.semanticColors
-import edu.uniquindio.co.tribooo.core.util.FormTexts
 
 /** Expone [error] a los lectores de pantalla; sin error no cambia nada. */
 fun Modifier.errorSemantics(error: String?): Modifier =
@@ -40,7 +41,7 @@ fun Modifier.errorSemantics(error: String?): Modifier =
 @Composable
 fun RequiredLegend(modifier: Modifier = Modifier) {
     Text(
-        text = FormTexts.REQUIRED_LEGEND,
+        text = stringResource(R.string.form_required_legend),
         style = MaterialTheme.typography.labelMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = modifier
@@ -79,7 +80,7 @@ fun FormInvalidNotice(modifier: Modifier = Modifier) {
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(Icons.Rounded.Error, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(FormTexts.SUBMIT_INVALID, style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.form_submit_invalid), style = MaterialTheme.typography.bodyMedium)
         }
     }
 }
@@ -113,7 +114,7 @@ fun FieldSupport(
         Column(modifier = Modifier.weight(1f)) {
             when {
                 error != null -> FormErrorText(error)
-                atLimit -> FormErrorText(FormTexts.limitReached(counter.second))
+                atLimit -> FormErrorText(stringResource(R.string.form_limit_reached, counter.second))
                 success != null -> {
                     val green = semanticColors().green
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

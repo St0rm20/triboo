@@ -35,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,9 +43,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.iconVector
 import edu.uniquindio.co.tribooo.core.theme.categoryColors
 import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
+import edu.uniquindio.co.tribooo.core.util.localizedName
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
 
 @Composable
@@ -75,7 +79,7 @@ fun MyEventsScreen(
             if (state.events.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        text = "No tienes eventos en este estado.",
+                        text = stringResource(R.string.my_events_empty),
                         fontSize = 15.sp,
                         color = colors.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -127,9 +131,9 @@ private fun MyEventsTopBar(onBack: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver", tint = colors.onSurface)
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back), tint = colors.onSurface)
         }
-        Text("Mis eventos", fontSize = 20.sp, color = colors.onSurface)
+        Text(stringResource(R.string.my_events_title), fontSize = 20.sp, color = colors.onSurface)
     }
 }
 
@@ -149,7 +153,7 @@ private fun MyEventsTabs(selected: MyEventsTab, onSelect: (MyEventsTab) -> Unit)
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = tab.label,
+                        text = stringResource(tab.label),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = if (isSelected) colors.primary else colors.onSurfaceVariant,
@@ -176,6 +180,7 @@ private fun MyEventsTabs(selected: MyEventsTab, onSelect: (MyEventsTab) -> Unit)
 @Composable
 private fun MyEventCard(item: MyEventItem, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val event = item.event
     val isRejected = item.status == EventStatus.RECHAZADO
     val linkColor = if (isRejected) colors.error else colors.primary
@@ -203,13 +208,13 @@ private fun MyEventCard(item: MyEventItem, onClick: () -> Unit) {
                 modifier = Modifier.padding(top = 10.dp)
             )
             Text(
-                text = eventWhenLabel(event.startDate, event.endDate),
+                text = eventWhenLabel(rp, event.startDate, event.endDate),
                 fontSize = 13.sp,
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(top = 6.dp)
             )
             Text(
-                text = "${event.place} · ${event.neighborhood}",
+                text = stringResource(R.string.common_dot_join, event.place, event.neighborhood),
                 fontSize = 13.sp,
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp)
@@ -236,7 +241,7 @@ private fun MyEventCard(item: MyEventItem, onClick: () -> Unit) {
                 )
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = if (isRejected) "Ver motivo del rechazo" else "Ver detalle",
+                        text = stringResource(if (isRejected) R.string.my_events_see_rejection else R.string.explore_view_detail),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                         color = linkColor
@@ -282,6 +287,6 @@ private fun CategoryBadge(item: MyEventItem) {
         horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         Icon(category.iconVector(), contentDescription = null, tint = tones.content, modifier = Modifier.size(14.dp))
-        Text(category.name, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = tones.content)
+        Text(category.localizedName(), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = tones.content)
     }
 }

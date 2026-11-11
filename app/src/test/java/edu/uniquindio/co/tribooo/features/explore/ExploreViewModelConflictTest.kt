@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.explore
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.component.FeedEventItem
 import edu.uniquindio.co.tribooo.data.repository.memory.EventFilterRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
@@ -59,7 +60,8 @@ class ExploreViewModelConflictTest {
             toggleAttendanceUseCase = world.toggleAttendance,
             findScheduleConflict = world.findScheduleConflict,
             joinWaitlist = world.joinWaitlist,
-            leaveWaitlist = world.leaveWaitlist
+            leaveWaitlist = world.leaveWaitlist,
+            resources = testResources
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
         return vm

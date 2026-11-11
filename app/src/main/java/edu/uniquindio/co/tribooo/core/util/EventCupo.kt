@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.core.util
 
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.domain.model.Event
 
 /** Porcentaje de ocupación a partir del cual el cupo se resalta como "últimos cupos". */
@@ -15,11 +16,11 @@ fun Event.occupancy(attendees: Int): Float = cupo?.let { (attendees.toFloat() / 
 fun Event.isCupoTight(attendees: Int): Boolean = cupo != null && occupancy(attendees) >= CUPO_WARNING
 
 /** "Cupo completo", "Últimos cupos · 2 libres" o "87 de 120 confirmados" */
-fun Event.cupoLabel(attendees: Int): String {
-    val cupo = cupo ?: return "Sin límite de cupo"
+fun Event.cupoLabel(rp: ResourceProvider, attendees: Int): String {
+    val cupo = cupo ?: return rp.getString(R.string.cupo_unlimited)
     return when {
-        isFull(attendees) -> "Cupo completo"
-        isCupoTight(attendees) -> "Últimos cupos · ${cupo - attendees} libres"
-        else -> "$attendees de $cupo confirmados"
+        isFull(attendees) -> rp.getString(R.string.cupo_full)
+        isCupoTight(attendees) -> rp.getQuantityString(R.plurals.cupo_last_spots, cupo - attendees, cupo - attendees)
+        else -> rp.getQuantityString(R.plurals.cupo_confirmed_of, attendees, attendees, cupo)
     }
 }

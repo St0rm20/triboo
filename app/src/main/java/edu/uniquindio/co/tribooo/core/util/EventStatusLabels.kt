@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.core.util
 
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
 import java.time.Duration
@@ -9,58 +10,62 @@ import java.time.Instant
 const val REVIEW_HOURS = 24L
 
 /** Título de la barra superior del detalle por estado. */
-fun statusScreenTitle(status: EventStatus): String = when (status) {
-    EventStatus.RECHAZADO -> "Evento rechazado"
-    EventStatus.PENDIENTE -> "Evento en revisión"
-    else -> "Evento finalizado"
-}
+fun statusScreenTitle(rp: ResourceProvider, status: EventStatus): String = rp.getString(
+    when (status) {
+        EventStatus.RECHAZADO -> R.string.status_screen_title_rejected
+        EventStatus.PENDIENTE -> R.string.status_screen_title_pending
+        else -> R.string.status_screen_title_finished
+    }
+)
 
 /** Titular del banner. */
-fun statusBannerTitle(status: EventStatus): String = when (status) {
-    EventStatus.RECHAZADO -> "Este evento fue rechazado"
-    EventStatus.PENDIENTE -> "Este evento está en revisión"
-    else -> "Este evento ya finalizó"
-}
+fun statusBannerTitle(rp: ResourceProvider, status: EventStatus): String = rp.getString(
+    when (status) {
+        EventStatus.RECHAZADO -> R.string.status_banner_title_rejected
+        EventStatus.PENDIENTE -> R.string.status_banner_title_pending
+        else -> R.string.status_banner_title_finished
+    }
+)
 
 /** Texto del banner. */
-fun statusBannerText(status: EventStatus): String = when (status) {
-    EventStatus.RECHAZADO ->
-        "No se publicó en el feed y nadie pudo confirmar asistencia. Puedes corregirlo y enviarlo de nuevo."
-    EventStatus.PENDIENTE ->
-        "Moderación lo está revisando. Todavía no es visible en el feed ni en el mapa."
-    else -> "Quedó archivado en tu historial: no acepta nuevas confirmaciones ni aparece en el feed."
-}
+fun statusBannerText(rp: ResourceProvider, status: EventStatus): String = rp.getString(
+    when (status) {
+        EventStatus.RECHAZADO -> R.string.status_banner_text_rejected
+        EventStatus.PENDIENTE -> R.string.status_banner_text_pending
+        else -> R.string.status_banner_text_finished
+    }
+)
 
 /** Etiqueta (pill) del banner. */
-fun statusPillLabel(status: EventStatus): String = when (status) {
-    EventStatus.RECHAZADO -> "No visible para la comunidad"
-    EventStatus.PENDIENTE -> "Pendiente de aprobación"
-    else -> "Archivado"
-}
+fun statusPillLabel(rp: ResourceProvider, status: EventStatus): String = rp.getString(
+    when (status) {
+        EventStatus.RECHAZADO -> R.string.status_pill_rejected
+        EventStatus.PENDIENTE -> R.string.status_pill_pending
+        else -> R.string.status_pill_finished
+    }
+)
 
 /** Título de la sección principal. */
-fun statusSectionTitle(status: EventStatus): String = when (status) {
-    EventStatus.RECHAZADO -> "Motivo del rechazo"
-    EventStatus.PENDIENTE -> "Estado de la revisión"
-    else -> "Cierre del evento"
-}
+fun statusSectionTitle(rp: ResourceProvider, status: EventStatus): String = rp.getString(
+    when (status) {
+        EventStatus.RECHAZADO -> R.string.status_section_title_rejected
+        EventStatus.PENDIENTE -> R.string.status_section_title_pending
+        else -> R.string.status_section_title_finished
+    }
+)
 
 /** Línea de política de la tarjeta principal. */
-fun statusPolicyLine(status: EventStatus): String = when (status) {
-    EventStatus.RECHAZADO -> "Rechazado por moderación"
-    EventStatus.PENDIENTE -> "Revisión · respuesta en menos de $REVIEW_HOURS h"
-    else -> "Evento cerrado · archivado automáticamente"
+fun statusPolicyLine(rp: ResourceProvider, status: EventStatus): String = when (status) {
+    EventStatus.RECHAZADO -> rp.getString(R.string.status_policy_rejected)
+    EventStatus.PENDIENTE -> rp.getString(R.string.status_policy_pending, REVIEW_HOURS)
+    else -> rp.getString(R.string.status_policy_finished)
 }
 
 /** Párrafo de la tarjeta principal; en un rechazo es el [reason] de moderación. */
-fun statusParagraph(status: EventStatus, reason: String?): String = when (status) {
-    EventStatus.RECHAZADO -> reason?.takeIf { it.isNotBlank() } ?: "Moderación no registró un motivo."
-    EventStatus.PENDIENTE ->
-        "Moderación está verificando la información del evento. Mientras la revisión siga abierta, el evento no " +
-            "aparece en el feed ni en el mapa, y nadie puede confirmar asistencia."
-    else ->
-        "El evento ya ocurrió: no acepta nuevas confirmaciones ni comentarios, y salió del feed. Queda en tu " +
-            "historial como organizador y suma a tu reputación en la comunidad."
+fun statusParagraph(rp: ResourceProvider, status: EventStatus, reason: String?): String = when (status) {
+    EventStatus.RECHAZADO -> reason?.takeIf { it.isNotBlank() } ?: rp.getString(R.string.status_paragraph_no_reason)
+    EventStatus.PENDIENTE -> rp.getString(R.string.status_paragraph_pending)
+    else -> rp.getString(R.string.status_paragraph_finished)
 }
 
 /** Horas que quedan de la revisión de 24 h (redondeadas hacia arriba); null si ya pasaron. */
@@ -71,68 +76,87 @@ fun reviewHoursLeft(sentAt: Instant, now: Instant = Instant.now()): Int? {
 }
 
 /** "Enviado el 18 jul 2026, 14:30 · quedan ~5 h de revisión" o "… · la revisión lleva más de 24 h". */
-fun pendingFooter(sentAt: Instant, now: Instant = Instant.now()): String {
+fun pendingFooter(rp: ResourceProvider, sentAt: Instant, now: Instant = Instant.now()): String {
     val left = reviewHoursLeft(sentAt, now)
-    val tail = if (left == null) "la revisión lleva más de $REVIEW_HOURS h" else "quedan ~$left h de revisión"
-    return "Enviado el ${sentAt.dayMonthYearTimeLabel()} · $tail"
+    return if (left == null) {
+        rp.getString(R.string.status_pending_footer_overdue, sentAt.dayMonthYearTimeLabel(rp), REVIEW_HOURS)
+    } else {
+        rp.getString(R.string.status_pending_footer_left, sentAt.dayMonthYearTimeLabel(rp), left)
+    }
 }
 
 /** "Revisado por Mauricio Salazar · 18 jul 2026, 14:30" */
-fun rejectedFooter(adminName: String?, reviewedAt: Instant?): String = when {
-    adminName != null && reviewedAt != null -> "Revisado por $adminName · ${reviewedAt.dayMonthYearTimeLabel()}"
-    else -> "Sin datos de la revisión"
+fun rejectedFooter(rp: ResourceProvider, adminName: String?, reviewedAt: Instant?): String = when {
+    adminName != null && reviewedAt != null ->
+        rp.getString(R.string.status_rejected_footer, adminName, reviewedAt.dayMonthYearTimeLabel(rp))
+    else -> rp.getString(R.string.status_rejected_footer_unknown)
 }
 
 /** "Cierre automático 24 h después del fin · 19 jul 2026, 14:30" */
-fun finishedFooter(endDate: Instant): String =
-    "Cierre automático $REVIEW_HOURS h después del fin · ${endDate.plus(Duration.ofHours(REVIEW_HOURS)).dayMonthYearTimeLabel()}"
+fun finishedFooter(rp: ResourceProvider, endDate: Instant): String = rp.getString(
+    R.string.status_finished_footer,
+    REVIEW_HOURS,
+    endDate.plus(Duration.ofHours(REVIEW_HOURS)).dayMonthYearTimeLabel(rp)
+)
 
 /** Texto de contexto temporal junto a la etiqueta del banner. */
-fun statusContextLabel(status: EventStatus, sentAt: Instant, endDate: Instant, rejectedAt: Instant?, now: Instant = Instant.now()): String =
-    when (status) {
-        EventStatus.RECHAZADO ->
-            "Rechazado el ${(rejectedAt ?: sentAt).atAppZone().toLocalDate().dayMonthYearLabel()}"
-        EventStatus.PENDIENTE -> "Enviado ${sentAt.agoLabel(now)}"
-        else -> "Finalizado el ${endDate.atAppZone().toLocalDate().dayMonthYearLabel()}"
-    }
+fun statusContextLabel(
+    rp: ResourceProvider,
+    status: EventStatus,
+    sentAt: Instant,
+    endDate: Instant,
+    rejectedAt: Instant?,
+    now: Instant = Instant.now()
+): String = when (status) {
+    EventStatus.RECHAZADO ->
+        rp.getString(R.string.status_context_rejected, (rejectedAt ?: sentAt).atAppZone().toLocalDate().dayMonthYearLabel(rp))
+    EventStatus.PENDIENTE -> rp.getString(R.string.status_context_pending, sentAt.agoLabel(rp, now))
+    else -> rp.getString(R.string.status_context_finished, endDate.atAppZone().toLocalDate().dayMonthYearLabel(rp))
+}
 
 /** Paso sugerido en la sección "Qué puedes hacer" / "Mientras esperas". */
 data class StatusStep(val title: String, val description: String)
 
 /** Título de la sección de pasos. */
-fun statusStepsTitle(status: EventStatus): String =
-    if (status == EventStatus.PENDIENTE) "Mientras esperas" else "Qué puedes hacer"
+fun statusStepsTitle(rp: ResourceProvider, status: EventStatus): String =
+    rp.getString(if (status == EventStatus.PENDIENTE) R.string.status_steps_title_pending else R.string.status_steps_title_default)
 
 /** Pasos del estado; en un evento finalizado, el de reseñas solo aparece si hay [reviewsCount]. */
-fun statusSteps(status: EventStatus, reviewsCount: Int): List<StatusStep> = when (status) {
+fun statusSteps(rp: ResourceProvider, status: EventStatus, reviewsCount: Int): List<StatusStep> = when (status) {
     EventStatus.RECHAZADO -> listOf(
         StatusStep(
-            "Corrige lo señalado por moderación",
-            "Ajusta el evento según el motivo del rechazo; no pierdes el contenido ya escrito."
+            rp.getString(R.string.status_step_rejected_fix_title),
+            rp.getString(R.string.status_step_rejected_fix_description)
         ),
-        StatusStep("Reenvía el evento a moderación", "Una nueva revisión tarda menos de $REVIEW_HOURS h.")
+        StatusStep(
+            rp.getString(R.string.status_step_rejected_resubmit_title),
+            rp.getString(R.string.status_step_rejected_resubmit_description, REVIEW_HOURS)
+        )
     )
     EventStatus.PENDIENTE -> listOf(
         StatusStep(
-            "Puedes seguir editando el borrador",
-            "Los cambios se guardan y entran a la misma revisión, sin volver a la cola."
+            rp.getString(R.string.status_step_pending_edit_title),
+            rp.getString(R.string.status_step_pending_edit_description)
         ),
         StatusStep(
-            "Te avisamos al aprobarse",
-            "Recibirás una notificación y el evento se publicará automáticamente."
+            rp.getString(R.string.status_step_pending_notify_title),
+            rp.getString(R.string.status_step_pending_notify_description)
         )
     )
     else -> listOfNotNull(
         StatusStep(
-            "Duplícalo para una nueva fecha",
-            "Se copian descripción, cupo y ubicación; solo cambias las fechas."
+            rp.getString(R.string.status_step_finished_duplicate_title),
+            rp.getString(R.string.status_step_finished_duplicate_description)
         ),
         StatusStep(
-            "Descarga la lista de asistencia",
-            "Incluye confirmados, asistentes reales y calificaciones recibidas."
+            rp.getString(R.string.status_step_finished_download_title),
+            rp.getString(R.string.status_step_finished_download_description)
         ),
         if (reviewsCount > 0) {
-            StatusStep("Responde las reseñas", "Contesta arriba las $reviewsCount reseñas que dejaron los asistentes.")
+            StatusStep(
+                rp.getString(R.string.status_step_finished_reviews_title),
+                rp.getQuantityString(R.plurals.status_step_finished_reviews_description, reviewsCount, reviewsCount)
+            )
         } else {
             null
         }
@@ -142,20 +166,20 @@ fun statusSteps(status: EventStatus, reviewsCount: Int): List<StatusStep> = when
 /** Textos de la confirmación para eliminar (rechazado) o retirar (pendiente) el evento. */
 data class RemoveDialogTexts(val title: String, val message: String, val confirmLabel: String, val doneMessage: String)
 
-fun removeDialogTexts(status: EventStatus): RemoveDialogTexts =
+fun removeDialogTexts(rp: ResourceProvider, status: EventStatus): RemoveDialogTexts =
     if (status == EventStatus.PENDIENTE) {
         RemoveDialogTexts(
-            title = "¿Retirar el envío?",
-            message = "El evento saldrá de la cola de revisión y se eliminará. No se puede deshacer.",
-            confirmLabel = "Retirar",
-            doneMessage = "Envío retirado de revisión."
+            title = rp.getString(R.string.status_remove_pending_title),
+            message = rp.getString(R.string.status_remove_pending_message),
+            confirmLabel = rp.getString(R.string.status_remove_pending_confirm),
+            doneMessage = rp.getString(R.string.status_remove_pending_done)
         )
     } else {
         RemoveDialogTexts(
-            title = "¿Eliminar el evento?",
-            message = "Se eliminará el evento rechazado y su contenido. No se puede deshacer.",
-            confirmLabel = "Eliminar",
-            doneMessage = "Evento rechazado eliminado."
+            title = rp.getString(R.string.status_remove_rejected_title),
+            message = rp.getString(R.string.status_remove_rejected_message),
+            confirmLabel = rp.getString(R.string.status_remove_rejected_confirm),
+            doneMessage = rp.getString(R.string.status_remove_rejected_done)
         )
     }
 

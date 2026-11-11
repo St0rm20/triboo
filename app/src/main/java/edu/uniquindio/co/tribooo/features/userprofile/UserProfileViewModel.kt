@@ -5,7 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.util.CommunityRole
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.communityRole
 import edu.uniquindio.co.tribooo.core.util.countOrDash
 import edu.uniquindio.co.tribooo.core.util.ratingOrDash
@@ -19,8 +21,10 @@ import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUse
 import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.ObserveCommentsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.user.Badge
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveUserUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.user.ReputationCalculator
 import edu.uniquindio.co.tribooo.domain.usecase.user.ToggleFollowUseCase
 import edu.uniquindio.co.tribooo.navigation.MainRoutes
 import jakarta.inject.Inject
@@ -40,6 +44,8 @@ data class UserProfileUiState(
     val isCurrentUser: Boolean = false,
     val isFollowing: Boolean = false,
     val role: CommunityRole = CommunityRole.NEIGHBOR,
+    val points: Int = 0,
+    val badges: List<Badge> = emptyList(),
     val followers: Int = 0,
     val attendances: Int = 0,
     val createdEvents: Int = 0,
@@ -80,12 +86,16 @@ internal fun buildUserProfileState(
         .filter { it.event.id in publicIds && it.author.id != user.id }
         .mapNotNull { it.rating }
 
+    val reputation = ReputationCalculator.calculate(user, sources.events, sources.attendances, sources.comments, sources.follows)
+
     return UserProfileUiState(
         isLoading = false,
         user = user,
         isCurrentUser = user.id == currentUser?.id,
         isFollowing = sources.follows.any { it.follower.id == currentUser?.id && it.followed.id == user.id },
-        role = communityRole(user.role, publicEvents.size),
+        role = communityRole(user.role, reputation.points),
+        points = reputation.points,
+        badges = reputation.badges,
         followers = sources.follows.count { it.followed.id == user.id },
         attendances = sources.attendances.count { it.user.id == user.id },
         createdEvents = publicEvents.size,
@@ -103,7 +113,8 @@ class UserProfileViewModel @Inject constructor(
     observeAttendances: ObserveAttendancesUseCase,
     observeFollows: ObserveFollowsUseCase,
     observeComments: ObserveCommentsUseCase,
-    private val toggleFollowUseCase: ToggleFollowUseCase
+    private val toggleFollowUseCase: ToggleFollowUseCase,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     private val userId = savedStateHandle.toRoute<MainRoutes.UserProfile>().userId
@@ -135,15 +146,15 @@ class UserProfileViewModel @Inject constructor(
 
         viewModelScope.launch { toggleFollowUseCase(user) }
         message.value = if (state.isFollowing) {
-            "Dejaste de seguir a ${user.name}."
+            resources.getString(R.string.detail_message_unfollowed, user.name)
         } else {
-            "Ahora sigues a ${user.name} · verás sus eventos en tu feed."
+            resources.getString(R.string.detail_message_followed, user.name)
         }
     }
 
     fun onReport() {
         if (!uiState.value.canInteract) return
-        message.value = "Perfil reportado a moderación."
+        message.value = resources.getString(R.string.user_profile_reported)
     }
 
     fun onMessageShown() = message.update { null }

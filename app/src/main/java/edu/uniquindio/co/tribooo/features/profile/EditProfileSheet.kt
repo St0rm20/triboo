@@ -34,18 +34,20 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.FormInvalidNotice
 import edu.uniquindio.co.tribooo.core.component.FormTextField
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
 import edu.uniquindio.co.tribooo.core.component.RequiredLegend
 import edu.uniquindio.co.tribooo.core.component.WrapRow
 import edu.uniquindio.co.tribooo.core.component.formTarget
-import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.initials
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 
 /**
  * Ventana "Editar datos personales". Sin estado propio: el formulario y sus errores vienen en
@@ -68,6 +70,7 @@ fun EditProfileSheet(
     onDismiss: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
+    val resources = rememberResourceProvider()
     val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
         uri?.let { onPhotoSelected(it.toString()) }
     }
@@ -91,13 +94,13 @@ fun EditProfileSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text("Editar datos personales", fontSize = 20.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                Text(stringResource(R.string.profile_edit_title), fontSize = 20.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Rounded.Close, contentDescription = "Cerrar", tint = colors.onSurfaceVariant)
+                    Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.common_close), tint = colors.onSurfaceVariant)
                 }
             }
             Text(
-                "Tu nombre y tu barrio se muestran a los vecinos en tus eventos y comentarios.",
+                stringResource(R.string.profile_edit_intro),
                 fontSize = 13.sp,
                 lineHeight = 19.sp,
                 color = colors.onSurfaceVariant
@@ -124,9 +127,9 @@ fun EditProfileSheet(
                         )
                         Text(
                             text = if (state.editPhoto == null) {
-                                "Sin foto: se muestran tus iniciales."
+                                stringResource(R.string.profile_edit_photo_none)
                             } else {
-                                "Foto lista. Reemplázala o vuelve a tus iniciales."
+                                stringResource(R.string.profile_edit_photo_ready)
                             },
                             fontSize = 12.sp,
                             lineHeight = 18.sp,
@@ -141,14 +144,14 @@ fun EditProfileSheet(
                         ) {
                             Icon(Icons.Rounded.PhotoCamera, contentDescription = null, modifier = Modifier.size(18.dp))
                             Text(
-                                text = if (state.editPhoto == null) "Subir foto" else "Cambiar foto",
+                                text = stringResource(if (state.editPhoto == null) R.string.profile_edit_photo_upload else R.string.profile_edit_photo_change),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier.padding(start = 8.dp)
                             )
                         }
                         if (state.editPhoto != null) {
-                            TextButton(onClick = onPhotoRemoved) { Text("Quitar", fontSize = 14.sp, fontWeight = FontWeight.Medium) }
+                            TextButton(onClick = onPhotoRemoved) { Text(stringResource(R.string.detail_rating_clear), fontSize = 14.sp, fontWeight = FontWeight.Medium) }
                         }
                     }
                 }
@@ -157,11 +160,11 @@ fun EditProfileSheet(
             FormTextField(
                 value = state.editName,
                 onValueChange = onNameChange,
-                label = "Nombre completo",
+                label = stringResource(R.string.profile_edit_name_label),
                 required = true,
-                placeholder = "Nombre y apellido",
-                hint = FormTexts.NAME_HINT,
-                error = state.nameError,
+                placeholder = stringResource(R.string.profile_edit_name_placeholder),
+                hint = stringResource(R.string.form_name_hint),
+                error = state.nameError(resources),
                 singleLine = true,
                 shape = RoundedCornerShape(17.dp),
                 containerColor = colors.surfaceContainer,
@@ -171,7 +174,7 @@ fun EditProfileSheet(
                     .formTarget(state.editFocusField == EditProfileField.NAME, onFocusHandled)
             )
 
-            FieldLabel("Ciudad *", topPadding = 16.dp)
+            FieldLabel(stringResource(R.string.profile_edit_city_label), topPadding = 16.dp)
             WrapRow {
                 cities.forEach { city ->
                     CityChip(city = city, selected = city == state.editCity, onClick = { onCityChange(city) })
@@ -181,11 +184,11 @@ fun EditProfileSheet(
             FormTextField(
                 value = state.editNeighborhood,
                 onValueChange = onNeighborhoodChange,
-                label = "Barrio",
+                label = stringResource(R.string.profile_edit_neighborhood_label),
                 required = true,
-                placeholder = "Ej. Laureles",
-                hint = FormTexts.NEIGHBORHOOD_HINT,
-                error = state.neighborhoodError,
+                placeholder = stringResource(R.string.profile_edit_neighborhood_placeholder),
+                hint = stringResource(R.string.form_neighborhood_hint),
+                error = state.neighborhoodError(resources),
                 singleLine = true,
                 shape = RoundedCornerShape(17.dp),
                 containerColor = colors.surfaceContainer,
@@ -198,9 +201,9 @@ fun EditProfileSheet(
             FormTextField(
                 value = state.editBio,
                 onValueChange = onBioChange,
-                label = "Sobre mí",
-                placeholder = "Cuéntale a la comunidad qué tipo de eventos organizas o te interesan.",
-                hint = FormTexts.BIO_HINT,
+                label = stringResource(R.string.profile_about),
+                placeholder = stringResource(R.string.profile_edit_bio_placeholder),
+                hint = stringResource(R.string.form_bio_hint),
                 maxLength = MAX_BIO_LENGTH,
                 minLines = 4,
                 shape = RoundedCornerShape(17.dp),
@@ -208,7 +211,7 @@ fun EditProfileSheet(
                 modifier = Modifier.padding(top = 18.dp)
             )
 
-            if (state.showInvalidNotice) FormInvalidNotice(modifier = Modifier.padding(top = 16.dp))
+            if (state.showInvalidNotice(resources)) FormInvalidNotice(modifier = Modifier.padding(top = 16.dp))
 
             Row(
                 modifier = Modifier
@@ -223,7 +226,7 @@ fun EditProfileSheet(
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp)
-                ) { Text("Cancelar", fontSize = 15.sp, fontWeight = FontWeight.Medium) }
+                ) { Text(stringResource(R.string.common_cancel), fontSize = 15.sp, fontWeight = FontWeight.Medium) }
                 Button(
                     onClick = onSave,
                     enabled = !state.isSaving,
@@ -235,7 +238,7 @@ fun EditProfileSheet(
                     if (state.isSaving) {
                         CircularProgressIndicator(modifier = Modifier.size(22.dp), strokeWidth = 2.dp, color = colors.onPrimary)
                     } else {
-                        Text("Guardar cambios", fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                        Text(stringResource(R.string.profile_edit_save), fontSize = 15.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }

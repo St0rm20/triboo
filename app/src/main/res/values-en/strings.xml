@@ -1,0 +1,785 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <string name="app_name">tribooo</string>
+
+    <!-- Common -->
+    <string name="common_accept">Accept</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_apply">Apply</string>
+    <string name="common_continue">Continue</string>
+    <string name="common_no_results">No results</string>
+    <plurals name="common_events_count">
+        <item quantity="one">%1$d event</item>
+        <item quantity="other">%1$d events</item>
+    </plurals>
+    <plurals name="common_attendees_count">
+        <item quantity="one">%1$d attendee</item>
+        <item quantity="other">%1$d attendees</item>
+    </plurals>
+
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_explore">Explore</string>
+    <string name="nav_agenda">Schedule</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_moderation">Moderation</string>
+    <string name="nav_create_event">Create event</string>
+
+    <!-- Categories -->
+    <string name="category_sports">Sports</string>
+    <string name="category_culture">Culture</string>
+    <string name="category_academic">Academic</string>
+    <string name="category_volunteering">Volunteering</string>
+    <string name="category_social">Social</string>
+
+    <!-- Report reasons -->
+    <string name="report_reason_false_info">False or misleading information</string>
+    <string name="report_reason_no_longer_exists">The event no longer exists or has changed</string>
+    <string name="report_reason_charges_or_ads">Charges, resale or advertising</string>
+    <string name="report_reason_wrong_place_or_contact">Wrong place or contact</string>
+    <string name="report_reason_offensive_or_unsafe">Offensive or unsafe content</string>
+    <string name="report_reason_spam_or_duplicate">It\'s spam or a duplicate</string>
+
+    <!-- Roles -->
+    <string name="role_admin">Administrator</string>
+    <string name="role_leader">Community leader</string>
+    <string name="role_organizer">Organizer</string>
+    <string name="role_neighbor">Active neighbor</string>
+
+    <!-- Reputation -->
+    <string name="reputation_points">%d points</string>
+    <string name="reputation_badges_title">Badges</string>
+    <string name="badge_first_event">First event</string>
+    <string name="badge_first_event_desc">Organized at least one published event.</string>
+    <string name="badge_verified_host">Verified host</string>
+    <string name="badge_verified_host_desc">Has at least one event verified by moderation.</string>
+    <string name="badge_frequent_attendee">Frequent attendee</string>
+    <string name="badge_frequent_attendee_desc">Has attended 10 or more events by other people.</string>
+    <string name="badge_well_rated">Well rated</string>
+    <string name="badge_well_rated_desc">Average of 4.5 or more across at least 3 reviews.</string>
+    <string name="badge_popular">Popular</string>
+    <string name="badge_popular_desc">Has 20 or more followers.</string>
+
+    <!-- Capacity -->
+    <string name="cupo_unlimited">No capacity limit</string>
+    <string name="cupo_full">Event full</string>
+    <plurals name="cupo_last_spots">
+        <item quantity="one">Last spot · %1$d left</item>
+        <item quantity="other">Last spots · %1$d left</item>
+    </plurals>
+    <plurals name="cupo_confirmed_of">
+        <item quantity="one">%1$d of %2$d confirmed</item>
+        <item quantity="other">%1$d of %2$d confirmed</item>
+    </plurals>
+
+    <!-- Waitlist -->
+    <string name="waitlist_label">Waitlisted · position %1$d</string>
+    <string name="waitlist_joined_message">You\'re on the waitlist · position %1$d.</string>
+    <string name="waitlist_left_message">You left the waitlist.</string>
+
+    <!-- Password strength -->
+    <string name="password_strength_empty">Security</string>
+    <string name="password_strength_weak">Weak</string>
+    <string name="password_strength_fair">Fair</string>
+    <string name="password_strength_good">Good</string>
+    <string name="password_strength_excellent">Excellent</string>
+
+    <!-- Followers -->
+    <plurals name="followers_summary">
+        <item quantity="one">%1$d person follows your events</item>
+        <item quantity="other">%1$d people follow your events</item>
+    </plurals>
+    <string name="followers_mutual">follows you and you follow them</string>
+    <string name="followers_since">since %1$s</string>
+
+    <!-- Schedule (utility texts) -->
+    <string name="agenda_summary" tools:ignore="PluralsCandidate">%1$s · %2$d this week</string>
+    <string name="agenda_no_events">no events</string>
+    <plurals name="agenda_confirmed_events">
+        <item quantity="one">%1$d confirmed event</item>
+        <item quantity="other">%1$d confirmed events</item>
+    </plurals>
+
+    <!-- Forms -->
+    <string name="form_required_legend">* Required</string>
+    <string name="form_submit_invalid">Check the highlighted fields.</string>
+    <string name="form_limit_reached" tools:ignore="PluralsCandidate">You reached the limit of %1$d characters</string>
+    <string name="form_image_limit_exceeded" tools:ignore="PluralsCandidate">Maximum %1$d images; the first %1$d were used</string>
+    <string name="form_recovery_sent">Code sent to %1$s</string>
+    <string name="form_recovery_reminder">Check %1$s: the code to recover your password is there.</string>
+    <string name="form_name_required">Name is required</string>
+    <string name="form_name_too_short">Name must be at least 3 characters long</string>
+    <string name="form_city_required">City is required</string>
+    <string name="form_address_required">Address is required</string>
+    <string name="form_neighborhood_required">Enter your neighborhood</string>
+    <string name="form_email_required">Email is required</string>
+    <string name="form_email_invalid">Email is not valid</string>
+    <string name="form_password_required">Password is required</string>
+    <string name="form_password_too_short">Password must be at least 6 characters long</string>
+    <string name="form_new_password_too_short">Password must be at least 8 characters long</string>
+    <string name="form_new_password_needs_uppercase">Include at least one uppercase letter</string>
+    <string name="form_confirm_password_required">You must confirm the password</string>
+    <string name="form_passwords_differ">Passwords don\'t match</string>
+    <string name="form_terms_required">You must accept the terms to continue</string>
+    <string name="form_event_title_required">Give the event a clear name</string>
+    <string name="form_category_required">Choose a category</string>
+    <string name="form_place_required">Choose or type the event\'s place</string>
+    <string name="form_place_name_required">Type the name of the place</string>
+    <string name="form_schedule_invalid">The end time must be after the start time</string>
+    <string name="form_contribution_amount_required">Enter the contribution amount or turn off the cost</string>
+    <string name="form_contribution_cause_required">Say what the contribution is for</string>
+    <string name="form_comment_required">Write a comment before posting it</string>
+    <string name="form_reply_required">Write a reply before posting it</string>
+    <string name="form_report_reason_required">Choose the reason for the report so you can send it.</string>
+    <string name="form_reject_reason_required">Write the reason for the rejection</string>
+    <string name="form_name_hint">At least 3 characters</string>
+    <string name="form_address_hint" tools:ignore="TypographyDashes">E.g. 12th Street # 5-30</string>
+    <string name="form_neighborhood_hint">E.g. Laureles</string>
+    <string name="form_email_hint">E.g. name@email.com</string>
+    <string name="form_password_hint">At least 6 characters</string>
+    <string name="form_new_password_hint">At least 8 characters and one uppercase letter</string>
+    <string name="form_confirm_password_hint">Repeat the same password</string>
+    <string name="form_event_title_hint">A short name that says what will happen</string>
+    <string name="form_event_description_hint">Optional · what will happen, what to bring, who it\'s for</string>
+    <string name="form_contribution_amount_hint">Numbers only, in Colombian pesos</string>
+    <string name="form_contribution_cause_hint">Moderation will check that it is a charitable cause</string>
+    <string name="form_place_name_hint">E.g. La Libertad Park</string>
+    <string name="form_place_neighborhood_hint">If you leave it empty, your city is used</string>
+    <string name="form_bio_hint">Optional · tell the community what you\'re into</string>
+    <string name="form_comment_hint">Required to post · the rating is optional</string>
+    <string name="form_reply_hint">Whoever wrote the review will see your reply</string>
+    <string name="form_report_detail_hint">Optional · dates, contacts or suspicious links</string>
+    <string name="form_reject_reason_hint">At least 15 characters · the author will receive it as written</string>
+    <string name="form_passwords_match">Passwords match</string>
+    <string name="form_login_success">Signed in successfully</string>
+    <string name="form_account_created">Account created. Sign in.</string>
+
+    <!-- Shared components -->
+    <string name="attendance_cost_title">This event asks for a contribution</string>
+    <string name="attendance_cost_message">“%1$s” asks for a contribution of %2$s per person, paid at the venue. It is a charity event: the platform does not allow for-profit events.</string>
+    <string name="attendance_cost_per_person">%1$s per person</string>
+    <string name="attendance_cost_cause">Declared purpose: %1$s</string>
+    <string name="attendance_cost_confirm">Accept and confirm</string>
+    <string name="attendance_free_title">Confirm your attendance?</string>
+    <string name="attendance_free_message">“%1$s” is free to enter: there is no cost or contribution. You can cancel up to 2 h before.</string>
+    <string name="schedule_conflict_title">Schedule conflict</string>
+    <string name="schedule_conflict_message">“%1$s” (%2$s) overlaps with another event you already confirmed that day.</string>
+    <string name="schedule_conflict_dismiss">Don\'t confirm</string>
+    <string name="event_card_organizer">You\'re organizing</string>
+    <string name="event_card_attendees">%1$s attending</string>
+    <string name="event_card_occupancy">%1$d%% full</string>
+    <string name="event_card_waitlist">Waitlist</string>
+    <string name="event_card_attend">I\'ll attend</string>
+    <string name="filters_title">Filters</string>
+    <string name="filters_clear">Clear</string>
+    <string name="filters_categories">Categories</string>
+    <string name="filters_when">When</string>
+    <string name="filters_when_any">Any time</string>
+    <string name="filters_when_week">This week</string>
+    <string name="filters_when_month">This month</string>
+    <string name="filters_distance">Distance</string>
+    <string name="filters_distance_up_to">Up to %1$d km</string>
+    <string name="filters_only_available">Only with spots available</string>
+    <string name="filters_only_available_hint">Hides full events</string>
+    <string name="map_read_only">map — read only</string>
+
+    <!-- Use cases -->
+    <string name="usecase_event_not_found">The event no longer exists.</string>
+    <string name="usecase_resubmit_sign_in">Sign in to resubmit events.</string>
+    <string name="usecase_resubmit_not_owner">You can only resubmit your own events.</string>
+    <string name="usecase_resubmit_not_rejected">Only rejected events can be resubmitted.</string>
+    <string name="usecase_resubmit_success">Event resubmitted for review.</string>
+    <string name="usecase_update_sign_in">Sign in to edit events.</string>
+    <string name="usecase_update_not_owner">You can only edit your own events.</string>
+    <string name="usecase_update_not_pending">Only events under review can be edited.</string>
+    <string name="usecase_update_success">Changes saved. The event is still under review.</string>
+    <string name="usecase_finalize_sign_in">Sign in to finish events.</string>
+    <string name="usecase_finalize_not_owner">You can only finish your own events.</string>
+    <string name="usecase_finalize_not_active">Only active events can be finished.</string>
+    <string name="usecase_finalize_success">Event finished. You can find it in My events → Finished.</string>
+    <string name="usecase_moderation_not_admin">You don\'t have access to this section</string>
+    <string name="usecase_moderation_event_unavailable">The post is no longer available.</string>
+    <string name="usecase_verify_not_pending">Only posts under review can be verified.</string>
+    <string name="usecase_verify_success">Post verified.</string>
+    <string name="usecase_restore_not_rejected">Only rejected posts can be restored.</string>
+    <string name="usecase_restore_success">Post restored.</string>
+    <string name="usecase_reject_reason_too_short" tools:ignore="PluralsCandidate">Write a reason of at least %1$d characters: the author will receive it as written.</string>
+    <string name="usecase_reject_not_allowed">This post cannot be rejected.</string>
+    <string name="usecase_reject_success">Post rejected.</string>
+    <string name="usecase_resolve_no_open_reports">This post has no open reports.</string>
+    <string name="usecase_resolve_success">Case resolved.</string>
+
+    <!-- Dates and relative time -->
+    <string-array name="days_short">
+        <item>Mon</item>
+        <item>Tue</item>
+        <item>Wed</item>
+        <item>Thu</item>
+        <item>Fri</item>
+        <item>Sat</item>
+        <item>Sun</item>
+    </string-array>
+    <string-array name="days_long">
+        <item>Monday</item>
+        <item>Tuesday</item>
+        <item>Wednesday</item>
+        <item>Thursday</item>
+        <item>Friday</item>
+        <item>Saturday</item>
+        <item>Sunday</item>
+    </string-array>
+    <string-array name="months_short">
+        <item>Jan</item>
+        <item>Feb</item>
+        <item>Mar</item>
+        <item>Apr</item>
+        <item>May</item>
+        <item>Jun</item>
+        <item>Jul</item>
+        <item>Aug</item>
+        <item>Sep</item>
+        <item>Oct</item>
+        <item>Nov</item>
+        <item>Dec</item>
+    </string-array>
+    <string-array name="months_long">
+        <item>January</item>
+        <item>February</item>
+        <item>March</item>
+        <item>April</item>
+        <item>May</item>
+        <item>June</item>
+        <item>July</item>
+        <item>August</item>
+        <item>September</item>
+        <item>October</item>
+        <item>November</item>
+        <item>December</item>
+    </string-array>
+    <string name="date_long">%1$s, %3$s %2$d</string>
+    <string name="date_short">%1$s, %3$s %2$d</string>
+    <string name="date_short_with_year">%1$s, %2$d</string>
+    <string name="date_day_month_year">%2$s %1$d, %3$d</string>
+    <string name="date_with_time">%1$s, %2$s</string>
+    <string name="date_month_year">%1$s %2$d</string>
+    <string name="common_dot_join">%1$s · %2$s</string>
+    <string name="date_range">%1$s – %2$s</string>
+    <string name="time_now">now</string>
+    <string name="time_yesterday">yesterday</string>
+    <string name="time_today">today</string>
+    <string name="time_moment_ago">just now</string>
+    <string name="time_ago_minutes">%1$d min ago</string>
+    <string name="time_ago_hours">%1$d h ago</string>
+    <string name="time_ago_days_short">%1$d d ago</string>
+    <plurals name="time_ago_days">
+        <item quantity="one">%1$d day ago</item>
+        <item quantity="other">%1$d days ago</item>
+    </plurals>
+
+    <!-- Splash -->
+    <string name="splash_title">Triboo</string>
+    <string name="splash_subtitle">Community events in your neighborhood</string>
+    <string name="splash_location">ARMENIA, QUINDÍO</string>
+
+    <!-- Onboarding -->
+    <string name="onboarding_step1_title">Discover what\'s happening two blocks away</string>
+    <string name="onboarding_step1_body">A feed and a map of sports, cultural, academic and volunteering events near you, filtered by distance and category.</string>
+    <string name="onboarding_step2_title">Reserve your spot in one tap</string>
+    <string name="onboarding_step2_body">Book your place, save events to decide later, and we\'ll let you know if the time changes or spots run out.</string>
+    <string name="onboarding_step3_title">Post your community\'s events</string>
+    <string name="onboarding_step3_body">Create an event, set its capacity and place, and send it for review. Follow its status and chat with those who attend.</string>
+    <string name="onboarding_step_counter">Step %1$d of %2$d</string>
+    <string name="onboarding_skip">Skip</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_create_account">Create my account</string>
+    <string name="onboarding_next">Next</string>
+
+    <!-- Sign in -->
+    <string name="login_title">Welcome back</string>
+    <string name="login_subtitle">Sign in to see your community\'s events and confirm your attendance.</string>
+    <string name="login_email_label">Email</string>
+    <string name="login_email_placeholder">yourname@email.com</string>
+    <string name="login_password_label">Password</string>
+    <string name="login_hide_password">Hide password</string>
+    <string name="login_show_password">Show password</string>
+    <string name="login_forgot_password">Forgot your password?</string>
+    <string name="login_sign_in">Sign in</string>
+    <string name="login_or">or</string>
+    <string name="login_continue_google">Continue with my Google account</string>
+    <string name="login_new_here">New here?</string>
+    <string name="login_create_account">Create account</string>
+    <string name="login_error_invalid_credentials">Incorrect email or password</string>
+    <string name="login_error_google">Couldn\'t sign in with Google</string>
+
+    <!-- Password recovery -->
+    <string name="recovery_back_to_login">Back to sign in</string>
+    <string name="recovery_title_sent">Check your email</string>
+    <string name="recovery_title">Recover your password</string>
+    <string name="recovery_message_sent">We sent a code to %1$s. Check your inbox and wait for the code to continue.</string>
+    <string name="recovery_message">Enter the email associated with your account. We\'ll send you a code to recover access.</string>
+    <string name="recovery_send_code">Send code</string>
+    <string name="recovery_use_another_email">Use another email</string>
+    <string name="recovery_back_home">Back to home</string>
+
+    <!-- Sign up -->
+    <string name="register_title">Create your account</string>
+    <string name="register_subtitle">With an account you can confirm attendance, save events and post your own.</string>
+    <string name="register_name_label">First and last name</string>
+    <string name="register_name_placeholder">Ana Milena Torres</string>
+    <string name="register_city_label">City</string>
+    <string name="register_address_label">Address</string>
+    <string name="register_address_placeholder">Home address</string>
+    <string name="register_confirm_password_label">Confirm password</string>
+    <string name="register_confirm_password_placeholder">Repeat your password</string>
+    <string name="register_have_account">Already have an account?</string>
+    <string name="register_terms_dialog_title">Terms of use and privacy</string>
+    <string name="register_terms_rule_respect">• Use the platform respectfully toward the community.</string>
+    <string name="register_terms_rule_charity">• Only charitable, non-profit events are posted.</string>
+    <string name="register_terms_rule_data">• Your data is used only for the basic operation of the app.</string>
+    <string name="register_terms_understood">Got it</string>
+    <string name="register_confirm_title">Confirm sign-up</string>
+    <string name="register_confirm_message">Are you sure you want to create your account?</string>
+    <string name="register_confirm_yes">Yes, sign me up</string>
+    <string name="register_terms_text">I accept the %1$s and the processing of my data according to the privacy policy</string>
+    <string name="register_terms_link">terms of use</string>
+    <string name="register_terms_accept_label">Accept terms</string>
+    <string name="register_success">Sign-up successful</string>
+    <string name="register_error_email_exists">An account with that email already exists</string>
+
+    <!-- Feed -->
+    <plurals name="feed_events_nearby">
+        <item quantity="one">%1$d event nearby</item>
+        <item quantity="other">%1$d events nearby</item>
+    </plurals>
+    <string name="feed_nearest_first">Nearest first</string>
+    <string name="feed_near_you">Near you</string>
+    <string name="feed_search_placeholder">Search events, neighborhoods, places</string>
+    <string name="feed_filters_count">Filters · %1$d</string>
+    <string name="feed_empty_title">No events match those filters</string>
+    <string name="feed_empty_text">Try another search or remove some categories.</string>
+    <string name="feed_clear_filters">Clear filters</string>
+    <string name="feed_notifications">Notifications</string>
+
+    <!-- Explore -->
+    <string name="explore_search_placeholder">Search the map</string>
+    <string name="explore_view_map">Map</string>
+    <string name="explore_view_list">List</string>
+    <string name="explore_my_location">My location</string>
+    <string name="explore_view_detail">View details</string>
+    <string name="explore_attending">I\'m going</string>
+    <string name="explore_attend">Go</string>
+    <string name="explore_empty_title">No events match these filters</string>
+    <string name="map_placeholder_park">parque de la vida</string>
+    <string name="map_placeholder_label">map — placeholder</string>
+    <string name="decimal_separator">.</string>
+
+    <!-- Schedule -->
+    <string-array name="weekday_letters">
+        <item>M</item>
+        <item>T</item>
+        <item>W</item>
+        <item>T</item>
+        <item>F</item>
+        <item>S</item>
+        <item>S</item>
+    </string-array>
+    <string name="agenda_title">My schedule</string>
+    <string name="agenda_previous_month">Previous month</string>
+    <string name="agenda_next_month">Next month</string>
+    <string name="agenda_going">You\'re going</string>
+    <string name="agenda_empty_day">Nothing scheduled this day.</string>
+    <string name="agenda_empty_day_hint">Days with a dot have events nearby.</string>
+
+    <!-- Event detail -->
+    <string name="common_back">Back</string>
+    <string name="common_close">Close</string>
+    <string name="common_you">You</string>
+    <string name="detail_unavailable">This event is no longer available</string>
+    <string name="detail_about">About the event</string>
+    <string name="detail_no_description">The organizer didn\'t add a description.</string>
+    <string name="detail_meeting_point">Meeting point</string>
+    <string name="detail_finalize_title">Finish this event?</string>
+    <string name="detail_finalize_message">It will stop appearing in the feed and won\'t accept new confirmations. It will be archived in My events, under Finished. This action cannot be undone.</string>
+    <string name="detail_finalize_confirm">Finish event</string>
+    <string name="detail_cover_description">Cover · %1$s</string>
+    <string name="detail_unsave">Remove from saved</string>
+    <string name="detail_save">Save event</string>
+    <string name="detail_share">Share event</string>
+    <string name="detail_already_reported">You already reported this event</string>
+    <string name="detail_report">Report event</string>
+    <string name="detail_gallery">Event gallery</string>
+    <string name="detail_gallery_counter">%1$d of %2$d</string>
+    <string name="detail_gallery_photo">Photo %1$d of %2$d · %3$s</string>
+    <string name="detail_gallery_previous">Previous photo</string>
+    <string name="detail_gallery_next">Next photo</string>
+    <string name="detail_verified">Verified by moderation</string>
+    <string name="detail_info_dates">Event start and end</string>
+    <string name="detail_info_timezone">Local time (Armenia, UTC-5)</string>
+    <string name="detail_info_distance">%1$s · %2$s from you</string>
+    <string name="detail_info_category_verified">Category verified by moderation</string>
+    <string name="detail_info_category">Event category</string>
+    <string name="detail_info_contribution">%1$s · charitable contribution</string>
+    <string name="detail_info_contribution_default_cause">Voluntary contribution for the event\'s cause</string>
+    <string name="detail_info_free">Free entry</string>
+    <string name="detail_info_free_hint">No cost or sign-up contribution</string>
+    <string name="detail_cupo_pill">capacity %1$d</string>
+    <string name="detail_organizer_mine">You\'re organizing · %1$s</string>
+    <string name="detail_organizer">Organizer · %1$s</string>
+    <string name="detail_following">Following</string>
+    <string name="detail_follow">Follow</string>
+    <string name="detail_attendees_count">Attendees · %1$s</string>
+    <string name="detail_see_all">See all</string>
+    <string name="detail_no_attendees">No one has confirmed yet. Be the first!</string>
+    <plurals name="detail_attendees_summary">
+        <item quantity="one">%1$s person confirmed their attendance</item>
+        <item quantity="other">%1$s people confirmed their attendance</item>
+    </plurals>
+    <string name="detail_attendees_title">Attendees</string>
+    <string name="detail_person_you_attend">You confirmed your attendance</string>
+    <string name="detail_person_neighbor_of">Neighbor from %1$s</string>
+    <string name="detail_comments_count">Comments · %1$d</string>
+    <plurals name="detail_reviews_count">
+        <item quantity="one">%1$d review</item>
+        <item quantity="other">%1$d reviews</item>
+    </plurals>
+    <string name="detail_rating_summary">%1$s ★ from %2$s</string>
+    <string name="detail_no_reviews">No reviews yet</string>
+    <string name="detail_rating_optional">Rating (optional)</string>
+    <string name="detail_rating_value">%1$d / 5</string>
+    <string name="detail_rating_none">Not rated</string>
+    <string name="detail_rating_clear">Clear</string>
+    <string name="detail_rating_star">%1$d of 5</string>
+    <string name="detail_rating_hint">Tap the same star again to remove it.</string>
+    <string name="detail_comment_placeholder">Write a comment *</string>
+    <string name="detail_comment_send">Post comment</string>
+    <string name="detail_interested">Interested</string>
+    <string name="detail_finalized">Event finished</string>
+    <string name="detail_cancel_attendance">Cancel attendance</string>
+    <string name="detail_confirm">Confirm</string>
+    <string name="detail_share_footer">See you on Triboo.</string>
+    <string name="detail_message_unsaved">You removed the event from your saved items.</string>
+    <string name="detail_message_saved">Event saved.</string>
+    <string name="detail_message_unfollowed">You stopped following %1$s.</string>
+    <string name="detail_message_followed">You now follow %1$s · you\'ll see their events in your feed.</string>
+    <string name="detail_message_attendance_cancelled">You cancelled your attendance.</string>
+    <string name="detail_message_attendance_confirmed">Done! Your spot is reserved.</string>
+    <string name="detail_message_already_reported">You already reported this event · moderation is reviewing the case.</string>
+    <string name="detail_message_report_sent">Report sent · moderation will review “%1$s”.</string>
+    <string name="detail_message_report_own_event">You can\'t report your own event.</string>
+    <string name="detail_message_report_sign_in">Sign in to report events.</string>
+    <string name="detail_message_comment_failed">The comment couldn\'t be posted.</string>
+    <string name="detail_message_comment_posted_rated">Comment posted with %1$d ★.</string>
+    <string name="detail_message_comment_posted">Comment posted.</string>
+
+    <!-- Report event -->
+    <string name="report_title">Report this event</string>
+    <string name="report_organizer">Organized by %1$s</string>
+    <string name="report_reason_label">Reason for the report *</string>
+    <string name="report_detail_label">Details · optional</string>
+    <string name="report_detail_placeholder">Tell moderation what you saw: dates, contacts, suspicious links.</string>
+    <string name="report_send">Send report</string>
+
+    <!-- Create / edit event -->
+    <string name="create_event_not_found">We couldn\'t find this event or it isn\'t yours.</string>
+    <string name="create_event_sign_in">Sign in to post events.</string>
+    <string name="create_event_success_duplicate">Event duplicated and sent for review.</string>
+    <string name="create_event_success_contribution">Event sent for review. Moderation will check that the %1$s contribution is charitable.</string>
+    <string name="create_event_success">Event sent for review. We\'ll let you know when it\'s approved.</string>
+    <string name="create_event_banner">Every event goes through moderation before appearing in the feed. It usually takes less than 24 h.</string>
+    <string name="create_event_description_label">Description</string>
+    <string name="create_event_description_placeholder">What will happen, what to bring, who it\'s for…</string>
+    <string name="create_event_start_time">Start time</string>
+    <string name="create_event_end_time">End time</string>
+    <string name="create_event_title_create">Create event</string>
+    <string name="create_event_title_edit">Edit event</string>
+    <string name="create_event_title_resubmit">Resubmit event</string>
+    <string name="create_event_title_duplicate">Duplicate event</string>
+    <string name="create_event_action_publish">Publish</string>
+    <string name="create_event_action_save">Save</string>
+    <string name="create_event_action_resubmit">Resubmit</string>
+    <string name="create_event_title_label">Event name</string>
+    <string name="create_event_title_placeholder">E.g. Night bike ride along Bolívar Ave.</string>
+    <string name="create_event_category_label">Category *</string>
+    <string name="create_event_multi_day">Multiple days</string>
+    <string name="create_event_multi_day_on">Start and end dates and times</string>
+    <string name="create_event_multi_day_off">A single day with start and end times</string>
+    <string name="create_event_start">Start</string>
+    <string name="create_event_end">End</string>
+    <string name="create_event_date">Date</string>
+    <string name="create_event_schedule">Hours</string>
+    <string name="create_event_place_label">Location *</string>
+    <string name="create_event_place_choose">Choose a place</string>
+    <string name="create_event_cupo_title">Maximum capacity</string>
+    <string name="create_event_cupo_subtitle">Optional · limits confirmations</string>
+    <string name="create_event_cupo_decrease">Decrease capacity</string>
+    <string name="create_event_cupo_increase">Increase capacity</string>
+    <string name="create_event_cupo_people">people</string>
+    <string name="create_event_contribution_title">Contribution for a cause</string>
+    <string name="create_event_contribution_on">Charity events only · the amount is paid at the venue</string>
+    <string name="create_event_contribution_off">Optional · only for charity, non-profit events</string>
+    <string name="create_event_amount_label">Contribution amount</string>
+    <string name="create_event_amount_suffix">COP per person</string>
+    <string name="create_event_cause_label">What is the contribution for?</string>
+    <string name="create_event_cause_placeholder">E.g. Scholarships for the Bambuco School</string>
+    <string name="create_event_contribution_banner">Only charity events can ask for a contribution. The platform does not allow for-profit events: moderation may ask you where the funds go.</string>
+    <string name="create_event_images_add">Add images</string>
+    <plurals name="create_event_images_selected">
+        <item quantity="one">%1$d image selected</item>
+        <item quantity="other">%1$d images selected</item>
+    </plurals>
+    <string name="create_event_images_hint" tools:ignore="PluralsCandidate">Up to %1$d photos · the first one will be the cover</string>
+    <string name="create_event_images_change">Tap to change the selection</string>
+    <string name="create_event_place_dialog_title">Event location</string>
+    <string name="create_event_place_dialog_message">Type the meeting point. Attendees will see this location.</string>
+    <string name="create_event_place_name_label">Place name</string>
+    <string name="create_event_place_neighborhood_label">Neighborhood or area</string>
+    <string name="create_event_place_use">Use this place</string>
+
+    <!-- My events -->
+    <string name="my_events_title">My events</string>
+    <string name="my_events_empty">You have no events in this status.</string>
+    <string name="my_events_see_rejection">See rejection reason</string>
+    <string name="my_events_tab_active">Active</string>
+    <string name="my_events_tab_pending">Pending</string>
+    <string name="my_events_tab_finished">Finished</string>
+    <string name="my_events_tab_rejected">Rejected</string>
+    <string name="my_events_status_active">Active</string>
+    <string name="my_events_status_pending">Under review</string>
+    <string name="my_events_status_finished">Finished</string>
+    <string name="my_events_status_rejected">Rejected</string>
+    <plurals name="my_events_confirmed">
+        <item quantity="one">%1$d confirmed</item>
+        <item quantity="other">%1$d confirmed</item>
+    </plurals>
+    <string name="my_events_summary_pending">Waiting for moderation</string>
+    <string name="my_events_summary_rated">%1$s · rating %2$s</string>
+    <string name="my_events_summary_rejected">It wasn\'t published in the feed</string>
+    <string name="my_events_footer_published">published %1$s</string>
+    <string name="my_events_footer_sent">Sent %1$s</string>
+    <string name="my_events_footer_finished">Finished on %1$s</string>
+    <string name="my_events_footer_rejected">Rejected on %1$s</string>
+
+    <!-- Event status -->
+    <string name="event_status_fallback_title">Event</string>
+    <string name="event_status_reviews_title">Attendee reviews · %1$d</string>
+    <string name="event_status_stat_attendees">attendees</string>
+    <string name="event_status_stat_rating">rating</string>
+    <string name="event_status_stat_reviews">reviews</string>
+    <string name="event_status_organizer_reply">Organizer\'s reply</string>
+    <string name="event_status_reply_label">Your reply</string>
+    <string name="event_status_reply_placeholder">Reply as the event organizer…</string>
+    <string name="event_status_reply">Reply</string>
+    <string name="event_status_reply_edit">Edit reply</string>
+    <string name="event_status_action_delete">Delete</string>
+    <string name="event_status_action_withdraw">Withdraw</string>
+    <string name="event_status_action_edit">Edit</string>
+    <string name="event_status_action_attendance">Attendance</string>
+    <string name="event_status_action_duplicate">Duplicate</string>
+    <string name="event_status_unavailable">This event is no longer available here</string>
+    <string name="event_status_reply_published">Reply posted as organizer.</string>
+    <string name="event_status_reply_failed">The reply couldn\'t be posted.</string>
+    <string name="event_status_reply_deleted">Reply deleted.</string>
+    <string name="event_status_remove_failed">The event couldn\'t be deleted.</string>
+    <string name="event_status_downloading">Downloading the attendance list (CSV).</string>
+    <string name="status_screen_title_rejected">Rejected event</string>
+    <string name="status_screen_title_pending">Event under review</string>
+    <string name="status_screen_title_finished">Finished event</string>
+    <string name="status_banner_title_rejected">This event was rejected</string>
+    <string name="status_banner_title_pending">This event is under review</string>
+    <string name="status_banner_title_finished">This event has finished</string>
+    <string name="status_banner_text_rejected">It wasn\'t published in the feed and no one could confirm attendance. You can fix it and send it again.</string>
+    <string name="status_banner_text_pending">Moderation is reviewing it. It isn\'t visible in the feed or on the map yet.</string>
+    <string name="status_banner_text_finished">It\'s archived in your history: it accepts no new confirmations and doesn\'t appear in the feed.</string>
+    <string name="status_pill_rejected">Not visible to the community</string>
+    <string name="status_pill_pending">Pending approval</string>
+    <string name="status_pill_finished">Archived</string>
+    <string name="status_section_title_rejected">Reason for rejection</string>
+    <string name="status_section_title_pending">Review status</string>
+    <string name="status_section_title_finished">Event closure</string>
+    <string name="status_policy_rejected">Rejected by moderation</string>
+    <string name="status_policy_pending">Review · reply in less than %1$d h</string>
+    <string name="status_policy_finished">Event closed · archived automatically</string>
+    <string name="status_paragraph_no_reason">Moderation didn\'t record a reason.</string>
+    <string name="status_paragraph_pending">Moderation is verifying the event\'s information. While the review is open, the event doesn\'t appear in the feed or on the map, and no one can confirm attendance.</string>
+    <string name="status_paragraph_finished">The event has already taken place: it accepts no new confirmations or comments, and it left the feed. It stays in your history as an organizer and adds to your reputation in the community.</string>
+    <string name="status_pending_footer_overdue">Sent on %1$s · the review has been open for more than %2$d h</string>
+    <string name="status_pending_footer_left">Sent on %1$s · ~%2$d h of review left</string>
+    <string name="status_rejected_footer">Reviewed by %1$s · %2$s</string>
+    <string name="status_rejected_footer_unknown">No review data</string>
+    <string name="status_finished_footer">Automatic closure %1$d h after the end · %2$s</string>
+    <string name="status_context_rejected">Rejected on %1$s</string>
+    <string name="status_context_pending">Sent %1$s</string>
+    <string name="status_context_finished">Finished on %1$s</string>
+    <string name="status_steps_title_pending">While you wait</string>
+    <string name="status_steps_title_default">What you can do</string>
+    <string name="status_step_rejected_fix_title">Fix what moderation pointed out</string>
+    <string name="status_step_rejected_fix_description">Adjust the event according to the rejection reason; you won\'t lose the content you already wrote.</string>
+    <string name="status_step_rejected_resubmit_title">Resubmit the event to moderation</string>
+    <string name="status_step_rejected_resubmit_description">A new review takes less than %1$d h.</string>
+    <string name="status_step_pending_edit_title">You can keep editing the draft</string>
+    <string name="status_step_pending_edit_description">Changes are saved and join the same review, without going back to the queue.</string>
+    <string name="status_step_pending_notify_title">We\'ll let you know when it\'s approved</string>
+    <string name="status_step_pending_notify_description">You\'ll get a notification and the event will be published automatically.</string>
+    <string name="status_step_finished_duplicate_title">Duplicate it for a new date</string>
+    <string name="status_step_finished_duplicate_description">Description, capacity and location are copied; you only change the dates.</string>
+    <string name="status_step_finished_download_title">Download the attendance list</string>
+    <string name="status_step_finished_download_description">Includes confirmed attendees, actual attendees and ratings received.</string>
+    <string name="status_step_finished_reviews_title">Reply to the reviews</string>
+    <plurals name="status_step_finished_reviews_description">
+        <item quantity="one">Reply above to the %1$d review left by attendees.</item>
+        <item quantity="other">Reply above to the %1$d reviews left by attendees.</item>
+    </plurals>
+    <string name="status_remove_pending_title">Withdraw the submission?</string>
+    <string name="status_remove_pending_message">The event will leave the review queue and be deleted. This cannot be undone.</string>
+    <string name="status_remove_pending_confirm">Withdraw</string>
+    <string name="status_remove_pending_done">Submission withdrawn from review.</string>
+    <string name="status_remove_rejected_title">Delete the event?</string>
+    <string name="status_remove_rejected_message">The rejected event and its content will be deleted. This cannot be undone.</string>
+    <string name="status_remove_rejected_confirm">Delete</string>
+    <string name="status_remove_rejected_done">Rejected event deleted.</string>
+
+    <!-- Saved -->
+    <string name="saved_title">Saved events</string>
+    <string name="saved_undo">Undo</string>
+    <string name="saved_empty_summary">Your list to decide later</string>
+    <plurals name="saved_summary">
+        <item quantity="one">%1$d saved event</item>
+        <item quantity="other">%1$d saved events</item>
+    </plurals>
+    <string name="saved_message_removed">Event removed from saved.</string>
+    <string name="saved_message_restored">Event added back to saved.</string>
+    <string name="saved_empty_title">No saved events</string>
+    <string name="saved_empty_text">Tap the bookmark on an event\'s detail to save it and come back later.</string>
+    <string name="saved_explore">Explore events</string>
+
+    <!-- Followers -->
+    <string name="followers_title">Followers</string>
+    <string name="followers_empty_title">You don\'t have followers yet</string>
+    <string name="followers_empty_text">When someone follows your events, they\'ll show up here.</string>
+
+    <!-- Profile -->
+    <string name="profile_updated">Personal details updated.</string>
+    <string name="profile_delete_failed">The account could not be deleted.</string>
+    <string name="profile_delete_account">Delete my account</string>
+    <string name="profile_logout_title">Sign out?</string>
+    <string name="profile_logout_message">You\'ll go back to the sign-in screen. Your confirmed and saved events stay in your account.</string>
+    <string name="profile_logout">Sign out</string>
+    <string name="profile_logout_stay">Stay here</string>
+    <string name="profile_delete_title">Delete your account?</string>
+    <string name="profile_delete_message">The events you organize and your attendance confirmations will be deleted. This action cannot be undone.</string>
+    <string name="profile_delete_keep">Keep account</string>
+    <string name="profile_header_subtitle">%1$s neighborhood · since %2$s %3$d</string>
+    <string name="profile_role_user">User</string>
+    <string name="profile_stat_to_review">To review</string>
+    <string name="profile_stat_rejected">Rejected</string>
+    <string name="profile_stat_resolved">Resolved</string>
+    <string name="profile_stat_attendances">Attendances</string>
+    <string name="profile_stat_created">Created</string>
+    <string name="profile_stat_rating">Rating</string>
+    <string name="profile_about">About me</string>
+    <string name="profile_no_bio">You haven\'t written your bio yet.</string>
+    <string name="profile_link_moderate">Moderate posts</string>
+    <string name="profile_link_reports">Community reports</string>
+    <string name="profile_link_rejected">Rejected posts</string>
+    <string name="profile_dark_theme">Dark theme</string>
+    <string name="profile_edit_title">Edit personal details</string>
+    <string name="profile_edit_intro">Your name and neighborhood are shown to neighbors on your events and comments.</string>
+    <string name="profile_edit_photo_none">No photo: your initials are shown.</string>
+    <string name="profile_edit_photo_ready">Photo ready. Replace it or go back to your initials.</string>
+    <string name="profile_edit_photo_upload">Upload photo</string>
+    <string name="profile_edit_photo_change">Change photo</string>
+    <string name="profile_edit_name_label">Full name</string>
+    <string name="profile_edit_name_placeholder">First and last name</string>
+    <string name="profile_edit_city_label">City *</string>
+    <string name="profile_edit_neighborhood_label">Neighborhood</string>
+    <string name="profile_edit_neighborhood_placeholder">E.g. Laureles</string>
+    <string name="profile_edit_bio_placeholder">Tell the community what kind of events you organize or are interested in.</string>
+    <string name="profile_edit_save">Save changes</string>
+
+    <!-- Another user's profile -->
+    <string name="user_profile_reported">Profile reported to moderation.</string>
+    <string name="user_profile_events">Events they organize</string>
+    <string name="user_profile_events_count">Events they organize · %1$d</string>
+    <string name="user_profile_no_events">They haven\'t organized any events yet. Attend the ones in their neighborhood.</string>
+    <string name="user_profile_title">User details</string>
+    <string name="user_profile_report">Report profile</string>
+    <string name="user_profile_member_since">%1$s · in the community since %2$s</string>
+    <string name="user_profile_stat_followers">followers</string>
+    <string name="user_profile_stat_attendances">attendances</string>
+    <string name="user_profile_stat_created">events created</string>
+    <string name="user_profile_about">About %1$s</string>
+    <string name="user_profile_no_bio">This person hasn\'t written an introduction yet.</string>
+    <string name="user_profile_unavailable">This profile is no longer available</string>
+
+    <!-- Notifications -->
+    <string name="notifications_all_read">All caught up</string>
+    <plurals name="notifications_unread">
+        <item quantity="one">%1$d unread notification</item>
+        <item quantity="other">%1$d unread notifications</item>
+    </plurals>
+    <string name="notifications_mark_read">Mark as read</string>
+    <string name="notifications_empty">You have no notifications yet</string>
+    <string name="notifications_see_comment">See comment</string>
+    <string name="notifications_see_profile">See profile</string>
+    <string name="notifications_see_event">See event</string>
+    <string name="notifications_headline_comment">%1$s commented on your event “%2$s”</string>
+    <string name="notifications_headline_follower">%1$s started following you</string>
+    <string name="notifications_headline_approved">Your event “%1$s” was approved and is now in the feed</string>
+    <string name="notifications_headline_rejected">Your event “%1$s” was rejected</string>
+
+    <!-- Moderation -->
+    <string name="moderation_tab_pending">Pending</string>
+    <string name="moderation_tab_rejected">Rejected</string>
+    <string name="moderation_tab_reports">Reports</string>
+    <string name="moderation_tab_resolved">Resolved</string>
+    <plurals name="moderation_summary_to_review">
+        <item quantity="one">%1$d post to review</item>
+        <item quantity="other">%1$d posts to review</item>
+    </plurals>
+    <plurals name="moderation_summary_open_reports">
+        <item quantity="one">%1$d open report</item>
+        <item quantity="other">%1$d open reports</item>
+    </plurals>
+    <string name="moderation_status_pending">Under review</string>
+    <string name="moderation_status_rejected">Rejected · out of the feed</string>
+    <string name="moderation_status_published">Published</string>
+    <string name="moderation_status_finished">Finished</string>
+    <string name="moderation_context_sent">sent %1$s</string>
+    <string name="moderation_context_last_report">last report %1$s</string>
+    <string name="moderation_context_published">published %1$s</string>
+    <string name="moderation_cupo">Capacity %1$d</string>
+    <string name="moderation_reported_by_user">Reported by %1$s</string>
+    <string name="moderation_reported_by_count" tools:ignore="PluralsCandidate">Reported by %1$d attendees</string>
+    <string name="moderation_report_line">%1$s — “%2$s”</string>
+    <string name="moderation_report_more" tools:ignore="PluralsCandidate">and %1$d more</string>
+    <string name="moderation_rejection_footer">Rejected on %1$s · %2$s</string>
+    <string name="moderation_rejection_footer_unknown">Rejected</string>
+    <string name="moderation_resolution_footer">Case closed by the moderation team · %1$s</string>
+    <string name="moderation_empty_pending_title">Nothing to review</string>
+    <string name="moderation_empty_pending_text">All submitted posts have already been verified or rejected.</string>
+    <string name="moderation_empty_reports_title">No open reports</string>
+    <string name="moderation_empty_reports_text">There are no posts reported by the community right now.</string>
+    <string name="moderation_empty_rejected_title">No rejected posts</string>
+    <string name="moderation_empty_rejected_text">Posts you reject will appear here with their reason.</string>
+    <string name="moderation_empty_resolved_title">No resolved cases</string>
+    <string name="moderation_empty_resolved_text">Mark a case as resolved and it will be archived here.</string>
+    <string name="moderation_verified_message">“%1$s” was verified and now appears in the public feed.</string>
+    <string name="moderation_rejected_message">“%1$s” was rejected, left the feed and the author received the reason.</string>
+    <string name="moderation_restored_message">“%1$s” is back in the public feed.</string>
+    <string name="moderation_resolved_message">Case for “%1$s” marked as resolved.</string>
+    <string name="moderation_tag_resolved">Resolved</string>
+    <string name="moderation_rejection_note">Reason sent to the author</string>
+    <string name="moderation_action_verify">Verify</string>
+    <string name="moderation_action_reject">Reject</string>
+    <string name="moderation_action_resolve">Mark as resolved</string>
+    <string name="moderation_action_restore">Restore</string>
+    <string name="reject_title">Reason for rejection</string>
+    <string name="reject_intro">The author receives this text and the post stops appearing in the public feed.</string>
+    <string name="reject_quick_title">Common reasons</string>
+    <string name="reject_placeholder">Explain to the author what to fix so they can send it again.</string>
+    <string name="reject_submit">Reject post</string>
+    <string name="reject_quick_commercial">Commercial content not allowed</string>
+    <string name="reject_quick_incomplete_info">Incomplete contact or place information</string>
+    <string name="reject_quick_duplicate">Duplicates an already published event</string>
+    <string name="reject_quick_conduct">Breaks the community guidelines</string>
+    <string name="reject_quick_false_data">False or misleading data</string>
+</resources>

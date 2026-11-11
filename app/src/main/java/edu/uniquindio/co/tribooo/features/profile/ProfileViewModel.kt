@@ -3,6 +3,8 @@ package edu.uniquindio.co.tribooo.features.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.R
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.model.Comment
@@ -21,7 +23,10 @@ import edu.uniquindio.co.tribooo.domain.usecase.location.GetCitiesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.moderation.ObserveModerationCountsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveUnreadNotificationsCountUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ObserveSavedEventsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.user.Badge
+import edu.uniquindio.co.tribooo.domain.usecase.user.DeleteAccountUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.user.ReputationCalculator
 import edu.uniquindio.co.tribooo.domain.usecase.user.UpdateProfileUseCase
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +46,9 @@ data class ProfileStats(
     val saved: Int = 0,
     /** Promedio de las calificaciones recibidas en sus eventos; null si aún no hay. */
     val rating: Double? = null,
+    /** Puntos de reputación e insignias ganadas. */
+    val points: Int = 0,
+    val badges: List<Badge> = emptyList(),
     val pendingReview: Int = 0,
     val rejected: Int = 0,
     val reports: Int = 0,
@@ -63,12 +71,16 @@ internal fun calculateProfileStats(
         .filter { it.event.organizer.id == user.id && it.author.id != user.id }
         .mapNotNull { it.rating }
 
+    val reputation = ReputationCalculator.calculate(user, events, attendances, comments, follows)
+
     return ProfileStats(
         followers = follows.count { it.followed.id == user.id },
         attendances = attendances.count { it.user.id == user.id },
         created = events.count { it.organizer.id == user.id },
         saved = saved.count { it.user.id == user.id },
         rating = if (ratings.isEmpty()) null else ratings.average(),
+        points = reputation.points,
+        badges = reputation.badges,
         pendingReview = events.count { it.status == EventStatus.PENDIENTE },
         rejected = events.count { it.status == EventStatus.RECHAZADO }
     )
@@ -102,21 +114,22 @@ data class ProfileUiState(
     val snackbarMessage: String? = null,
     val loggedOut: Boolean = false
 ) {
-    private fun rawError(field: EditProfileField): String? = when (field) {
-        EditProfileField.NAME -> Validators.name(editName)
-        EditProfileField.NEIGHBORHOOD -> Validators.neighborhood(editNeighborhood)
+    private fun rawError(field: EditProfileField, resources: ResourceProvider): String? = when (field) {
+        EditProfileField.NAME -> Validators.name(resources, editName)
+        EditProfileField.NEIGHBORHOOD -> Validators.neighborhood(resources, editNeighborhood)
     }
 
-    private fun shownError(field: EditProfileField): String? =
-        rawError(field).takeIf { editSubmitAttempted || field in editTouched }
+    private fun shownError(field: EditProfileField, resources: ResourceProvider): String? =
+        rawError(field, resources).takeIf { editSubmitAttempted || field in editTouched }
 
-    val nameError: String? get() = shownError(EditProfileField.NAME)
-    val neighborhoodError: String? get() = shownError(EditProfileField.NEIGHBORHOOD)
+    fun nameError(resources: ResourceProvider): String? = shownError(EditProfileField.NAME, resources)
+    fun neighborhoodError(resources: ResourceProvider): String? = shownError(EditProfileField.NEIGHBORHOOD, resources)
 
-    val firstInvalidEditField: EditProfileField? get() = EditProfileField.entries.firstOrNull { rawError(it) != null }
+    fun firstInvalidEditField(resources: ResourceProvider): EditProfileField? =
+        EditProfileField.entries.firstOrNull { rawError(it, resources) != null }
 
     /** Se intentó guardar y aún quedan campos inválidos. */
-    val showInvalidNotice: Boolean get() = editSubmitAttempted && firstInvalidEditField != null
+    fun showInvalidNotice(resources: ResourceProvider): Boolean = editSubmitAttempted && firstInvalidEditField(resources) != null
 }
 
 /** Datos de los repositorios que alimentan las cifras (se agrupan porque `combine` admite máximo 5 flujos). */
@@ -140,7 +153,9 @@ class ProfileViewModel @Inject constructor(
     observeModerationCounts: ObserveModerationCountsUseCase,
     getCities: GetCitiesUseCase,
     private val updateProfileUseCase: UpdateProfileUseCase,
-    private val logoutUseCase: LogoutUseCase
+    private val logoutUseCase: LogoutUseCase,
+    private val deleteAccountUseCase: DeleteAccountUseCase,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     val cities: List<String> = getCities()
@@ -227,7 +242,7 @@ class ProfileViewModel @Inject constructor(
         val form = local.value
         if (form.isSaving) return
 
-        val invalid = form.firstInvalidEditField
+        val invalid = form.firstInvalidEditField(resources)
         if (invalid != null) {
             local.update { it.copy(editSubmitAttempted = true, editFocusField = invalid) }
             return
@@ -236,7 +251,7 @@ class ProfileViewModel @Inject constructor(
         local.update { it.copy(isSaving = true) }
         viewModelScope.launch {
             updateProfileUseCase(user, form.editName, form.editCity, form.editNeighborhood, form.editBio, form.editPhoto)
-            local.update { it.copy(showEditDialog = false, isSaving = false, snackbarMessage = "Datos personales actualizados.") }
+            local.update { it.copy(showEditDialog = false, isSaving = false, snackbarMessage = resources.getString(R.string.profile_updated)) }
         }
     }
 
@@ -254,15 +269,20 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    // Eliminar cuenta (como en el prototipo, solo se muestra el aviso; no se borran datos)
+    // Eliminar cuenta
 
     fun onDeleteAccountClick() = local.update { it.copy(showDeleteDialog = true) }
 
     fun onDismissDeleteDialog() = local.update { it.copy(showDeleteDialog = false) }
 
     fun onConfirmDeleteAccount() {
-        local.update {
-            it.copy(showDeleteDialog = false, snackbarMessage = "Cuenta marcada para eliminación en 14 días.")
+        local.update { it.copy(showDeleteDialog = false) }
+        viewModelScope.launch {
+            if (deleteAccountUseCase()) {
+                local.update { it.copy(loggedOut = true) }
+            } else {
+                local.update { it.copy(snackbarMessage = resources.getString(R.string.profile_delete_failed)) }
+            }
         }
     }
 

@@ -1,13 +1,11 @@
 package edu.uniquindio.co.tribooo.core.util
 
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.domain.model.Event
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.temporal.TemporalAdjusters
-
-/** Iniciales de los días de la semana, que empieza en lunes. */
-val WEEKDAY_LETTERS = listOf("L", "M", "M", "J", "V", "S", "D")
 
 /** Celdas del mes en filas de siete: null para los huecos antes del día 1 (la semana inicia en lunes). */
 fun monthCells(month: YearMonth): List<LocalDate?> {
@@ -40,17 +38,19 @@ fun countThisWeek(events: List<Event>, today: LocalDate): Int {
 }
 
 /** "1 evento confirmado · 0 esta semana" o "3 eventos confirmados · 2 esta semana". */
-fun agendaSummary(confirmed: Int, thisWeek: Int): String {
-    val total = if (confirmed == 1) "1 evento confirmado" else "$confirmed eventos confirmados"
-    return "$total · $thisWeek esta semana"
-}
+fun agendaSummary(rp: ResourceProvider, confirmed: Int, thisWeek: Int): String =
+    rp.getString(
+        R.string.agenda_summary,
+        rp.getQuantityString(R.plurals.agenda_confirmed_events, confirmed, confirmed),
+        thisWeek
+    )
 
 /** "Lunes 5 de octubre · 2 eventos", "· 1 evento" o "· sin eventos". */
-fun selectedDayLabel(day: LocalDate, count: Int): String {
-    val events = when (count) {
-        0 -> "sin eventos"
-        1 -> "1 evento"
-        else -> "$count eventos"
+fun selectedDayLabel(rp: ResourceProvider, day: LocalDate, count: Int): String {
+    val events = if (count == 0) {
+        rp.getString(R.string.agenda_no_events)
+    } else {
+        rp.getQuantityString(R.plurals.common_events_count, count, count)
     }
-    return "${day.longLabel()} · $events"
+    return rp.getString(R.string.common_dot_join, day.longLabel(rp), events)
 }

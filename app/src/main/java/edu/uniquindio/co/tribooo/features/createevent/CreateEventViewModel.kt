@@ -4,10 +4,11 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.util.APP_ZONE
 import edu.uniquindio.co.tribooo.core.util.FormLimits
-import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.formatMoney
 import edu.uniquindio.co.tribooo.domain.model.Category
@@ -40,7 +41,6 @@ private const val MIN_CUPO = 5
 private const val CUPO_STEP = 5
 private const val EVENT_ID_KEY = "eventId"
 private const val MODE_KEY = "mode"
-private const val EVENT_NOT_FOUND = "No encontramos este evento o no es tuyo."
 
 /** Selector abierto en la pantalla. Algunos encadenan al siguiente (fecha → hora). */
 enum class PickerTarget { START_DATE, START_TIME, END_DATE, END_TIME, PLACE }
@@ -86,31 +86,32 @@ data class CreateEventUiState(
 
     val isPublishing: Boolean get() = publishResult == RequestResult.Loading
 
-    private fun rawError(field: EventField): String? = when (field) {
-        EventField.TITLE -> Validators.eventTitle(title)
-        EventField.CATEGORY -> Validators.category(category != null)
-        EventField.SCHEDULE -> Validators.schedule(isRangeValid)
-        EventField.PLACE -> Validators.place(place != null)
+    private fun rawError(field: EventField, resources: ResourceProvider): String? = when (field) {
+        EventField.TITLE -> Validators.eventTitle(resources, title)
+        EventField.CATEGORY -> Validators.category(resources, category != null)
+        EventField.SCHEDULE -> Validators.schedule(resources, isRangeValid)
+        EventField.PLACE -> Validators.place(resources, place != null)
         EventField.CONTRIBUTION_AMOUNT ->
-            if (contributionEnabled) Validators.contributionAmount(contributionAmount) else null
+            if (contributionEnabled) Validators.contributionAmount(resources, contributionAmount) else null
         EventField.CONTRIBUTION_CAUSE ->
-            if (contributionEnabled) Validators.contributionCause(contributionCause) else null
+            if (contributionEnabled) Validators.contributionCause(resources, contributionCause) else null
     }
 
     /** El error del campo solo se ve si el usuario ya lo tocó o intentó enviar el formulario. */
-    private fun shownError(field: EventField): String? =
-        rawError(field).takeIf { submitAttempted || field in touched }
+    private fun shownError(field: EventField, resources: ResourceProvider): String? =
+        rawError(field, resources).takeIf { submitAttempted || field in touched }
 
-    val titleError: String? get() = shownError(EventField.TITLE)
-    val categoryError: String? get() = shownError(EventField.CATEGORY)
-    val placeError: String? get() = shownError(EventField.PLACE)
-    val contributionError: String? get() = shownError(EventField.CONTRIBUTION_AMOUNT)
-    val contributionCauseError: String? get() = shownError(EventField.CONTRIBUTION_CAUSE)
+    fun titleError(resources: ResourceProvider): String? = shownError(EventField.TITLE, resources)
+    fun categoryError(resources: ResourceProvider): String? = shownError(EventField.CATEGORY, resources)
+    fun placeError(resources: ResourceProvider): String? = shownError(EventField.PLACE, resources)
+    fun contributionError(resources: ResourceProvider): String? = shownError(EventField.CONTRIBUTION_AMOUNT, resources)
+    fun contributionCauseError(resources: ResourceProvider): String? = shownError(EventField.CONTRIBUTION_CAUSE, resources)
 
     /** El horario se revisa siempre: sus valores iniciales son válidos y solo el usuario puede romperlos. */
-    val scheduleError: String? get() = rawError(EventField.SCHEDULE)
+    fun scheduleError(resources: ResourceProvider): String? = rawError(EventField.SCHEDULE, resources)
 
-    val firstInvalidField: EventField? get() = EventField.entries.firstOrNull { rawError(it) != null }
+    fun firstInvalidField(resources: ResourceProvider): EventField? =
+        EventField.entries.firstOrNull { rawError(it, resources) != null }
 }
 
 @HiltViewModel
@@ -123,7 +124,8 @@ class CreateEventViewModel @Inject constructor(
     private val resubmitEventUseCase: ResubmitEventUseCase,
     private val resolvePlaceUseCase: ResolvePlaceUseCase,
     observeEventImages: ObserveEventImagesUseCase,
-    savedStateHandle: SavedStateHandle
+    savedStateHandle: SavedStateHandle,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     // Solo la ruta EditEvent trae estos argumentos; en CreateEvent no existen (modo crear)
@@ -145,7 +147,7 @@ class CreateEventViewModel @Inject constructor(
         if (mode != null && eventId != null) {
             viewModelScope.launch { preload(eventId, mode, observeEventImages()) }
         } else if (mode != null) {
-            _uiState.update { it.copy(isLoading = false, loadError = EVENT_NOT_FOUND) }
+            _uiState.update { it.copy(isLoading = false, loadError = resources.getString(R.string.create_event_not_found)) }
         }
     }
 
@@ -154,7 +156,7 @@ class CreateEventViewModel @Inject constructor(
         val event = getEventUseCase(eventId)
         val user = getCurrentUserUseCase()
         if (event == null || user == null || event.organizer.id != user.id) {
-            _uiState.update { it.copy(isLoading = false, loadError = EVENT_NOT_FOUND) }
+            _uiState.update { it.copy(isLoading = false, loadError = resources.getString(R.string.create_event_not_found)) }
             return
         }
         val gallery = images.value.filter { it.event.id == eventId }.sortedBy { it.order }.map { it.url }
@@ -259,7 +261,7 @@ class CreateEventViewModel @Inject constructor(
     fun onImagesSelected(uris: List<String>) {
         if (uris.isEmpty()) return
         _uiState.update {
-            it.copy(imageUris = uris.take(FormLimits.MAX_IMAGES), imageNotice = Validators.imageLimitNotice(uris.size))
+            it.copy(imageUris = uris.take(FormLimits.MAX_IMAGES), imageNotice = Validators.imageLimitNotice(resources, uris.size))
         }
     }
 
@@ -270,7 +272,7 @@ class CreateEventViewModel @Inject constructor(
     fun publish() {
         val state = _uiState.value
         if (state.isLoading || state.loadError != null || state.publishResult == RequestResult.Loading) return
-        val invalid = state.firstInvalidField
+        val invalid = state.firstInvalidField(resources)
         val category = state.category
         val place = state.place
         if (invalid != null || category == null || place == null) {
@@ -279,7 +281,7 @@ class CreateEventViewModel @Inject constructor(
                 it.copy(
                     submitAttempted = true,
                     focusField = invalid,
-                    publishResult = RequestResult.Failure(FormTexts.SUBMIT_INVALID)
+                    publishResult = RequestResult.Failure(resources.getString(R.string.form_submit_invalid))
                 )
             }
             return
@@ -290,7 +292,7 @@ class CreateEventViewModel @Inject constructor(
         viewModelScope.launch {
             val organizer = getCurrentUserUseCase()
             if (organizer == null) {
-                _uiState.update { it.copy(publishResult = RequestResult.Failure("Inicia sesión para publicar eventos.")) }
+                _uiState.update { it.copy(publishResult = RequestResult.Failure(resources.getString(R.string.create_event_sign_in))) }
                 return@launch
             }
 
@@ -325,10 +327,10 @@ class CreateEventViewModel @Inject constructor(
     }
 
     private fun createdMessage(state: CreateEventUiState) = when {
-        mode == EventFormMode.DUPLICATE -> "Evento duplicado y enviado a revisión."
+        mode == EventFormMode.DUPLICATE -> resources.getString(R.string.create_event_success_duplicate)
         state.contributionEnabled ->
-            "Evento enviado a revisión. Moderación verificará que el aporte de ${state.contributionAmount.formatMoney()} sea benéfico."
-        else -> "Evento enviado a revisión. Te avisamos al aprobarlo."
+            resources.getString(R.string.create_event_success_contribution, state.contributionAmount.formatMoney())
+        else -> resources.getString(R.string.create_event_success)
     }
 
     fun resetPublishResult() {

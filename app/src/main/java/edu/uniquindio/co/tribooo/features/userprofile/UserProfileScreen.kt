@@ -40,6 +40,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -47,7 +48,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.EventThumbnail
+import edu.uniquindio.co.tribooo.core.component.BadgeChips
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
 import edu.uniquindio.co.tribooo.core.component.avatarColors
 import edu.uniquindio.co.tribooo.core.component.iconVector
@@ -57,7 +60,9 @@ import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
 import edu.uniquindio.co.tribooo.core.util.firstName
 import edu.uniquindio.co.tribooo.core.util.formatThousands
 import edu.uniquindio.co.tribooo.core.util.initials
+import edu.uniquindio.co.tribooo.core.util.localizedName
 import edu.uniquindio.co.tribooo.core.util.monthYearLabel
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.User
 
@@ -95,7 +100,11 @@ fun UserProfileScreen(
                     item(key = "about") { AboutSection(user = user) }
                     item(key = "events-title") {
                         Text(
-                            text = if (state.events.isEmpty()) "Eventos que organiza" else "Eventos que organiza · ${state.events.size}",
+                            text = if (state.events.isEmpty()) {
+                                stringResource(R.string.user_profile_events)
+                            } else {
+                                stringResource(R.string.user_profile_events_count, state.events.size)
+                            },
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Medium,
                             color = colors.onSurface,
@@ -105,7 +114,7 @@ fun UserProfileScreen(
                     if (state.events.isEmpty()) {
                         item(key = "events-empty") {
                             Text(
-                                text = "Todavía no ha organizado eventos. Asiste a los de su barrio.",
+                                text = stringResource(R.string.user_profile_no_events),
                                 fontSize = 14.sp,
                                 color = colors.onSurfaceVariant
                             )
@@ -141,12 +150,12 @@ private fun UserTopBar(showReport: Boolean, onBack: () -> Unit, onReport: () -> 
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver", tint = colors.onSurface)
+            Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back), tint = colors.onSurface)
         }
-        Text("Detalle de usuario", fontSize = 20.sp, color = colors.onSurface, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.user_profile_title), fontSize = 20.sp, color = colors.onSurface, modifier = Modifier.weight(1f))
         if (showReport) {
             IconButton(onClick = onReport) {
-                Icon(Icons.Rounded.Flag, contentDescription = "Reportar perfil", tint = colors.onSurfaceVariant)
+                Icon(Icons.Rounded.Flag, contentDescription = stringResource(R.string.user_profile_report), tint = colors.onSurfaceVariant)
             }
         }
     }
@@ -155,6 +164,7 @@ private fun UserTopBar(showReport: Boolean, onBack: () -> Unit, onReport: () -> 
 @Composable
 private fun UserCard(user: User, state: UserProfileUiState, onToggleFollow: () -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val (avatarBg, avatarFg) = avatarColors(user.id.hashCode())
 
     Surface(shape = RoundedCornerShape(28.dp), color = colors.surfaceContainerLowest, modifier = Modifier.fillMaxWidth()) {
@@ -180,22 +190,32 @@ private fun UserCard(user: User, state: UserProfileUiState, onToggleFollow: () -
                 modifier = Modifier.padding(top = 12.dp)
             )
             Text(
-                text = "${user.neighborhood} · en la comunidad desde ${user.dateRegistered.monthYearLabel()}",
+                text = stringResource(R.string.user_profile_member_since, user.neighborhood, user.dateRegistered.monthYearLabel(rp)),
                 fontSize = 13.sp,
                 color = colors.onSurfaceVariant,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 4.dp)
             )
-            RoleBadge(state.role)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                RoleBadge(state.role)
+                Text(
+                    text = stringResource(R.string.reputation_points, state.points),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+            }
+            BadgeChips(state.badges, Modifier.padding(top = 10.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                StatCard(state.followers.formatThousands(), "seguidores", Modifier.weight(1f))
-                StatCard(state.attendances.formatThousands(), "asistencias", Modifier.weight(1f))
-                StatCard(state.createdEventsLabel, "eventos creados", Modifier.weight(1f))
-                StatCard(state.ratingLabel, "calificación", Modifier.weight(1f))
+                StatCard(state.followers.formatThousands(), stringResource(R.string.user_profile_stat_followers), Modifier.weight(1f))
+                StatCard(state.attendances.formatThousands(), stringResource(R.string.user_profile_stat_attendances), Modifier.weight(1f))
+                StatCard(state.createdEventsLabel, stringResource(R.string.user_profile_stat_created), Modifier.weight(1f))
+                StatCard(state.ratingLabel, stringResource(R.string.event_status_stat_rating), Modifier.weight(1f))
             }
 
             if (state.canInteract) {
@@ -219,7 +239,7 @@ private fun UserCard(user: User, state: UserProfileUiState, onToggleFollow: () -
                         modifier = Modifier.size(20.dp)
                     )
                     Text(
-                        text = if (following) "Siguiendo" else "Seguir",
+                        text = stringResource(if (following) R.string.detail_following else R.string.detail_follow),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(start = 8.dp)
@@ -248,7 +268,7 @@ private fun RoleBadge(role: CommunityRole) {
         horizontalArrangement = Arrangement.spacedBy(5.dp)
     ) {
         Icon(icon, contentDescription = null, tint = colors.onSecondaryContainer, modifier = Modifier.size(16.dp))
-        Text(role.label, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colors.onSecondaryContainer)
+        Text(stringResource(role.label), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = colors.onSecondaryContainer)
     }
 }
 
@@ -280,13 +300,13 @@ private fun AboutSection(user: User) {
 
     Column(modifier = Modifier.padding(top = 6.dp)) {
         Text(
-            text = "Sobre ${user.name.firstName()}",
+            text = stringResource(R.string.user_profile_about, user.name.firstName()),
             fontSize = 16.sp,
             fontWeight = FontWeight.Medium,
             color = colors.onSurface
         )
         Text(
-            text = user.bio?.takeIf { it.isNotBlank() } ?: "Esta persona aún no ha escrito su presentación.",
+            text = user.bio?.takeIf { it.isNotBlank() } ?: stringResource(R.string.user_profile_no_bio),
             fontSize = 14.sp,
             lineHeight = 21.sp,
             color = colors.onSurfaceVariant,
@@ -298,6 +318,7 @@ private fun AboutSection(user: User) {
 @Composable
 private fun CompactEventCard(event: Event, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val tones = categoryColors(event.category)
 
     Surface(
@@ -320,7 +341,7 @@ private fun CompactEventCard(event: Event, onClick: () -> Unit) {
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Icon(event.category.iconVector(), contentDescription = null, tint = tones.content, modifier = Modifier.size(14.dp))
-                    Text(event.category.name, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = tones.content)
+                    Text(event.category.localizedName(), fontSize = 12.sp, fontWeight = FontWeight.Medium, color = tones.content)
                 }
                 Text(
                     text = event.title,
@@ -332,7 +353,7 @@ private fun CompactEventCard(event: Event, onClick: () -> Unit) {
                     modifier = Modifier.padding(top = 5.dp)
                 )
                 Text(
-                    text = eventWhenLabel(event.startDate, event.endDate),
+                    text = eventWhenLabel(rp, event.startDate, event.endDate),
                     fontSize = 12.sp,
                     color = colors.onSurfaceVariant,
                     maxLines = 1,
@@ -355,7 +376,7 @@ private fun UserNotFound(onBack: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("Este perfil ya no está disponible", fontSize = 16.sp, color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
-        Button(onClick = onBack, modifier = Modifier.padding(top = 16.dp)) { Text("Volver") }
+        Text(stringResource(R.string.user_profile_unavailable), fontSize = 16.sp, color = colors.onSurfaceVariant, textAlign = TextAlign.Center)
+        Button(onClick = onBack, modifier = Modifier.padding(top = 16.dp)) { Text(stringResource(R.string.common_back)) }
     }
 }

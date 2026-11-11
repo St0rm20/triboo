@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.feed
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
 import edu.uniquindio.co.tribooo.core.component.FeedEventItem
 import edu.uniquindio.co.tribooo.data.repository.memory.EventFilterRepositoryImpl
@@ -70,7 +71,8 @@ class FeedViewModelTest {
             findScheduleConflict = world.findScheduleConflict,
             joinWaitlist = world.joinWaitlist,
             leaveWaitlist = world.leaveWaitlist,
-            messenger = SnackbarMessenger()
+            messenger = SnackbarMessenger(),
+            resources = testResources
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
         return vm

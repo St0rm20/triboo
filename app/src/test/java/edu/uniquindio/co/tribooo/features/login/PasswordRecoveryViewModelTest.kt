@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.login
 
+import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.MessageTarget
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
@@ -34,7 +35,7 @@ class PasswordRecoveryViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = PasswordRecoveryViewModel(RequestPasswordRecoveryUseCase(), messenger)
+    private fun viewModel() = PasswordRecoveryViewModel(RequestPasswordRecoveryUseCase(testResources), messenger, testResources)
 
     @Test
     fun emptyEmailShowsTheErrorAndDoesNotAdvance() {
@@ -43,7 +44,7 @@ class PasswordRecoveryViewModelTest {
         vm.onSend()
 
         val state = vm.uiState.value
-        assertEquals(FormTexts.EMAIL_REQUIRED, state.emailError)
+        assertEquals(FormTexts.EMAIL_REQUIRED, state.emailError(testResources))
         assertEquals(FormTexts.SUBMIT_INVALID, state.message)
         assertTrue(state.focusEmail)
         assertNull(state.sentTo)
@@ -57,18 +58,18 @@ class PasswordRecoveryViewModelTest {
 
         vm.onSend()
 
-        assertEquals(FormTexts.EMAIL_INVALID, vm.uiState.value.emailError)
+        assertEquals(FormTexts.EMAIL_INVALID, vm.uiState.value.emailError(testResources))
         assertNull(vm.uiState.value.sentTo)
     }
 
     @Test
     fun untouchedFieldShowsNoErrorButTouchedAndEmptyDoes() {
         val vm = viewModel()
-        assertNull(vm.uiState.value.emailError)
+        assertNull(vm.uiState.value.emailError(testResources))
 
         vm.onEmailFocusLost()
 
-        assertEquals(FormTexts.EMAIL_REQUIRED, vm.uiState.value.emailError)
+        assertEquals(FormTexts.EMAIL_REQUIRED, vm.uiState.value.emailError(testResources))
     }
 
     @Test
@@ -123,6 +124,6 @@ class PasswordRecoveryViewModelTest {
 
         assertNull(vm.uiState.value.sentTo)
         assertEquals("ana@mail.co", vm.uiState.value.email)
-        assertNull(vm.uiState.value.emailError)
+        assertNull(vm.uiState.value.emailError(testResources))
     }
 }

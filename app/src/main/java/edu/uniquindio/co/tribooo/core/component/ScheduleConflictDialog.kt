@@ -14,11 +14,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.util.eventHoursLabel
 import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
 
 /** Avisa que el evento que se quiere confirmar se cruza con otro ya confirmado. */
@@ -31,14 +34,15 @@ fun ScheduleConflictDialog(
     val colors = MaterialTheme.colorScheme
     val event = conflict.event
     val other = conflict.other
+    val rp = rememberResourceProvider()
 
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Rounded.EventRepeat, contentDescription = null, tint = colors.tertiary) },
-        title = { Text("Choque de horario") },
+        title = { Text(stringResource(R.string.schedule_conflict_title)) },
         text = {
             Column {
-                Text("“${event.title}” (${eventHoursLabel(event.startDate, event.endDate)}) se cruza con otro evento que ya confirmaste ese día.")
+                Text(stringResource(R.string.schedule_conflict_message, event.title, eventHoursLabel(event.startDate, event.endDate)))
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = colors.surfaceContainerHigh,
@@ -49,7 +53,7 @@ fun ScheduleConflictDialog(
                     Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
                         Text(other.title, fontSize = 14.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
                         Text(
-                            eventWhenLabel(other.startDate, other.endDate),
+                            eventWhenLabel(rp, other.startDate, other.endDate),
                             fontSize = 12.sp,
                             color = colors.onSurfaceVariant,
                             modifier = Modifier.padding(top = 2.dp)
@@ -58,7 +62,7 @@ fun ScheduleConflictDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onContinue) { Text("Continuar") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("No confirmar") } }
+        confirmButton = { TextButton(onClick = onContinue) { Text(stringResource(R.string.common_continue)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.schedule_conflict_dismiss)) } }
     )
 }

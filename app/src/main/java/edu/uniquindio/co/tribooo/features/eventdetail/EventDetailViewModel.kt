@@ -3,14 +3,15 @@ package edu.uniquindio.co.tribooo.features.eventdetail
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.util.FormLimits
-import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.distanceKmTo
 import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.core.util.isFull
-import edu.uniquindio.co.tribooo.core.util.WAITLIST_LEFT_MESSAGE
+import edu.uniquindio.co.tribooo.core.util.waitlistLeftMessage
 import edu.uniquindio.co.tribooo.core.util.shortName
 import edu.uniquindio.co.tribooo.core.util.waitlistJoinedMessage
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -60,8 +61,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
-
-private const val ALREADY_REPORTED_MESSAGE = "Ya reportaste este evento · moderación está revisando el caso."
 
 /** Cuántos asistentes se muestran en la fila de avatares. */
 private const val ATTENDEES_PREVIEW = 12
@@ -145,7 +144,7 @@ data class CommentDraft(
     /** El campo debe recibir el foco tras un envío inválido. */
     val focusRequested: Boolean = false
 ) {
-    val error: String? get() = Validators.comment(text).takeIf { submitAttempted }
+    fun error(resources: ResourceProvider): String? = Validators.comment(resources, text).takeIf { submitAttempted }
 }
 
 /** Reporte que el usuario está llenando; [error] aparece si intenta enviarlo sin motivo. */
@@ -233,7 +232,8 @@ class EventDetailViewModel @Inject constructor(
     private val submitReportUseCase: SubmitReportUseCase,
     private val joinWaitlist: JoinWaitlistUseCase,
     private val leaveWaitlist: LeaveWaitlistUseCase,
-    private val finalizeEventUseCase: FinalizeEventUseCase
+    private val finalizeEventUseCase: FinalizeEventUseCase,
+    private val resources: ResourceProvider
 ) : ViewModel() {
 
     // El argumento de la ruta EventDetail llega con el nombre de su propiedad
@@ -325,10 +325,10 @@ class EventDetailViewModel @Inject constructor(
                     detail.isAttending -> confirmAttendance(event, attending = true)
                     detail.isWaitlisted -> viewModelScope.launch {
                         leaveWaitlist(event)
-                        showMessage(WAITLIST_LEFT_MESSAGE)
+                        showMessage(waitlistLeftMessage(resources))
                     }
                     detail.isFull -> viewModelScope.launch {
-                        joinWaitlist(event)?.let { showMessage(waitlistJoinedMessage(it)) }
+                        joinWaitlist(event)?.let { showMessage(waitlistJoinedMessage(resources, it)) }
                     }
                     else -> requestAttendance(event)
                 }
@@ -338,7 +338,7 @@ class EventDetailViewModel @Inject constructor(
 
             EventDetailAction.ToggleSaved -> {
                 viewModelScope.launch { toggleSavedEventUseCase(event) }
-                showMessage(if (detail.isSaved) "Quitaste el evento de tus guardados." else "Evento guardado.")
+                showMessage(resources.getString(if (detail.isSaved) R.string.detail_message_unsaved else R.string.detail_message_saved))
             }
 
             EventDetailAction.ToggleFollow -> {
@@ -346,9 +346,9 @@ class EventDetailViewModel @Inject constructor(
                 viewModelScope.launch { toggleFollowUseCase(event.organizer) }
                 showMessage(
                     if (detail.isFollowingOrganizer) {
-                        "Dejaste de seguir a ${event.organizer.name}."
+                        resources.getString(R.string.detail_message_unfollowed, event.organizer.name)
                     } else {
-                        "Ahora sigues a ${event.organizer.name} · verás sus eventos en tu feed."
+                        resources.getString(R.string.detail_message_followed, event.organizer.name)
                     }
                 )
             }
@@ -374,7 +374,7 @@ class EventDetailViewModel @Inject constructor(
 
             EventDetailAction.ShowReport -> {
                 if (detail.isMine) return
-                if (detail.hasReported) showMessage(ALREADY_REPORTED_MESSAGE) else localState.update { it.copy(report = ReportDraft()) }
+                if (detail.hasReported) showMessage(resources.getString(R.string.detail_message_already_reported)) else localState.update { it.copy(report = ReportDraft()) }
             }
 
             EventDetailAction.HideReport -> localState.update { it.copy(report = null) }
@@ -435,7 +435,7 @@ class EventDetailViewModel @Inject constructor(
 
     private fun confirmAttendance(event: Event, attending: Boolean) {
         viewModelScope.launch { toggleAttendanceUseCase(event) }
-        showMessage(if (attending) "Cancelaste tu asistencia." else "¡Listo! Tu lugar está reservado.")
+        showMessage(resources.getString(if (attending) R.string.detail_message_attendance_cancelled else R.string.detail_message_attendance_confirmed))
     }
 
     private fun updateReport(transform: (ReportDraft) -> ReportDraft) {
@@ -447,17 +447,17 @@ class EventDetailViewModel @Inject constructor(
         if (draft.isSending) return
         val reason = draft.reason
         if (reason == null) {
-            updateReport { it.copy(error = Validators.reportReason(null), focusRequested = true) }
+            updateReport { it.copy(error = Validators.reportReason(resources, null), focusRequested = true) }
             return
         }
         updateReport { it.copy(isSending = true) }
         viewModelScope.launch {
             val message = when (submitReportUseCase(event, reason, draft.detail)) {
-                SubmitReportResult.SENT -> "Reporte enviado · moderación revisará “${event.title}”."
-                SubmitReportResult.ALREADY_REPORTED -> ALREADY_REPORTED_MESSAGE
-                SubmitReportResult.OWN_EVENT -> "No puedes reportar tu propio evento."
-                SubmitReportResult.NOT_SIGNED_IN -> "Inicia sesión para reportar eventos."
-                SubmitReportResult.INVALID_REASON -> FormTexts.REPORT_REASON_REQUIRED
+                SubmitReportResult.SENT -> resources.getString(R.string.detail_message_report_sent, event.title)
+                SubmitReportResult.ALREADY_REPORTED -> resources.getString(R.string.detail_message_already_reported)
+                SubmitReportResult.OWN_EVENT -> resources.getString(R.string.detail_message_report_own_event)
+                SubmitReportResult.NOT_SIGNED_IN -> resources.getString(R.string.detail_message_report_sign_in)
+                SubmitReportResult.INVALID_REASON -> resources.getString(R.string.form_report_reason_required)
             }
             localState.update { it.copy(report = null, message = message) }
         }
@@ -467,11 +467,11 @@ class EventDetailViewModel @Inject constructor(
         val draft = localState.value.draft
         if (draft.isSending) return
         val text = draft.text.trim()
-        if (Validators.comment(text) != null) {
+        if (Validators.comment(resources, text) != null) {
             localState.update {
                 it.copy(
                     draft = it.draft.copy(submitAttempted = true, focusRequested = true),
-                    message = FormTexts.SUBMIT_INVALID
+                    message = resources.getString(R.string.form_submit_invalid)
                 )
             }
             return
@@ -485,10 +485,10 @@ class EventDetailViewModel @Inject constructor(
                 when {
                     !published -> it.copy(
                         draft = it.draft.copy(isSending = false),
-                        message = "No se pudo publicar el comentario."
+                        message = resources.getString(R.string.detail_message_comment_failed)
                     )
-                    rating != null -> it.copy(draft = CommentDraft(), message = "Comentario publicado con $rating ★.")
-                    else -> it.copy(draft = CommentDraft(), message = "Comentario publicado.")
+                    rating != null -> it.copy(draft = CommentDraft(), message = resources.getString(R.string.detail_message_comment_posted_rated, rating))
+                    else -> it.copy(draft = CommentDraft(), message = resources.getString(R.string.detail_message_comment_posted))
                 }
             }
         }
@@ -503,7 +503,7 @@ class EventDetailViewModel @Inject constructor(
         val isCurrentUser = id == currentUser?.id
         return PersonItem(
             id = id,
-            name = if (isCurrentUser) "Tú" else name,
+            name = if (isCurrentUser) resources.getString(R.string.common_you) else name,
             initials = this.name.initials(),
             neighborhood = neighborhood,
             isCurrentUser = isCurrentUser,

@@ -20,14 +20,17 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.iconVector
 import edu.uniquindio.co.tribooo.core.theme.categoryColors
 import edu.uniquindio.co.tribooo.core.util.MapPoint
+import edu.uniquindio.co.tribooo.core.util.localizedName
 import edu.uniquindio.co.tribooo.domain.model.Category
 import kotlin.math.roundToInt
 
@@ -79,11 +82,11 @@ fun EventMapPlaceholder(
                 .background(colors.tertiaryContainer, RoundedCornerShape(12.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text("parque de la vida", fontSize = 11.sp, color = colors.onTertiaryContainer)
+            Text(stringResource(R.string.map_placeholder_park), fontSize = 11.sp, color = colors.onTertiaryContainer)
         }
 
         Text(
-            text = "mapa — placeholder",
+            text = stringResource(R.string.map_placeholder_label),
             fontSize = 11.sp,
             color = colors.onSurfaceVariant,
             modifier = Modifier.align(Alignment.BottomStart).padding(12.dp)
@@ -133,7 +136,7 @@ private fun Pin(category: Category, selected: Boolean, size: Dp, onClick: () -> 
     ) {
         Icon(
             imageVector = category.iconVector(),
-            contentDescription = category.name,
+            contentDescription = category.localizedName(),
             tint = content,
             modifier = Modifier.size(size * 0.5f).rotate(45f)
         )

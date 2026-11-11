@@ -25,20 +25,20 @@ class ModerationLabelsTest {
 
     @Test
     fun summaryUsesSingularAndPlural() {
-        assertEquals("1 publicación por revisar · 1 reporte abierto", moderationSummary(1, 1))
-        assertEquals("3 publicaciones por revisar · 0 reportes abiertos", moderationSummary(3, 0))
+        assertEquals("1 publicación por revisar · 1 reporte abierto", moderationSummary(testResources, 1, 1))
+        assertEquals("3 publicaciones por revisar · 0 reportes abiertos", moderationSummary(testResources, 3, 0))
     }
 
     @Test
     fun tabLabelShowsCountOnlyIfPositive() {
-        assertEquals("Pendientes · 4", moderationTabLabel(ModerationTab.PENDIENTES, 4))
-        assertEquals("Resueltas", moderationTabLabel(ModerationTab.RESUELTAS, 0))
+        assertEquals("Pendientes · 4", moderationTabLabel(testResources, ModerationTab.PENDIENTES, 4))
+        assertEquals("Resueltas", moderationTabLabel(testResources, ModerationTab.RESUELTAS, 0))
     }
 
     @Test
     fun reportedByNamesTheOnlyReporterOrCounts() {
-        assertEquals("Reportado por Camilo Arango", reportedByLabel(listOf(report(ReportReasons.FALSE_INFO))))
-        assertEquals("Reportado por 2 asistentes", reportedByLabel(listOf(report("a"), report("b"))))
+        assertEquals("Reportado por Camilo Arango", reportedByLabel(testResources, listOf(report(ReportReasons.FALSE_INFO))))
+        assertEquals("Reportado por 2 asistentes", reportedByLabel(testResources, listOf(report("a"), report("b"))))
     }
 
     @Test
@@ -53,7 +53,7 @@ class ModerationLabelsTest {
 
         assertEquals(
             listOf("Información falsa o engañosa — “No era así”", "Es spam o está duplicado", "Cobro, reventa o publicidad", "y 2 más"),
-            reportLines(reports)
+            reportLines(testResources, reports)
         )
     }
 
@@ -80,7 +80,7 @@ class ModerationLabelsTest {
             openReports = listOf(Report("r", event, user, "x", date = now.minusSeconds(40 * 60)))
         )
 
-        assertEquals("enviado hace 5 h", moderationContext(pending, ModerationTab.PENDIENTES, now))
-        assertEquals("último reporte hace 40 min", moderationContext(reported, ModerationTab.REPORTES, now))
+        assertEquals("enviado hace 5 h", moderationContext(testResources, pending, ModerationTab.PENDIENTES, now))
+        assertEquals("último reporte hace 40 min", moderationContext(testResources, reported, ModerationTab.REPORTES, now))
     }
 }
