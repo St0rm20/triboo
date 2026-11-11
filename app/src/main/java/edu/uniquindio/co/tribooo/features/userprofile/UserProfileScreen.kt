@@ -50,6 +50,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.EventThumbnail
+import edu.uniquindio.co.tribooo.core.component.BadgeChips
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
 import edu.uniquindio.co.tribooo.core.component.avatarColors
 import edu.uniquindio.co.tribooo.core.component.iconVector
@@ -195,7 +196,17 @@ private fun UserCard(user: User, state: UserProfileUiState, onToggleFollow: () -
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 4.dp)
             )
-            RoleBadge(state.role)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                RoleBadge(state.role)
+                Text(
+                    text = stringResource(R.string.reputation_points, state.points),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = colors.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 10.dp)
+                )
+            }
+            BadgeChips(state.badges, Modifier.padding(top = 10.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth().padding(top = 16.dp),

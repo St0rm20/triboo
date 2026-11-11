@@ -23,8 +23,10 @@ import edu.uniquindio.co.tribooo.domain.usecase.location.GetCitiesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.moderation.ObserveModerationCountsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveUnreadNotificationsCountUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ObserveSavedEventsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.user.Badge
 import edu.uniquindio.co.tribooo.domain.usecase.user.DeleteAccountUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.user.ReputationCalculator
 import edu.uniquindio.co.tribooo.domain.usecase.user.UpdateProfileUseCase
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -44,6 +46,9 @@ data class ProfileStats(
     val saved: Int = 0,
     /** Promedio de las calificaciones recibidas en sus eventos; null si aún no hay. */
     val rating: Double? = null,
+    /** Puntos de reputación e insignias ganadas. */
+    val points: Int = 0,
+    val badges: List<Badge> = emptyList(),
     val pendingReview: Int = 0,
     val rejected: Int = 0,
     val reports: Int = 0,
@@ -66,12 +71,16 @@ internal fun calculateProfileStats(
         .filter { it.event.organizer.id == user.id && it.author.id != user.id }
         .mapNotNull { it.rating }
 
+    val reputation = ReputationCalculator.calculate(user, events, attendances, comments, follows)
+
     return ProfileStats(
         followers = follows.count { it.followed.id == user.id },
         attendances = attendances.count { it.user.id == user.id },
         created = events.count { it.organizer.id == user.id },
         saved = saved.count { it.user.id == user.id },
         rating = if (ratings.isEmpty()) null else ratings.average(),
+        points = reputation.points,
+        badges = reputation.badges,
         pendingReview = events.count { it.status == EventStatus.PENDIENTE },
         rejected = events.count { it.status == EventStatus.RECHAZADO }
     )

@@ -45,6 +45,20 @@
     <string name="role_organizer">Organizador</string>
     <string name="role_neighbor">Vecino activo</string>
 
+    <!-- Reputación -->
+    <string name="reputation_points">%d puntos</string>
+    <string name="reputation_badges_title">Insignias</string>
+    <string name="badge_first_event">Primer evento</string>
+    <string name="badge_first_event_desc">Organizó al menos un evento publicado.</string>
+    <string name="badge_verified_host">Anfitrión verificado</string>
+    <string name="badge_verified_host_desc">Tiene al menos un evento verificado por moderación.</string>
+    <string name="badge_frequent_attendee">Asistente frecuente</string>
+    <string name="badge_frequent_attendee_desc">Ha asistido a 10 o más eventos de otras personas.</string>
+    <string name="badge_well_rated">Bien calificado</string>
+    <string name="badge_well_rated_desc">Promedio de 4.5 o más en al menos 3 reseñas.</string>
+    <string name="badge_popular">Popular</string>
+    <string name="badge_popular_desc">Tiene 20 o más seguidores.</string>
+
     <!-- Cupo -->
     <string name="cupo_unlimited">Sin límite de cupo</string>
     <string name="cupo_full">Cupo completo</string>

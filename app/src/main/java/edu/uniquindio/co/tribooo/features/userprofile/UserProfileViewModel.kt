@@ -21,8 +21,10 @@ import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUse
 import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.ObserveCommentsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.user.Badge
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveUserUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.user.ReputationCalculator
 import edu.uniquindio.co.tribooo.domain.usecase.user.ToggleFollowUseCase
 import edu.uniquindio.co.tribooo.navigation.MainRoutes
 import jakarta.inject.Inject
@@ -42,6 +44,8 @@ data class UserProfileUiState(
     val isCurrentUser: Boolean = false,
     val isFollowing: Boolean = false,
     val role: CommunityRole = CommunityRole.NEIGHBOR,
+    val points: Int = 0,
+    val badges: List<Badge> = emptyList(),
     val followers: Int = 0,
     val attendances: Int = 0,
     val createdEvents: Int = 0,
@@ -82,12 +86,16 @@ internal fun buildUserProfileState(
         .filter { it.event.id in publicIds && it.author.id != user.id }
         .mapNotNull { it.rating }
 
+    val reputation = ReputationCalculator.calculate(user, sources.events, sources.attendances, sources.comments, sources.follows)
+
     return UserProfileUiState(
         isLoading = false,
         user = user,
         isCurrentUser = user.id == currentUser?.id,
         isFollowing = sources.follows.any { it.follower.id == currentUser?.id && it.followed.id == user.id },
-        role = communityRole(user.role, publicEvents.size),
+        role = communityRole(user.role, reputation.points),
+        points = reputation.points,
+        badges = reputation.badges,
         followers = sources.follows.count { it.followed.id == user.id },
         attendances = sources.attendances.count { it.user.id == user.id },
         createdEvents = publicEvents.size,

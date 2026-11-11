@@ -75,7 +75,8 @@ class UserProfileTest {
         )
 
         assertEquals(2, state.createdEvents)
-        assertEquals(CommunityRole.ORGANIZER, state.role)
+        assertEquals(20, state.points) // 2 eventos publicados x 10 puntos
+        assertEquals(CommunityRole.NEIGHBOR, state.role)
     }
 
     @Test
@@ -114,11 +115,12 @@ class UserProfileTest {
     @Test
     fun roleRuleThresholds() {
         assertEquals(CommunityRole.NEIGHBOR, communityRole(UserRole.USER, 0))
-        assertEquals(CommunityRole.ORGANIZER, communityRole(UserRole.USER, 1))
-        assertEquals(CommunityRole.ORGANIZER, communityRole(UserRole.USER, 9))
-        assertEquals(CommunityRole.LEADER, communityRole(UserRole.USER, 10))
+        assertEquals(CommunityRole.NEIGHBOR, communityRole(UserRole.USER, 29))
+        assertEquals(CommunityRole.ORGANIZER, communityRole(UserRole.USER, 30))
+        assertEquals(CommunityRole.ORGANIZER, communityRole(UserRole.USER, 149))
+        assertEquals(CommunityRole.LEADER, communityRole(UserRole.USER, 150))
         assertEquals(CommunityRole.ADMIN, communityRole(UserRole.ADMIN, 0))
-        assertEquals(CommunityRole.ADMIN, communityRole(UserRole.ADMIN, 25))
+        assertEquals(CommunityRole.ADMIN, communityRole(UserRole.ADMIN, 250))
     }
 
     @Test

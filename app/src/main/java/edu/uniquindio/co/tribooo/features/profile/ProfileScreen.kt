@@ -66,6 +66,7 @@ import edu.uniquindio.co.tribooo.core.component.avatarColors
 import edu.uniquindio.co.tribooo.core.util.atAppZone
 import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.domain.model.User
+import edu.uniquindio.co.tribooo.domain.usecase.user.Badge
 
 @Composable
 fun ProfileScreen(
@@ -127,6 +128,10 @@ fun ProfileScreen(
                 ProfileHeader(user = user, state = state)
 
                 AboutCard(user = user, onEditClick = viewModel::onEditClick)
+
+                if (!state.isAdmin && state.stats.badges.isNotEmpty()) {
+                    BadgesCard(state.stats.badges)
+                }
 
                 if (state.isAdmin) {
                     AdminLinks(
@@ -281,16 +286,29 @@ private fun ProfileHeader(user: User, state: ProfileUiState) {
                         fontSize = 13.sp,
                         color = colors.onSurfaceVariant
                     )
-                    Text(
-                        text = stringResource(if (state.isAdmin) R.string.role_admin else R.string.profile_role_user),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = colors.onSecondaryContainer,
-                        modifier = Modifier
-                            .padding(top = 4.dp)
-                            .background(colors.secondaryContainer, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 9.dp, vertical = 3.dp)
-                    )
+                    Row(
+                        modifier = Modifier.padding(top = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = stringResource(if (state.isAdmin) R.string.role_admin else R.string.profile_role_user),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = colors.onSecondaryContainer,
+                            modifier = Modifier
+                                .background(colors.secondaryContainer, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 9.dp, vertical = 3.dp)
+                        )
+                        if (!state.isAdmin) {
+                            Text(
+                                text = stringResource(R.string.reputation_points, state.stats.points),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = colors.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
 
@@ -305,6 +323,28 @@ private fun ProfileHeader(user: User, state: ProfileUiState) {
                     StatCell(stringResource(R.string.profile_stat_attendances), stats.attendances.toString(), Modifier.weight(1f))
                     StatCell(stringResource(R.string.profile_stat_created), stats.created.toString(), Modifier.weight(1f))
                     StatCell(stringResource(R.string.profile_stat_rating), stats.ratingLabel, Modifier.weight(1f))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BadgesCard(badges: List<Badge>) {
+    val colors = MaterialTheme.colorScheme
+
+    Surface(
+        shape = RoundedCornerShape(26.dp),
+        color = colors.surfaceContainerLowest,
+        shadowElevation = 1.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(stringResource(R.string.reputation_badges_title), fontSize = 15.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+            badges.forEach { badge ->
+                Column {
+                    Text(stringResource(badge.label), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                    Text(stringResource(badge.description), fontSize = 12.sp, color = colors.onSurfaceVariant)
                 }
             }
         }
