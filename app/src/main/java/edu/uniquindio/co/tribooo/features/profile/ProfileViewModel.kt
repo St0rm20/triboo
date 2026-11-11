@@ -23,6 +23,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.location.GetCitiesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.moderation.ObserveModerationCountsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveUnreadNotificationsCountUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ObserveSavedEventsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.user.DeleteAccountUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.UpdateProfileUseCase
 import jakarta.inject.Inject
@@ -144,6 +145,7 @@ class ProfileViewModel @Inject constructor(
     getCities: GetCitiesUseCase,
     private val updateProfileUseCase: UpdateProfileUseCase,
     private val logoutUseCase: LogoutUseCase,
+    private val deleteAccountUseCase: DeleteAccountUseCase,
     private val resources: ResourceProvider
 ) : ViewModel() {
 
@@ -258,15 +260,20 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    // Eliminar cuenta (como en el prototipo, solo se muestra el aviso; no se borran datos)
+    // Eliminar cuenta
 
     fun onDeleteAccountClick() = local.update { it.copy(showDeleteDialog = true) }
 
     fun onDismissDeleteDialog() = local.update { it.copy(showDeleteDialog = false) }
 
     fun onConfirmDeleteAccount() {
-        local.update {
-            it.copy(showDeleteDialog = false, snackbarMessage = resources.getString(R.string.profile_delete_scheduled))
+        local.update { it.copy(showDeleteDialog = false) }
+        viewModelScope.launch {
+            if (deleteAccountUseCase()) {
+                local.update { it.copy(loggedOut = true) }
+            } else {
+                local.update { it.copy(snackbarMessage = resources.getString(R.string.profile_delete_failed)) }
+            }
         }
     }
 

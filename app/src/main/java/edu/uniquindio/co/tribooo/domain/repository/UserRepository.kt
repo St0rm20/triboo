@@ -7,6 +7,7 @@ interface UserRepository {
     val users: StateFlow<List<User>>
     suspend fun save(user: User)
     suspend fun update(user: User)
+    suspend fun delete(id: String)
     suspend fun findById(id: String): User?
     suspend fun findByEmail(email: String): User?
     suspend fun login(email: String, password: String): User?

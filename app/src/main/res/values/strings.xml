@@ -644,7 +644,7 @@
 
     <!-- Perfil -->
     <string name="profile_updated">Datos personales actualizados.</string>
-    <string name="profile_delete_scheduled">Cuenta marcada para eliminación en 14 días.</string>
+    <string name="profile_delete_failed">No se pudo eliminar la cuenta.</string>
     <string name="profile_delete_account">Eliminar mi cuenta</string>
     <string name="profile_logout_title">¿Cerrar sesión?</string>
     <string name="profile_logout_message">Volverás a la pantalla de inicio de sesión. Tus eventos confirmados y guardados se mantienen en tu cuenta.</string>

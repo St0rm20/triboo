@@ -644,7 +644,7 @@
 
     <!-- Profile -->
     <string name="profile_updated">Personal details updated.</string>
-    <string name="profile_delete_scheduled">Account marked for deletion in 14 days.</string>
+    <string name="profile_delete_failed">The account could not be deleted.</string>
     <string name="profile_delete_account">Delete my account</string>
     <string name="profile_logout_title">Sign out?</string>
     <string name="profile_logout_message">You\'ll go back to the sign-in screen. Your confirmed and saved events stay in your account.</string>

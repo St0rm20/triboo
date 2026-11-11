@@ -17,6 +17,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.moderation.ObserveModerationCoun
 import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveNotificationsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveUnreadNotificationsCountUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ObserveSavedEventsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.user.DeleteAccountUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.UpdateProfileUseCase
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +67,10 @@ class EditProfileFormTest {
             getCities = GetCitiesUseCase(LocationRepositoryImpl()),
             updateProfileUseCase = UpdateProfileUseCase(world.users),
             logoutUseCase = LogoutUseCase(world.session),
+            deleteAccountUseCase = DeleteAccountUseCase(
+                world.users, world.events, world.attendances, SavedEventRepositoryImpl(), world.waitlist,
+                FollowRepositoryImpl(), CommentRepositoryImpl(), world.session, world.getCurrentUser
+            ),
             resources = testResources
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
