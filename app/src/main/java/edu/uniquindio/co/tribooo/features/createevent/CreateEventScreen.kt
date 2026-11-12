@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Add
@@ -175,6 +176,7 @@ fun CreateEventScreen(
                 state = state,
                 onMultiDayChange = viewModel::onMultiDayChange,
                 onOpenPicker = viewModel::openPicker,
+                onOpenLocationPicker = viewModel::onOpenLocationPicker,
                 onFocusHandled = viewModel::onFocusHandled
             )
 
@@ -188,6 +190,17 @@ fun CreateEventScreen(
                 onClick = {
                     imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 }
+            )
+        }
+    }
+
+    if (state.showLocationPicker) {
+        val initialLocation = state.pickedLocation ?: state.place?.location ?: state.userLocation
+        if (initialLocation != null) {
+            LocationPickerScreen(
+                initialLocation = initialLocation,
+                onConfirm = viewModel::onLocationPicked,
+                onDismiss = viewModel::onCloseLocationPicker
             )
         }
     }
@@ -458,6 +471,7 @@ private fun ScheduleAndPlaceCard(
     state: CreateEventUiState,
     onMultiDayChange: (Boolean) -> Unit,
     onOpenPicker: (PickerTarget) -> Unit,
+    onOpenLocationPicker: () -> Unit,
     onFocusHandled: () -> Unit
 ) {
     val divider = MaterialTheme.colorScheme.surfaceContainer
@@ -537,6 +551,15 @@ private fun ScheduleAndPlaceCard(
                     FormErrorText(it, Modifier.padding(start = 52.dp, end = 16.dp, bottom = 8.dp))
                 }
             }
+            HorizontalDivider(color = divider)
+
+            PickerRow(
+                icon = Icons.Rounded.Map,
+                label = stringResource(R.string.create_event_place_mark_on_map),
+                value = if (state.pickedLocation != null) stringResource(R.string.create_event_place_marked) else "",
+                trailingIcon = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                onClick = onOpenLocationPicker
+            )
         }
     }
 }

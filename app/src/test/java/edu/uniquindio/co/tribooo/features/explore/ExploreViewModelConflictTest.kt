@@ -3,7 +3,10 @@ package edu.uniquindio.co.tribooo.features.explore
 import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.component.FeedEventItem
 import edu.uniquindio.co.tribooo.data.repository.memory.EventFilterRepositoryImpl
+import edu.uniquindio.co.tribooo.core.component.MapPin
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.memory.MockData
+import edu.uniquindio.co.tribooo.domain.model.Location
 import edu.uniquindio.co.tribooo.domain.model.Contribution
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObservePublishedEventsUseCase
@@ -13,6 +16,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.filters.FilterEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.filters.ObserveEventFiltersUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.filters.UpdateEventFiltersUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.ObserveCurrentLocationUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.location.UpdateCurrentLocationUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -45,13 +49,15 @@ class ExploreViewModelConflictTest {
         Dispatchers.resetMain()
     }
 
+    private val locations = LocationRepositoryImpl()
+
     private fun TestScope.viewModel(): ExploreViewModel {
         val filters = EventFilterRepositoryImpl()
         val vm = ExploreViewModel(
             observePublishedEvents = ObservePublishedEventsUseCase(world.events),
             observeAttendances = world.observeAttendances,
             observeCurrentUser = world.observeCurrentUser,
-            observeCurrentLocation = ObserveCurrentLocationUseCase(LocationRepositoryImpl()),
+            observeCurrentLocation = ObserveCurrentLocationUseCase(locations),
             observeFilters = ObserveEventFiltersUseCase(filters),
             observeWaitlist = world.observeWaitlist,
             filterEvents = FilterEventsUseCase(),
@@ -61,6 +67,7 @@ class ExploreViewModelConflictTest {
             findScheduleConflict = world.findScheduleConflict,
             joinWaitlist = world.joinWaitlist,
             leaveWaitlist = world.leaveWaitlist,
+            updateCurrentLocation = UpdateCurrentLocationUseCase(locations),
             resources = testResources
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
@@ -70,6 +77,24 @@ class ExploreViewModelConflictTest {
     private fun ExploreViewModel.item(id: String): FeedEventItem = uiState.value.events.first { it.event.id == id }
 
     private fun stepOf(vm: ExploreViewModel) = vm.uiState.value.attendanceStep
+
+    @Test
+    fun pinsCarryTheEventLocation() = runTest {
+        val event = world.publish("a", 10, 12)
+        val vm = viewModel()
+
+        assertEquals(listOf(MapPin("a", event.category, event.location)), vm.uiState.value.pins)
+    }
+
+    @Test
+    fun userLocationFromTheMapUpdatesTheCurrentLocation() = runTest {
+        val vm = viewModel()
+        val moved = Location(MockData.currentLocation.latitude + 0.01, MockData.currentLocation.longitude)
+
+        vm.onUserLocation(moved)
+
+        assertEquals(moved, locations.currentLocation.value)
+    }
 
     @Test
     fun freeEventAsksToConfirmThenAttendsOnAccept() = runTest {

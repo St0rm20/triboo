@@ -180,7 +180,6 @@
     <string name="filters_distance_up_to">Hasta %1$d km</string>
     <string name="filters_only_available">Solo con cupo disponible</string>
     <string name="filters_only_available_hint">Oculta eventos llenos</string>
-    <string name="map_read_only">mapa — solo lectura</string>
 
     <!-- Casos de uso -->
     <string name="usecase_event_not_found">El evento ya no existe.</string>
@@ -368,8 +367,6 @@
     <string name="explore_attending">Ya voy</string>
     <string name="explore_attend">Voy</string>
     <string name="explore_empty_title">No hay eventos con estos filtros</string>
-    <string name="map_placeholder_park">parque de la vida</string>
-    <string name="map_placeholder_label">mapa — placeholder</string>
     <string name="decimal_separator">,</string>
 
     <!-- Agenda -->
@@ -532,6 +529,9 @@
     <string name="create_event_place_dialog_message">Escribe el punto de encuentro. Los asistentes verán esta ubicación.</string>
     <string name="create_event_place_name_label">Nombre del lugar</string>
     <string name="create_event_place_neighborhood_label">Barrio o sector</string>
+    <string name="create_event_place_mark_on_map">Marcar en el mapa</string>
+    <string name="create_event_place_marked">Punto marcado en el mapa</string>
+    <string name="location_picker_confirm">Confirmar ubicación</string>
     <string name="create_event_place_use">Usar este lugar</string>
 
     <!-- Mis eventos -->

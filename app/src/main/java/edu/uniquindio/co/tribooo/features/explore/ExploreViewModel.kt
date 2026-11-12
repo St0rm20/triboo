@@ -4,14 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.component.FeedEventItem
+import edu.uniquindio.co.tribooo.core.component.MapPin
 import edu.uniquindio.co.tribooo.core.component.toCardItems
 import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.waitlistLeftMessage
 import edu.uniquindio.co.tribooo.core.util.waitlistJoinedMessage
-import edu.uniquindio.co.tribooo.core.util.MapProjection
 import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.EventFilters
+import edu.uniquindio.co.tribooo.domain.model.Location
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.FindScheduleConflictUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUseCase
@@ -25,6 +26,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.filters.FilterEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.filters.ObserveEventFiltersUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.filters.UpdateEventFiltersUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.ObserveCurrentLocationUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.location.UpdateCurrentLocationUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.waitlist.JoinWaitlistUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.waitlist.LeaveWaitlistUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.waitlist.ObserveWaitlistUseCase
@@ -92,6 +94,7 @@ class ExploreViewModel @Inject constructor(
     private val findScheduleConflict: FindScheduleConflictUseCase,
     private val joinWaitlist: JoinWaitlistUseCase,
     private val leaveWaitlist: LeaveWaitlistUseCase,
+    private val updateCurrentLocation: UpdateCurrentLocationUseCase,
     private val resources: ResourceProvider
 ) : ViewModel() {
 
@@ -108,12 +111,10 @@ class ExploreViewModel @Inject constructor(
     ) { published, (attendances, waitlist), filters, user, location ->
         val attendeesByEvent = attendances.groupingBy { it.event.id }.eachCount()
         val filtered = filterEvents(published, attendeesByEvent, location, filters)
-        // El mapa se ajusta a todos los publicados para que los pines no se muevan al filtrar
-        val projection = MapProjection(published.map { it.location })
 
         ExploreContent(
             events = toCardItems(filtered, attendances, waitlist, user?.id, location),
-            pins = filtered.map { MapPin(it.id, it.category, projection.project(it.location)) },
+            pins = filtered.map { MapPin(it.id, it.category, it.location) },
             filters = filters
         )
     }
@@ -137,6 +138,11 @@ class ExploreViewModel @Inject constructor(
 
     /** "Mi ubicación": vuelve al evento más cercano. */
     fun onRecenter() = local.update { it.copy(selectedId = null) }
+
+    /** El mapa reportó la posición real del usuario. */
+    fun onUserLocation(location: Location) {
+        viewModelScope.launch { updateCurrentLocation(location) }
+    }
 
     fun onQueryChange(value: String) = updateFilters { it.copy(query = value) }
 
