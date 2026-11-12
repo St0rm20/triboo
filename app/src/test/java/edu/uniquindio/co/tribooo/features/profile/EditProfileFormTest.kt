@@ -66,10 +66,10 @@ class EditProfileFormTest {
             observeModerationCounts = ObserveModerationCountsUseCase(world.events, world.reports, ModerationReviewRepositoryImpl()),
             getCities = GetCitiesUseCase(LocationRepositoryImpl()),
             updateProfileUseCase = UpdateProfileUseCase(world.users),
-            logoutUseCase = LogoutUseCase(world.session),
+            logoutUseCase = LogoutUseCase(world.auth, world.session),
             deleteAccountUseCase = DeleteAccountUseCase(
                 world.users, world.events, world.attendances, SavedEventRepositoryImpl(), world.waitlist,
-                FollowRepositoryImpl(), CommentRepositoryImpl(), world.session, world.getCurrentUser
+                FollowRepositoryImpl(), CommentRepositoryImpl(), world.session, world.getCurrentUser, world.auth
             ),
             resources = testResources
         )

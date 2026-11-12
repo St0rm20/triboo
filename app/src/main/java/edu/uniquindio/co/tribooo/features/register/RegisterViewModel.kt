@@ -9,6 +9,7 @@ import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
 import edu.uniquindio.co.tribooo.core.util.Validators
+import edu.uniquindio.co.tribooo.core.util.authErrorMessage
 import edu.uniquindio.co.tribooo.domain.usecase.auth.RegisterUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetCitiesUseCase
 import jakarta.inject.Inject
@@ -131,19 +132,19 @@ class RegisterViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(registerResult = RequestResult.Loading) }
-            val user = registerUseCase(
+            val result = registerUseCase(
                 name = state.name,
                 city = state.city,
                 address = state.address,
                 email = state.email,
                 password = state.password
+            ).fold(
+                onSuccess = {
+                    messenger.post(MessageTarget.LOGIN, resources.getString(R.string.form_account_created))
+                    RequestResult.Success(resources.getString(R.string.register_success))
+                },
+                onFailure = { RequestResult.Failure(authErrorMessage(resources, it)) }
             )
-            val result = if (user != null) {
-                messenger.post(MessageTarget.LOGIN, resources.getString(R.string.form_account_created))
-                RequestResult.Success(resources.getString(R.string.register_success))
-            } else {
-                RequestResult.Failure(resources.getString(R.string.register_error_email_exists))
-            }
             _uiState.update { it.copy(registerResult = result) }
         }
     }

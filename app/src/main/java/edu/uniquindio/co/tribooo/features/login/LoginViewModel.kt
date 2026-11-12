@@ -9,6 +9,9 @@ import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
 import edu.uniquindio.co.tribooo.core.util.Validators
+import edu.uniquindio.co.tribooo.core.util.authErrorMessage
+import edu.uniquindio.co.tribooo.domain.model.AuthErrorReason
+import edu.uniquindio.co.tribooo.domain.model.AuthException
 import edu.uniquindio.co.tribooo.domain.usecase.auth.LoginUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.auth.LoginWithGoogleUseCase
 import jakarta.inject.Inject
@@ -83,33 +86,41 @@ class LoginViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(loginResult = RequestResult.Loading) }
-            val user = loginUseCase(email = state.email, password = state.password)
-            val result = if (user != null) {
-                val success = resources.getString(R.string.form_login_success)
-                messenger.post(MessageTarget.FEED, success)
-                RequestResult.Success(success)
-            } else {
-                RequestResult.Failure(resources.getString(R.string.login_error_invalid_credentials))
-            }
+            val result = loginUseCase(email = state.email, password = state.password).fold(
+                onSuccess = { onLoggedIn() },
+                onFailure = { RequestResult.Failure(authErrorMessage(resources, it)) }
+            )
             _uiState.update { it.copy(loginResult = result) }
         }
     }
 
-    /** Simulación de "Continuar con mi cuenta Google": entra con la cuenta sembrada sin pedir credenciales. */
-    fun loginWithGoogle() {
+    /** "Continuar con mi cuenta Google": recibe el ID token que entregó el selector de cuentas de Credential Manager. */
+    fun loginWithGoogle(idToken: String) {
         if (_uiState.value.loginResult == RequestResult.Loading) return
 
         viewModelScope.launch {
             _uiState.update { it.copy(loginResult = RequestResult.Loading) }
-            val result = if (loginWithGoogleUseCase() != null) {
-                val success = resources.getString(R.string.form_login_success)
-                messenger.post(MessageTarget.FEED, success)
-                RequestResult.Success(success)
-            } else {
-                RequestResult.Failure(resources.getString(R.string.login_error_google))
-            }
+            val result = loginWithGoogleUseCase(idToken).fold(
+                onSuccess = { onLoggedIn() },
+                onFailure = { error ->
+                    val network = (error as? AuthException)?.reason == AuthErrorReason.NETWORK
+                    RequestResult.Failure(resources.getString(if (network) R.string.auth_error_network else R.string.login_error_google))
+                }
+            )
             _uiState.update { it.copy(loginResult = result) }
         }
+    }
+
+    /** El selector de cuentas de Google falló (sin cuentas, sin servicios de Google o sin el client ID configurado). */
+    fun onGoogleSignInFailed() {
+        _uiState.update { it.copy(loginResult = RequestResult.Failure(resources.getString(R.string.login_error_google))) }
+    }
+
+    /** Deja el aviso de bienvenida para el feed. */
+    private fun onLoggedIn(): RequestResult {
+        val success = resources.getString(R.string.form_login_success)
+        messenger.post(MessageTarget.FEED, success)
+        return RequestResult.Success(success)
     }
 
     fun resetLoginResult() {

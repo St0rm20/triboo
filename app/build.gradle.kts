@@ -33,6 +33,8 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         resValue("string", "mapbox_access_token", localProperties.getProperty("MAPBOX_ACCESS_TOKEN", ""))
+        // Client ID web (OAuth tipo 3) de Firebase para "Continuar con Google"; también se lee de local.properties
+        resValue("string", "google_web_client_id", localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", ""))
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
@@ -68,8 +70,16 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
+    // Firebase BoM: fija versiones compatibles de todas las librerías Firebase
+    implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
+    implementation(libs.kotlinx.coroutines.play.services)
+
+    // --- Inicio de sesión con Google (Credential Manager) ---
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.coil.compose)
 

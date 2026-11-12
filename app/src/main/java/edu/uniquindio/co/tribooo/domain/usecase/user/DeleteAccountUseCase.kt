@@ -1,7 +1,9 @@
 package edu.uniquindio.co.tribooo.domain.usecase.user
 
+import edu.uniquindio.co.tribooo.domain.model.AuthException
 import edu.uniquindio.co.tribooo.domain.model.UserRole
 import edu.uniquindio.co.tribooo.domain.repository.AttendanceRepository
+import edu.uniquindio.co.tribooo.domain.repository.AuthRepository
 import edu.uniquindio.co.tribooo.domain.repository.CommentRepository
 import edu.uniquindio.co.tribooo.domain.repository.EventRepository
 import edu.uniquindio.co.tribooo.domain.repository.FollowRepository
@@ -21,15 +23,24 @@ class DeleteAccountUseCase @Inject constructor(
     private val followRepository: FollowRepository,
     private val commentRepository: CommentRepository,
     private val sessionRepository: SessionRepository,
-    private val getCurrentUser: GetCurrentUserUseCase
+    private val getCurrentUser: GetCurrentUserUseCase,
+    private val authRepository: AuthRepository
 ) {
     /**
      * Elimina la cuenta del usuario actual con todo lo que le pertenece (incluidos sus eventos, sin importar su estado)
-     * y cierra la sesión. Retorna false, sin borrar nada, si no hay sesión o si es administrador.
+     * y cierra la sesión. Retorna false, sin borrar nada, si no hay sesión, si es administrador o si Firebase
+     * Authentication no elimina la cuenta (por ejemplo, porque exige haber iniciado sesión hace poco).
      */
     suspend operator fun invoke(): Boolean {
         val user = getCurrentUser() ?: return false
         if (user.role == UserRole.ADMIN) return false
+
+        // Primero la cuenta de Firebase: si falla no se borra nada y el usuario puede reintentar
+        try {
+            authRepository.deleteCurrentAccount()
+        } catch (e: AuthException) {
+            return false
+        }
 
         val ownEventIds = eventRepository.events.value.filter { it.organizer.id == user.id }.map { it.id }.toSet()
 

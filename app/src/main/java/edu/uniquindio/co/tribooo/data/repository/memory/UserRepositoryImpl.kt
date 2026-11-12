@@ -35,8 +35,4 @@ class UserRepositoryImpl @Inject constructor() : UserRepository {
     override suspend fun findByEmail(email: String): User? {
         return _users.value.firstOrNull { it.email.equals(email, ignoreCase = true) }
     }
-
-    override suspend fun login(email: String, password: String): User? {
-        return _users.value.firstOrNull { it.email.equals(email, ignoreCase = true) && it.password == password }
-    }
 }

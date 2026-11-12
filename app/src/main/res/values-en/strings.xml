@@ -104,8 +104,8 @@
     <string name="form_submit_invalid">Check the highlighted fields.</string>
     <string name="form_limit_reached" tools:ignore="PluralsCandidate">You reached the limit of %1$d characters</string>
     <string name="form_image_limit_exceeded" tools:ignore="PluralsCandidate">Maximum %1$d images; the first %1$d were used</string>
-    <string name="form_recovery_sent">Code sent to %1$s</string>
-    <string name="form_recovery_reminder">Check %1$s: the code to recover your password is there.</string>
+    <string name="form_recovery_sent">Link sent to %1$s</string>
+    <string name="form_recovery_reminder">Check %1$s: the link to reset your password is there.</string>
     <string name="form_name_required">Name is required</string>
     <string name="form_name_too_short">Name must be at least 3 characters long</string>
     <string name="form_city_required">City is required</string>
@@ -308,14 +308,17 @@
     <string name="login_create_account">Create account</string>
     <string name="login_error_invalid_credentials">Incorrect email or password</string>
     <string name="login_error_google">Couldn\'t sign in with Google</string>
+    <string name="auth_error_network">No connection. Check your internet and try again.</string>
+    <string name="auth_error_generic">Something went wrong. Try again.</string>
+    <string name="auth_error_weak_password">The password is too weak</string>
 
     <!-- Password recovery -->
     <string name="recovery_back_to_login">Back to sign in</string>
     <string name="recovery_title_sent">Check your email</string>
     <string name="recovery_title">Recover your password</string>
-    <string name="recovery_message_sent">We sent a code to %1$s. Check your inbox and wait for the code to continue.</string>
-    <string name="recovery_message">Enter the email associated with your account. We\'ll send you a code to recover access.</string>
-    <string name="recovery_send_code">Send code</string>
+    <string name="recovery_message_sent">We sent a link to %1$s. Open it from your inbox to create a new password.</string>
+    <string name="recovery_message">Enter the email associated with your account. We\'ll send you a link to reset your password.</string>
+    <string name="recovery_send_code">Send link</string>
     <string name="recovery_use_another_email">Use another email</string>
     <string name="recovery_back_home">Back to home</string>
 

@@ -104,8 +104,8 @@
     <string name="form_submit_invalid">Revisa los campos marcados.</string>
     <string name="form_limit_reached" tools:ignore="PluralsCandidate">Llegaste al límite de %1$d caracteres</string>
     <string name="form_image_limit_exceeded" tools:ignore="PluralsCandidate">Máximo %1$d imágenes; se usaron las primeras %1$d</string>
-    <string name="form_recovery_sent">Código enviado a %1$s</string>
-    <string name="form_recovery_reminder">Revisa %1$s: ahí está el código para recuperar tu contraseña.</string>
+    <string name="form_recovery_sent">Enlace enviado a %1$s</string>
+    <string name="form_recovery_reminder">Revisa %1$s: ahí está el enlace para restablecer tu contraseña.</string>
     <string name="form_name_required">El nombre es obligatorio</string>
     <string name="form_name_too_short">El nombre debe tener al menos 3 caracteres</string>
     <string name="form_city_required">La ciudad es obligatoria</string>
@@ -308,14 +308,17 @@
     <string name="login_create_account">Crear cuenta</string>
     <string name="login_error_invalid_credentials">Email o contraseña incorrectos</string>
     <string name="login_error_google">No se pudo iniciar sesión con Google</string>
+    <string name="auth_error_network">Sin conexión. Revisa tu internet e inténtalo de nuevo.</string>
+    <string name="auth_error_generic">Algo salió mal. Inténtalo de nuevo.</string>
+    <string name="auth_error_weak_password">La contraseña es muy débil</string>
 
     <!-- Recuperar contraseña -->
     <string name="recovery_back_to_login">Volver al inicio de sesión</string>
     <string name="recovery_title_sent">Revisa tu correo</string>
     <string name="recovery_title">Recupera tu contraseña</string>
-    <string name="recovery_message_sent">Enviamos un código a %1$s. Revisa la bandeja de entrada y espera el código para continuar.</string>
-    <string name="recovery_message">Escribe el correo asociado a tu cuenta. Te enviaremos un código para recuperar el acceso.</string>
-    <string name="recovery_send_code">Enviar código</string>
+    <string name="recovery_message_sent">Enviamos un enlace a %1$s. Ábrelo desde tu bandeja de entrada para crear una contraseña nueva.</string>
+    <string name="recovery_message">Escribe el correo asociado a tu cuenta. Te enviaremos un enlace para restablecer tu contraseña.</string>
+    <string name="recovery_send_code">Enviar enlace</string>
     <string name="recovery_use_another_email">Usar otro correo</string>
     <string name="recovery_back_home">Volver al inicio</string>
 

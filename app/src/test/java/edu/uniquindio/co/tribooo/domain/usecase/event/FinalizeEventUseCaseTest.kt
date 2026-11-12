@@ -17,7 +17,7 @@ class FinalizeEventUseCaseTest {
 
     private val users = UserRepositoryImpl()
     private val me: User = runBlocking { users.findById("u-daniela")!! }
-    private val other = User("x", "Otra Persona", "x@mail.co", "123456", "Armenia", "Centro")
+    private val other = User("x", "Otra Persona", "x@mail.co", "Armenia", "Centro")
     private val now = Instant.parse("2099-01-10T12:00:00Z")
 
     private fun finalize(userId: String?, block: suspend (FinalizeEventUseCase, EventRepository) -> Unit) = runBlocking {

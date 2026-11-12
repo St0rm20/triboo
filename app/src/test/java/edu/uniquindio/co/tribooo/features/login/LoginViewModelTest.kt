@@ -6,9 +6,12 @@ import edu.uniquindio.co.tribooo.core.util.MessageTarget
 import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
+import edu.uniquindio.co.tribooo.domain.model.AuthAccount
+import edu.uniquindio.co.tribooo.domain.model.AuthErrorReason
 import edu.uniquindio.co.tribooo.domain.model.UserRole
 import edu.uniquindio.co.tribooo.domain.model.UserSession
 import edu.uniquindio.co.tribooo.domain.repository.SessionRepository
+import edu.uniquindio.co.tribooo.domain.usecase.auth.FakeAuthRepository
 import edu.uniquindio.co.tribooo.domain.usecase.auth.LoginUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.auth.LoginWithGoogleUseCase
 import kotlinx.coroutines.Dispatchers
@@ -43,6 +46,7 @@ class LoginViewModelTest {
     }
 
     private val messenger = SnackbarMessenger()
+    private val auth = FakeAuthRepository()
 
     @Before
     fun setUp() {
@@ -57,7 +61,9 @@ class LoginViewModelTest {
     private fun viewModel(): LoginViewModel {
         val users = UserRepositoryImpl()
         val session = FakeSession()
-        return LoginViewModel(LoginUseCase(users, session), LoginWithGoogleUseCase(users, session), messenger, testResources)
+        return LoginViewModel(
+            LoginUseCase(auth, users, session), LoginWithGoogleUseCase(auth, users, session), messenger, testResources
+        )
     }
 
     @Test
@@ -144,5 +150,30 @@ class LoginViewModelTest {
 
         assertEquals(RequestResult.Failure("Email o contraseña incorrectos"), vm.uiState.value.loginResult)
         assertFalse(vm.uiState.value.message != null)
+    }
+
+    @Test
+    fun networkFailureShowsTheConnectionMessage() = runTest {
+        val vm = viewModel()
+        vm.onEmailChange("daniela.restrepo@triboo.co")
+        vm.onPasswordChange("123456")
+        auth.failNextWith = AuthErrorReason.NETWORK
+
+        vm.login()
+
+        assertEquals(RequestResult.Failure(FormTexts.AUTH_NETWORK_ERROR), vm.uiState.value.loginResult)
+    }
+
+    @Test
+    fun googleTokenLogsInAndPickerFailureShowsTheGoogleError() = runTest {
+        auth.googleAccounts["token"] = AuthAccount(uid = "u-daniela", email = "daniela.restrepo@triboo.co")
+        val vm = viewModel()
+
+        vm.loginWithGoogle("token")
+        assertTrue(vm.uiState.value.loginResult is RequestResult.Success)
+
+        vm.resetLoginResult()
+        vm.onGoogleSignInFailed()
+        assertEquals(RequestResult.Failure("No se pudo iniciar sesión con Google"), vm.uiState.value.loginResult)
     }
 }

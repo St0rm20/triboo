@@ -48,7 +48,7 @@ class ObserveMyFollowersUseCaseTest {
     private val maria = person("u-vecino-0") // "María Jaramillo"
     private val camilo = person("u-vecino-1") // "Camilo Arango"
     private val felipe = person("u-vecino-2") // "Felipe López"
-    private val ghost = User("ghost", "Fantasma", "g@mail.co", "123456", "Armenia", "Centro")
+    private val ghost = User("ghost", "Fantasma", "g@mail.co", "Armenia", "Centro")
 
     private fun observe(follows: List<Follow>, repository: FakeFollowRepository = FakeFollowRepository(follows)) =
         ObserveMyFollowersUseCase(ObserveFollowsUseCase(repository), users, ObserveCurrentUserUseCase(session, users))
@@ -99,7 +99,7 @@ class ObserveMyFollowersUseCaseTest {
         assertEquals("3 personas siguen tus eventos", followersSummary(testResources, 3))
 
         val user = User(
-            "x", "X", "x@mail.co", "123456", "Armenia", "Granada",
+            "x", "X", "x@mail.co", "Armenia", "Granada",
             dateRegistered = Instant.parse("2025-03-15T15:00:00Z")
         )
         assertEquals("Granada · te sigue y lo sigues", followerSubtitle(testResources, user, followedByMe = true))

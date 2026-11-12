@@ -14,7 +14,7 @@ import org.junit.Test
 
 class ReputationCalculatorTest {
 
-    private fun user(id: String) = User(id, "Usuario $id", "$id@mail.co", "123456", "Armenia", "Centro")
+    private fun user(id: String) = User(id, "Usuario $id", "$id@mail.co", "Armenia", "Centro")
 
     private val me = user("me")
     private val org = user("org")

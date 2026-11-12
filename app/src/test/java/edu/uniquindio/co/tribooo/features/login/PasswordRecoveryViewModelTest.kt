@@ -4,6 +4,8 @@ import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.MessageTarget
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
+import edu.uniquindio.co.tribooo.domain.model.AuthErrorReason
+import edu.uniquindio.co.tribooo.domain.usecase.auth.FakeAuthRepository
 import edu.uniquindio.co.tribooo.domain.usecase.auth.RequestPasswordRecoveryUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -24,6 +26,7 @@ import org.junit.Test
 class PasswordRecoveryViewModelTest {
 
     private val messenger = SnackbarMessenger()
+    private val auth = FakeAuthRepository().apply { resetEmailLatencyMillis = 900 }
 
     @Before
     fun setUp() {
@@ -35,7 +38,7 @@ class PasswordRecoveryViewModelTest {
         Dispatchers.resetMain()
     }
 
-    private fun viewModel() = PasswordRecoveryViewModel(RequestPasswordRecoveryUseCase(testResources), messenger, testResources)
+    private fun viewModel() = PasswordRecoveryViewModel(RequestPasswordRecoveryUseCase(auth, testResources), messenger, testResources)
 
     @Test
     fun emptyEmailShowsTheErrorAndDoesNotAdvance() {
@@ -86,7 +89,7 @@ class PasswordRecoveryViewModelTest {
         val state = vm.uiState.value
         assertFalse(state.isSending)
         assertEquals("ana@mail.co", state.sentTo)
-        assertEquals("Código enviado a ana@mail.co", state.message)
+        assertEquals("Enlace enviado a ana@mail.co", state.message)
     }
 
     @Test
@@ -125,5 +128,19 @@ class PasswordRecoveryViewModelTest {
         assertNull(vm.uiState.value.sentTo)
         assertEquals("ana@mail.co", vm.uiState.value.email)
         assertNull(vm.uiState.value.emailError(testResources))
+    }
+
+    @Test
+    fun networkFailureKeepsTheFormOpenWithTheConnectionMessage() = runTest {
+        val vm = viewModel()
+        vm.onEmailChange("ana@mail.co")
+        auth.failNextWith = AuthErrorReason.NETWORK
+
+        vm.onSend()
+        testScheduler.advanceUntilIdle()
+
+        assertNull(vm.uiState.value.sentTo)
+        assertFalse(vm.uiState.value.isSending)
+        assertEquals(FormTexts.AUTH_NETWORK_ERROR, vm.uiState.value.message)
     }
 }

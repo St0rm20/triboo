@@ -4,6 +4,7 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import edu.uniquindio.co.tribooo.data.repository.firebase.AuthRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.local.SessionRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.AttendanceRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
@@ -19,6 +20,7 @@ import edu.uniquindio.co.tribooo.data.repository.memory.SavedEventRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.WaitlistRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.repository.AttendanceRepository
+import edu.uniquindio.co.tribooo.domain.repository.AuthRepository
 import edu.uniquindio.co.tribooo.domain.repository.CommentRepository
 import edu.uniquindio.co.tribooo.domain.repository.EventFilterRepository
 import edu.uniquindio.co.tribooo.domain.repository.EventRepository
@@ -69,6 +71,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindUserRepository(impl: UserRepositoryImpl): UserRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindAuthRepository(impl: AuthRepositoryImpl): AuthRepository
 
     @Binds
     @Singleton

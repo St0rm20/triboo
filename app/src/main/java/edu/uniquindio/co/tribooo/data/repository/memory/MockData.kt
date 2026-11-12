@@ -45,12 +45,11 @@ internal object MockData {
         "Quimbaya", "Salento", "Santa Marta", "Tunja", "Valledupar", "Villavicencio"
     )
 
-    /** Usuaria de prueba con eventos, comentarios y seguidos (inicia sesión con su email y "123456"). */
+    /** Usuaria de prueba con eventos, comentarios y seguidos (para iniciar sesión debe existir en Firebase Authentication con el mismo id). */
     val daniela = User(
         id = "u-daniela",
         name = "Daniela Restrepo",
         email = "daniela.restrepo@triboo.co",
-        password = "123456",
         city = "Armenia",
         neighborhood = "Granada",
         bio = "Organizo ciclopaseos y bazares en el barrio."
@@ -60,7 +59,6 @@ internal object MockData {
         id = id,
         name = name,
         email = "$id@triboo.co",
-        password = "123456",
         city = "Armenia",
         neighborhood = neighborhood,
         bio = bio
@@ -113,7 +111,6 @@ internal object MockData {
             id = "u-vecino-$i",
             name = name,
             email = "vecino$i@triboo.co",
-            password = "123456",
             city = "Armenia",
             neighborhood = "Centro"
         )
@@ -124,7 +121,6 @@ internal object MockData {
         id = "u-moderacion",
         name = "Mauricio Salazar",
         email = "moderacion@triboo.co",
-        password = "admin1234",
         city = "Armenia",
         neighborhood = "Centro",
         role = UserRole.ADMIN
@@ -355,7 +351,6 @@ internal object MockData {
                     id = "u-$tag-${event.id}-$n",
                     name = "Vecino ${n + 1}",
                     email = "$tag-${event.id}-$n@triboo.co",
-                    password = "123456",
                     city = "Armenia",
                     neighborhood = event.neighborhood
                 )

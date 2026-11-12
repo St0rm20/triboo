@@ -15,8 +15,8 @@ import java.time.Instant
 
 class ExploreStateTest {
 
-    private val me = User("me", "Ana Gómez", "a@mail.co", "123456", "Armenia", "Centro")
-    private val other = User("x", "Otro", "o@mail.co", "123456", "Armenia", "Centro")
+    private val me = User("me", "Ana Gómez", "a@mail.co", "Armenia", "Centro")
+    private val other = User("x", "Otro", "o@mail.co", "Armenia", "Centro")
     private val here = Location(4.5, -75.6)
 
     private fun event(id: String, lat: Double, cupo: Int? = null) = Event(

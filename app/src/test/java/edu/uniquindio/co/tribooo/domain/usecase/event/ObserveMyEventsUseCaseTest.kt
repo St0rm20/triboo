@@ -41,7 +41,7 @@ class ObserveMyEventsUseCaseTest {
 
     private val users = UserRepositoryImpl()
     private val me = runBlocking { users.findById("u-daniela")!! }
-    private val other = User("x", "Otra Persona", "x@mail.co", "123456", "Armenia", "Centro")
+    private val other = User("x", "Otra Persona", "x@mail.co", "Armenia", "Centro")
 
     private fun event(id: String, organizer: User, status: EventStatus) = Event(
         id = id, title = id, description = "", startDate = Instant.now(), endDate = Instant.now(),

@@ -56,7 +56,7 @@ class ObserveMySavedEventsUseCaseTest {
 
     private val users = UserRepositoryImpl()
     private val me = runBlocking { users.findById("u-daniela")!! }
-    private val other = User("x", "Otra Persona", "x@mail.co", "123456", "Armenia", "Centro")
+    private val other = User("x", "Otra Persona", "x@mail.co", "Armenia", "Centro")
     private val session = FakeSessionRepository(me.id)
 
     private fun event(id: String, startDay: Int, status: EventStatus = EventStatus.ACTIVO, title: String = id) = Event(

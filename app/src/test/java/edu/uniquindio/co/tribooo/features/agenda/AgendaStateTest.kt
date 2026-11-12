@@ -19,8 +19,8 @@ import java.time.YearMonth
 
 class AgendaStateTest {
 
-    private val me = User("me", "Ana", "a@mail.co", "123456", "Armenia", "Centro")
-    private val other = User("x", "Otro", "o@mail.co", "123456", "Armenia", "Centro")
+    private val me = User("me", "Ana", "a@mail.co", "Armenia", "Centro")
+    private val other = User("x", "Otro", "o@mail.co", "Armenia", "Centro")
     private val today = LocalDate.of(2026, 10, 21)
 
     private fun event(

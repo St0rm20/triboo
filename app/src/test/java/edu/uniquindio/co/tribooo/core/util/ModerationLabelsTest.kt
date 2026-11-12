@@ -15,7 +15,7 @@ import java.time.Instant
 
 class ModerationLabelsTest {
 
-    private val user = User("u", "Camilo Arango", "c@mail.co", "123456", "Armenia", "Centro")
+    private val user = User("u", "Camilo Arango", "c@mail.co", "Armenia", "Centro")
     private val event = Event(
         id = "e", title = "Evento", description = "", startDate = Instant.now(), endDate = Instant.now(),
         place = "", neighborhood = "", location = Location(0.0, 0.0), organizer = user, category = Category.SOCIAL

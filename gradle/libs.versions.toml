@@ -8,7 +8,7 @@ espressoCore = "3.7.0"
 lifecycleRuntimeKtx = "2.10.0"
 lifecycleViewmodelCompose = "2.10.0"
 activityCompose = "1.13.0"
-kotlin = "2.2.10"
+kotlin = "2.4.20"
 composeBom = "2024.09.00"
 navigationCompose = "2.8.9"
 kotlinxSerialization = "1.8.1"
@@ -20,8 +20,9 @@ coreSplashscreen = "1.2.0"
 ksp = "2.3.6" # Desde KSP 2.3.0 la versión ya no va atada a la versión de Kotlin
 mapbox = "11.22.0"
 googleGmsGoogleServices = "4.6.0"
-firebaseFirestore = "27.2.0"
-firebaseAuth = "25.0.0" # Desde KSP 2.3.0 la versión ya no va atada a la versión de Kotlin
+firebaseBom = "35.1.0"
+credentials = "1.5.0"
+googleId = "1.1.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,8 +53,13 @@ mapbox-android = { module = "com.mapbox.maps:android-ndk27", version.ref = "mapb
 mapbox-compose = { module = "com.mapbox.extension:maps-compose-ndk27", version.ref = "mapbox" }
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
-firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
-firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
+firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
+firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
+kotlinx-coroutines-play-services = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-play-services", version.ref = "kotlinxCoroutines" }
+androidx-credentials = { module = "androidx.credentials:credentials", version.ref = "credentials" }
+androidx-credentials-play-services-auth = { module = "androidx.credentials:credentials-play-services-auth", version.ref = "credentials" }
+googleid = { module = "com.google.android.libraries.identity.googleid:googleid", version.ref = "googleId" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

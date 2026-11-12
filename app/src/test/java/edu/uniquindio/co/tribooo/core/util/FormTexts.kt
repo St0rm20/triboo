@@ -36,6 +36,7 @@ object FormTexts {
     val REJECT_REASON_REQUIRED get() = text(R.string.form_reject_reason_required)
     val LOGIN_SUCCESS get() = text(R.string.form_login_success)
     val ACCOUNT_CREATED get() = text(R.string.form_account_created)
+    val AUTH_NETWORK_ERROR get() = text(R.string.auth_error_network)
 
     fun recoveryReminder(email: String) = resources.getString(R.string.form_recovery_reminder, email)
 }

@@ -23,7 +23,7 @@ import java.time.Instant
 class UserProfileTest {
 
     private fun user(id: String, role: UserRole = UserRole.USER) =
-        User(id, "Usuario $id", "$id@mail.co", "123456", "Armenia", "Centro", role = role)
+        User(id, "Usuario $id", "$id@mail.co", "Armenia", "Centro", role = role)
 
     private val me = user("me")
     private val org = user("org")
