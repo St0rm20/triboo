@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "comment.schema.json",
+  "title": "Comment",
+  "description": "Comentario o reseña de un evento; las respuestas del organizador llevan parentCommentId.",
+  "x-firestore-collection": "comments",
+  "x-document-id": "UUID generado por la app",
+  "x-dto": "edu.uniquindio.co.tribooo.data.remote.comment.CommentDto",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "eventId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "events",
+      "description": "Evento comentado."
+    },
+    "authorId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "users",
+      "description": "Autor."
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "x-firestore-type": "timestamp",
+      "description": "Fecha del comentario."
+    },
+    "rating": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "description": "Calificación 1-5; null si no califica.",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "parentCommentId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "x-firestore-ref": "comments",
+      "description": "Comentario que responde; null si es de primer nivel."
+    }
+  },
+  "required": [
+    "id",
+    "eventId",
+    "authorId",
+    "text",
+    "date"
+  ],
+  "additionalProperties": false
+}

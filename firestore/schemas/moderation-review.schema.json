@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "moderation-review.schema.json",
+  "title": "ModerationReview",
+  "description": "Historial de acciones de moderación (solo se crean, nunca se editan).",
+  "x-firestore-collection": "moderationReviews",
+  "x-document-id": "UUID generado por la app",
+  "x-dto": "edu.uniquindio.co.tribooo.data.remote.moderationreview.ModerationReviewDto",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "eventId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "events",
+      "description": "Evento revisado."
+    },
+    "adminId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "users",
+      "description": "Administrador (role = ADMIN)."
+    },
+    "action": {
+      "type": "string",
+      "enum": [
+        "VERIFICAR",
+        "RECHAZAR",
+        "RESTAURAR",
+        "RESOLVER"
+      ]
+    },
+    "reason": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Motivo; obligatorio al rechazar."
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "x-firestore-type": "timestamp",
+      "description": "Fecha de la revisión."
+    }
+  },
+  "required": [
+    "id",
+    "eventId",
+    "adminId",
+    "action",
+    "date"
+  ],
+  "additionalProperties": false
+}

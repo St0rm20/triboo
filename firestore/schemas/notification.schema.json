@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "notification.schema.json",
+  "title": "Notification",
+  "description": "Notificación para un usuario.",
+  "x-firestore-collection": "notifications",
+  "x-document-id": "UUID generado por la app",
+  "x-dto": "edu.uniquindio.co.tribooo.data.remote.notification.NotificationDto",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "destinationUserId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "users",
+      "description": "Destinatario."
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "COMMENT",
+        "FOLLOWER",
+        "APPROVAL",
+        "REJECTION"
+      ]
+    },
+    "reference": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Id del elemento según el tipo: comentario (COMMENT), usuario seguidor (FOLLOWER) o evento (APPROVAL/REJECTION)."
+    },
+    "read": {
+      "type": "boolean",
+      "default": false
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "x-firestore-type": "timestamp",
+      "description": "Fecha de la notificación."
+    }
+  },
+  "required": [
+    "id",
+    "destinationUserId",
+    "type",
+    "read",
+    "date"
+  ],
+  "additionalProperties": false
+}

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "category.schema.json",
+  "title": "Category",
+  "description": "Catálogo de categorías; se siembra con Category.defaultCategories.",
+  "x-firestore-collection": "categories",
+  "x-document-id": "id de la categoría (p. ej. \"deportes\")",
+  "x-dto": "edu.uniquindio.co.tribooo.data.remote.category.CategoryDto",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "key": {
+      "type": "string",
+      "description": "Clave estable para el texto traducido en los recursos."
+    },
+    "icon": {
+      "type": "string",
+      "description": "Nombre del ícono de Material Symbols."
+    },
+    "color": {
+      "type": "string",
+      "description": "Color en hexadecimal.",
+      "pattern": "^#[0-9A-Fa-f]{6}$"
+    }
+  },
+  "required": [
+    "id",
+    "key",
+    "icon",
+    "color"
+  ],
+  "additionalProperties": false
+}

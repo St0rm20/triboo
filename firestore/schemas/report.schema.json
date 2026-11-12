@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "report.schema.json",
+  "title": "Report",
+  "description": "Reporte de un vecino sobre un evento.",
+  "x-firestore-collection": "reports",
+  "x-document-id": "UUID generado por la app",
+  "x-dto": "edu.uniquindio.co.tribooo.data.remote.report.ReportDto",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "eventId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "events",
+      "description": "Evento reportado."
+    },
+    "reporterId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "users",
+      "description": "Quien reporta."
+    },
+    "reason": {
+      "type": "string",
+      "description": "Clave de ReportReasons.",
+      "enum": [
+        "false_info",
+        "no_longer_exists",
+        "charges_or_ads",
+        "wrong_place_or_contact",
+        "offensive_or_unsafe",
+        "spam_or_duplicate"
+      ]
+    },
+    "detail": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Detalle opcional."
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "x-firestore-type": "timestamp",
+      "description": "Fecha del reporte."
+    },
+    "resolved": {
+      "type": "boolean",
+      "default": false
+    }
+  },
+  "required": [
+    "id",
+    "eventId",
+    "reporterId",
+    "reason",
+    "date",
+    "resolved"
+  ],
+  "additionalProperties": false
+}

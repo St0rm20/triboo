@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "waitlist-entry.schema.json",
+  "title": "WaitlistEntry",
+  "description": "Persona en la lista de espera de un evento con el cupo lleno; el orden sale de joinedAt.",
+  "x-firestore-collection": "waitlist",
+  "x-document-id": "\"{userId}_{eventId}\"",
+  "x-dto": "edu.uniquindio.co.tribooo.data.remote.waitlist.WaitlistEntryDto",
+  "type": "object",
+  "properties": {
+    "userId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "users",
+      "description": "Usuario en espera."
+    },
+    "eventId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "events",
+      "description": "Evento."
+    },
+    "joinedAt": {
+      "type": "string",
+      "format": "date-time",
+      "x-firestore-type": "timestamp",
+      "description": "Momento en que entró a la lista."
+    }
+  },
+  "required": [
+    "userId",
+    "eventId",
+    "joinedAt"
+  ],
+  "additionalProperties": false
+}
