@@ -9,6 +9,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
@@ -50,6 +51,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.outlined.Flag
 import androidx.compose.material.icons.rounded.Bookmark
 import androidx.compose.material.icons.rounded.BookmarkBorder
 import androidx.compose.material.icons.rounded.Category
@@ -59,10 +61,12 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.EventBusy
+import androidx.compose.material.icons.rounded.TaskAlt
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Payments
 import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
@@ -71,6 +75,8 @@ import androidx.compose.material.icons.rounded.VolunteerActivism
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -100,6 +106,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -111,12 +119,23 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import edu.uniquindio.co.tribooo.R
+import edu.uniquindio.co.tribooo.core.component.AttendanceDialogs
+import edu.uniquindio.co.tribooo.core.component.ConfirmAlertDialog
+import edu.uniquindio.co.tribooo.core.component.FieldSupport
+import edu.uniquindio.co.tribooo.core.component.RequiredLegend
+import edu.uniquindio.co.tribooo.core.component.errorSemantics
+import edu.uniquindio.co.tribooo.core.component.formTarget
+import edu.uniquindio.co.tribooo.core.util.FormLimits
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
-import edu.uniquindio.co.tribooo.core.component.MapPlaceholder
+import com.mapbox.geojson.Point
+import edu.uniquindio.co.tribooo.core.component.MapBox
+import edu.uniquindio.co.tribooo.core.component.MapPin
 import edu.uniquindio.co.tribooo.core.component.WrapRow
 import edu.uniquindio.co.tribooo.core.component.avatarColors
 import edu.uniquindio.co.tribooo.core.component.iconVector
 import edu.uniquindio.co.tribooo.core.theme.categoryColors
+import edu.uniquindio.co.tribooo.core.util.ResourceProviderImpl
 import edu.uniquindio.co.tribooo.core.util.agoLabel
 import edu.uniquindio.co.tribooo.core.util.cupoLabel
 import edu.uniquindio.co.tribooo.core.util.eventDaysLabel
@@ -128,8 +147,12 @@ import edu.uniquindio.co.tribooo.core.util.formatThousands
 import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.core.util.isCupoTight
 import edu.uniquindio.co.tribooo.core.util.kmLabel
+import edu.uniquindio.co.tribooo.core.util.localizedName
 import edu.uniquindio.co.tribooo.core.util.occupancy
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
+import edu.uniquindio.co.tribooo.core.util.waitlistLabel
 import edu.uniquindio.co.tribooo.domain.model.Event
+import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -141,6 +164,7 @@ private val HeroHeight = 224.dp
 @Composable
 fun EventDetailScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToUser: (userId: String) -> Unit,
     viewModel: EventDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -154,17 +178,50 @@ fun EventDetailScreen(
         }
     }
 
-    // El primer cuadro llega sin datos mientras se combinan los flujos del repositorio
-    val detail = state.detail ?: return
+    // Sin datos (cargando o evento inexistente) la pantalla igual ofrece volver
+    val detail = state.detail ?: run {
+        MissingEventContent(isLoading = state.isLoading, onBack = onNavigateBack)
+        return
+    }
 
     EventDetailContent(
         detail = detail,
         draft = state.draft,
+        showAttendees = state.showAttendees,
+        report = state.report,
+        attendanceStep = state.attendanceStep,
+        showFinalizeDialog = state.showFinalizeDialog,
         snackbarHostState = snackbarHostState,
         onBack = onNavigateBack,
         onShare = { context.shareEvent(detail.event) },
+        onNavigateToUser = onNavigateToUser,
         onAction = viewModel::onAction
     )
+}
+
+/** Pantalla mínima mientras el evento carga o si ya no está disponible; la flecha de atrás siempre funciona. */
+@Composable
+private fun MissingEventContent(isLoading: Boolean, onBack: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    Scaffold(containerColor = colors.surface) { innerPadding ->
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            IconButton(onClick = onBack, modifier = Modifier.padding(start = 4.dp, top = 4.dp)) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.common_back), tint = colors.onSurface)
+            }
+            Column(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator()
+                } else {
+                    Text(stringResource(R.string.detail_unavailable), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                    Button(onClick = onBack, modifier = Modifier.padding(top = 16.dp)) { Text(stringResource(R.string.common_back)) }
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -175,13 +232,16 @@ fun EventDetailScreen(
 fun EventDetailContent(
     detail: EventDetail,
     draft: CommentDraft,
+    showAttendees: Boolean,
+    report: ReportDraft?,
+    attendanceStep: AttendanceStep?,
+    showFinalizeDialog: Boolean,
     snackbarHostState: SnackbarHostState,
     onBack: () -> Unit,
     onShare: () -> Unit,
+    onNavigateToUser: (userId: String) -> Unit,
     onAction: (EventDetailAction) -> Unit
 ) {
-    var showAttendees by rememberSaveable { mutableStateOf(false) }
-
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = { DetailBottomBar(detail = detail, onAction = onAction) }
@@ -207,7 +267,8 @@ fun EventDetailContent(
                         detail = detail,
                         onBack = onBack,
                         onToggleSaved = { onAction(EventDetailAction.ToggleSaved) },
-                        onShare = onShare
+                        onShare = onShare,
+                        onReport = { onAction(EventDetailAction.ShowReport) }
                     )
                 }
 
@@ -220,14 +281,20 @@ fun EventDetailContent(
                 }
 
                 item(key = "organizer") {
-                    OrganizerCard(detail = detail, onToggleFollow = { onAction(EventDetailAction.ToggleFollow) })
+                    OrganizerCard(
+                        detail = detail,
+                        onToggleFollow = { onAction(EventDetailAction.ToggleFollow) },
+                        onOpenProfile = {
+                            if (!detail.isMine) onNavigateToUser(detail.event.organizer.id)
+                        }
+                    )
                 }
 
                 item(key = "about") {
                     Column(modifier = Modifier.padding(horizontal = ContentPadding)) {
-                        SectionTitle("Sobre el evento")
+                        SectionTitle(stringResource(R.string.detail_about))
                         Text(
-                            text = detail.event.description.ifBlank { "El organizador no agregó una descripción." },
+                            text = detail.event.description.ifBlank { stringResource(R.string.detail_no_description) },
                             fontSize = 15.sp,
                             lineHeight = 24.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -237,17 +304,22 @@ fun EventDetailContent(
 
                 item(key = "meeting-point") {
                     Column(modifier = Modifier.padding(horizontal = ContentPadding)) {
-                        SectionTitle("Punto de encuentro")
-                        MapPlaceholder(
+                        SectionTitle(stringResource(R.string.detail_meeting_point))
+                        MapBox(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(128.dp)
+                                .height(160.dp),
+                            // Point.fromLngLat lleva primero la longitud
+                            center = Point.fromLngLat(detail.event.location.longitude, detail.event.location.latitude),
+                            zoom = 15.5,
+                            pins = listOf(MapPin(detail.event.id, detail.event.category, detail.event.location)),
+                            interactive = false
                         )
                     }
                 }
 
                 item(key = "attendees") {
-                    AttendeesSection(detail = detail, onSeeAll = { showAttendees = true })
+                    AttendeesSection(detail = detail, onSeeAll = { onAction(EventDetailAction.ShowAttendees) })
                 }
 
                 item(key = "comments-header") { CommentsHeader(detail = detail) }
@@ -255,6 +327,9 @@ fun EventDetailContent(
                 items(detail.comments, key = { it.id }) { comment ->
                     CommentCard(
                         comment = comment,
+                        onOpenProfile = {
+                            if (!comment.author.isCurrentUser) onNavigateToUser(comment.author.id)
+                        },
                         modifier = Modifier.padding(horizontal = ContentPadding, vertical = 5.dp)
                     )
                 }
@@ -281,8 +356,37 @@ fun EventDetailContent(
         }
     }
 
+    if (report != null) {
+        ReportEventSheet(event = detail.event, draft = report, onAction = onAction)
+    }
+
+    AttendanceDialogs(
+        step = attendanceStep,
+        onCancel = { onAction(EventDetailAction.CancelAttendance) },
+        onContinue = { onAction(EventDetailAction.ContinueAttendance) }
+    )
+
+    if (showFinalizeDialog) {
+        ConfirmAlertDialog(
+            title = stringResource(R.string.detail_finalize_title),
+            message = stringResource(R.string.detail_finalize_message),
+            confirmLabel = stringResource(R.string.detail_finalize_confirm),
+            dismissLabel = stringResource(R.string.common_cancel),
+            onConfirm = { onAction(EventDetailAction.ConfirmFinalize) },
+            onDismiss = { onAction(EventDetailAction.DismissFinalize) }
+        )
+    }
+
     if (showAttendees) {
-        AttendeesSheet(detail = detail, onDismiss = { showAttendees = false })
+        AttendeesSheet(
+            detail = detail,
+            onDismiss = { onAction(EventDetailAction.HideAttendees) },
+            onOpenProfile = { userId ->
+                // Se cierra la hoja para que no quede abierta al volver
+                onAction(EventDetailAction.HideAttendees)
+                onNavigateToUser(userId)
+            }
+        )
     }
 }
 
@@ -291,7 +395,8 @@ private fun HeroCover(
     detail: EventDetail,
     onBack: () -> Unit,
     onToggleSaved: () -> Unit,
-    onShare: () -> Unit
+    onShare: () -> Unit,
+    onReport: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
     val cover = detail.event.imageUrl
@@ -316,7 +421,7 @@ private fun HeroCover(
         } else {
             AsyncImage(
                 model = cover,
-                contentDescription = "Portada · ${detail.event.title}",
+                contentDescription = stringResource(R.string.detail_cover_description, detail.event.title),
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
@@ -331,22 +436,32 @@ private fun HeroCover(
         ) {
             FloatingCircleButton(
                 icon = Icons.AutoMirrored.Rounded.ArrowBack,
-                contentDescription = "Volver",
+                contentDescription = stringResource(R.string.common_back),
                 onClick = onBack
             )
             Spacer(Modifier.weight(1f))
             FloatingCircleButton(
                 icon = if (detail.isSaved) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                contentDescription = if (detail.isSaved) "Quitar de guardados" else "Guardar evento",
+                contentDescription = stringResource(if (detail.isSaved) R.string.detail_unsave else R.string.detail_save),
                 onClick = onToggleSaved,
                 container = if (detail.isSaved) colors.primaryContainer else colors.surfaceContainerLowest,
                 content = if (detail.isSaved) colors.onPrimaryContainer else colors.onSurface
             )
             FloatingCircleButton(
                 icon = Icons.Rounded.Share,
-                contentDescription = "Compartir evento",
+                contentDescription = stringResource(R.string.detail_share),
                 onClick = onShare
             )
+            // El organizador no puede reportar su propio evento
+            if (!detail.isMine) {
+                FloatingCircleButton(
+                    icon = if (detail.hasReported) Icons.Rounded.Flag else Icons.Outlined.Flag,
+                    contentDescription = stringResource(if (detail.hasReported) R.string.detail_already_reported else R.string.detail_report),
+                    onClick = onReport,
+                    container = if (detail.hasReported) colors.errorContainer else colors.surfaceContainerLowest,
+                    content = if (detail.hasReported) colors.onErrorContainer else colors.onSurface
+                )
+            }
         }
 
         // Borde redondeado de la hoja de contenido que se monta sobre la portada
@@ -380,9 +495,9 @@ private fun EventGallery(images: List<String>, eventTitle: String) {
             verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text("Galería del evento", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+            Text(stringResource(R.string.detail_gallery), fontSize = 16.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
             Text(
-                "${pagerState.currentPage + 1} de ${images.size}",
+                stringResource(R.string.detail_gallery_counter, pagerState.currentPage + 1, images.size),
                 fontSize = 12.sp,
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 1.dp)
@@ -399,7 +514,7 @@ private fun EventGallery(images: List<String>, eventTitle: String) {
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 AsyncImage(
                     model = images[page],
-                    contentDescription = "Foto ${page + 1} de ${images.size} · $eventTitle",
+                    contentDescription = stringResource(R.string.detail_gallery_photo, page + 1, images.size, eventTitle),
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize()
                 )
@@ -408,7 +523,7 @@ private fun EventGallery(images: List<String>, eventTitle: String) {
             if (images.size > 1) {
                 FloatingCircleButton(
                     icon = Icons.Rounded.ChevronLeft,
-                    contentDescription = "Foto anterior",
+                    contentDescription = stringResource(R.string.detail_gallery_previous),
                     onClick = { goTo(pagerState.currentPage - 1) },
                     size = 36.dp,
                     iconSize = 20.dp,
@@ -418,7 +533,7 @@ private fun EventGallery(images: List<String>, eventTitle: String) {
                 )
                 FloatingCircleButton(
                     icon = Icons.Rounded.ChevronRight,
-                    contentDescription = "Foto siguiente",
+                    contentDescription = stringResource(R.string.detail_gallery_next),
                     onClick = { goTo(pagerState.currentPage + 1) },
                     size = 36.dp,
                     iconSize = 20.dp,
@@ -463,11 +578,11 @@ private fun DetailHeader(event: Event) {
 
     Column(modifier = Modifier.padding(horizontal = ContentPadding)) {
         WrapRow {
-            Pill(icon = event.category.iconVector(), text = event.category.name, container = tones.container, content = tones.content)
+            Pill(icon = event.category.iconVector(), text = event.category.localizedName(), container = tones.container, content = tones.content)
             if (event.verified) {
                 Pill(
                     icon = Icons.Rounded.Verified,
-                    text = "Verificado por moderación",
+                    text = stringResource(R.string.detail_verified),
                     container = colors.secondaryContainer,
                     content = colors.onSecondaryContainer
                 )
@@ -488,23 +603,40 @@ private fun DetailHeader(event: Event) {
 private fun InfoCard(detail: EventDetail) {
     val event = detail.event
     val contribution = event.contribution
+    val rp = rememberResourceProvider()
     val rows = listOf(
-        InfoRowData(Icons.Rounded.Event, eventDaysLabel(event.startDate, event.endDate), "Inicio y fin del evento"),
-        InfoRowData(Icons.Rounded.Schedule, eventHoursLabel(event.startDate, event.endDate), "Hora local (Armenia, UTC-5)"),
-        InfoRowData(Icons.Rounded.Place, event.place, "${event.neighborhood} · a ${detail.distanceKm.kmLabel()} de ti"),
+        InfoRowData(
+            Icons.Rounded.Event,
+            eventDaysLabel(rp, event.startDate, event.endDate),
+            stringResource(R.string.detail_info_dates)
+        ),
+        InfoRowData(
+            Icons.Rounded.Schedule,
+            eventHoursLabel(event.startDate, event.endDate),
+            stringResource(R.string.detail_info_timezone)
+        ),
+        InfoRowData(
+            Icons.Rounded.Place,
+            event.place,
+            stringResource(R.string.detail_info_distance, event.neighborhood, detail.distanceKm.kmLabel())
+        ),
         InfoRowData(
             Icons.Rounded.Category,
-            event.category.name,
-            if (event.verified) "Categoría verificada por moderación" else "Categoría del evento"
+            event.category.localizedName(),
+            stringResource(if (event.verified) R.string.detail_info_category_verified else R.string.detail_info_category)
         ),
         if (contribution != null) {
             InfoRowData(
                 Icons.Rounded.VolunteerActivism,
-                "${contribution.amount.formatMoney()} · aporte benéfico",
-                contribution.cause ?: "Aporte voluntario para la causa del evento"
+                stringResource(R.string.detail_info_contribution, contribution.amount.formatMoney()),
+                contribution.cause ?: stringResource(R.string.detail_info_contribution_default_cause)
             )
         } else {
-            InfoRowData(Icons.Rounded.Payments, "Entrada libre", "Sin costo ni aporte de inscripción")
+            InfoRowData(
+                Icons.Rounded.Payments,
+                stringResource(R.string.detail_info_free),
+                stringResource(R.string.detail_info_free_hint)
+            )
         }
     )
 
@@ -542,6 +674,7 @@ private fun InfoRow(row: InfoRowData) {
 @Composable
 private fun CupoCard(detail: EventDetail) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
     val event = detail.event
     val tight = event.isCupoTight(detail.attendeesCount)
     val container = if (tight) colors.errorContainer else colors.primaryContainer
@@ -562,8 +695,8 @@ private fun CupoCard(detail: EventDetail) {
     ) {
         Column(modifier = Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(event.cupoLabel(detail.attendeesCount), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = content)
-                Text("cupo ${event.cupo}", fontSize = 12.sp, color = content)
+                Text(event.cupoLabel(rp, detail.attendeesCount), fontSize = 14.sp, fontWeight = FontWeight.Medium, color = content)
+                Text(stringResource(R.string.detail_cupo_pill, event.cupo ?: 0), fontSize = 12.sp, color = content)
             }
             Box(
                 modifier = Modifier
@@ -586,14 +719,16 @@ private fun CupoCard(detail: EventDetail) {
 }
 
 @Composable
-private fun OrganizerCard(detail: EventDetail, onToggleFollow: () -> Unit) {
+private fun OrganizerCard(detail: EventDetail, onToggleFollow: () -> Unit, onOpenProfile: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val organizer = detail.event.organizer
-    val eventsLabel = if (detail.organizerEventsCount == 1) "1 evento" else "${detail.organizerEventsCount} eventos"
+    val eventsLabel = pluralStringResource(R.plurals.common_events_count, detail.organizerEventsCount, detail.organizerEventsCount)
 
     DetailCard(modifier = Modifier.padding(start = ContentPadding, end = ContentPadding, top = 12.dp)) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier
+                .then(if (detail.isMine) Modifier else Modifier.clickable(onClick = onOpenProfile))
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -603,12 +738,13 @@ private fun OrganizerCard(detail: EventDetail, onToggleFollow: () -> Unit) {
                 content = colors.onTertiaryContainer,
                 size = 46.dp,
                 shape = RoundedCornerShape(16.dp),
-                fontSize = 15.sp
+                fontSize = 15.sp,
+                photo = detail.organizerPhoto
             )
             Column(modifier = Modifier.weight(1f)) {
                 Text(organizer.name, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
                 Text(
-                    text = if (detail.isMine) "Tú organizas · $eventsLabel" else "Organizador · $eventsLabel",
+                    text = stringResource(if (detail.isMine) R.string.detail_organizer_mine else R.string.detail_organizer, eventsLabel),
                     fontSize = 12.sp,
                     color = colors.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
@@ -625,7 +761,7 @@ private fun OrganizerCard(detail: EventDetail, onToggleFollow: () -> Unit) {
                     modifier = Modifier.height(36.dp)
                 ) {
                     Box(modifier = Modifier.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
-                        Text(if (following) "Siguiendo" else "Seguir", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        Text(stringResource(if (following) R.string.detail_following else R.string.detail_follow), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -645,7 +781,7 @@ private fun AttendeesSection(detail: EventDetail, onSeeAll: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "Asistentes · ${detail.attendeesCount.formatThousands()}",
+                stringResource(R.string.detail_attendees_count, detail.attendeesCount.formatThousands()),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.onSurface,
@@ -653,13 +789,13 @@ private fun AttendeesSection(detail: EventDetail, onSeeAll: () -> Unit) {
             )
             if (detail.attendees.isNotEmpty()) {
                 TextButton(onClick = onSeeAll, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                    Text("Ver todos", fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                    Text(stringResource(R.string.detail_see_all), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 }
             }
         }
         if (detail.attendees.isEmpty()) {
             Text(
-                "Aún nadie confirma. ¡Sé el primero!",
+                stringResource(R.string.detail_no_attendees),
                 fontSize = 14.sp,
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(horizontal = ContentPadding, vertical = 10.dp)
@@ -679,7 +815,8 @@ private fun AttendeesSection(detail: EventDetail, onSeeAll: () -> Unit) {
                             content = fg,
                             size = 48.dp,
                             shape = RoundedCornerShape(18.dp),
-                            fontSize = 15.sp
+                            fontSize = 15.sp,
+                            photo = person.photo
                         )
                         Text(
                             person.name.firstName(),
@@ -699,7 +836,7 @@ private fun AttendeesSection(detail: EventDetail, onSeeAll: () -> Unit) {
 /** Hoja con la lista completa de asistentes confirmados. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AttendeesSheet(detail: EventDetail, onDismiss: () -> Unit) {
+private fun AttendeesSheet(detail: EventDetail, onDismiss: () -> Unit, onOpenProfile: (userId: String) -> Unit) {
     val colors = MaterialTheme.colorScheme
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
@@ -707,11 +844,11 @@ private fun AttendeesSheet(detail: EventDetail, onDismiss: () -> Unit) {
     val close: () -> Unit = {
         scope.launch { sheetState.hide() }.invokeOnCompletion { onDismiss() }
     }
-    val summary = if (detail.attendeesCount == 1) {
-        "1 persona confirmó su asistencia"
-    } else {
-        "${detail.attendeesCount.formatThousands()} personas confirmaron su asistencia"
-    }
+    val summary = pluralStringResource(
+        R.plurals.detail_attendees_summary,
+        detail.attendeesCount,
+        detail.attendeesCount.formatThousands()
+    )
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -722,7 +859,7 @@ private fun AttendeesSheet(detail: EventDetail, onDismiss: () -> Unit) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Icon(Icons.Rounded.Groups, contentDescription = null, tint = colors.primary, modifier = Modifier.size(24.dp))
                 Text(
-                    "Asistentes",
+                    stringResource(R.string.detail_attendees_title),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Medium,
                     color = colors.onSurface,
@@ -730,7 +867,7 @@ private fun AttendeesSheet(detail: EventDetail, onDismiss: () -> Unit) {
                 )
                 FloatingCircleButton(
                     icon = Icons.Rounded.Close,
-                    contentDescription = "Cerrar",
+                    contentDescription = stringResource(R.string.common_close),
                     onClick = close,
                     size = 40.dp,
                     iconSize = 21.dp,
@@ -753,14 +890,14 @@ private fun AttendeesSheet(detail: EventDetail, onDismiss: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             itemsIndexed(detail.attendees, key = { _, person -> person.id }) { index, person ->
-                AttendeeRow(person = person, seed = index)
+                AttendeeRow(person = person, seed = index, onClick = { onOpenProfile(person.id) })
             }
         }
     }
 }
 
 @Composable
-private fun AttendeeRow(person: PersonItem, seed: Int) {
+private fun AttendeeRow(person: PersonItem, seed: Int, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val (bg, fg) = avatarColors(seed)
 
@@ -769,6 +906,7 @@ private fun AttendeeRow(person: PersonItem, seed: Int) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(colors.surfaceContainerLow)
+            .then(if (person.isCurrentUser) Modifier else Modifier.clickable(onClick = onClick))
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -779,12 +917,17 @@ private fun AttendeeRow(person: PersonItem, seed: Int) {
             content = fg,
             size = 44.dp,
             shape = RoundedCornerShape(16.dp),
-            fontSize = 14.sp
+            fontSize = 14.sp,
+            photo = person.photo
         )
         Column(modifier = Modifier.weight(1f)) {
             Text(person.name, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
             Text(
-                text = if (person.isCurrentUser) "Confirmaste tu asistencia" else "Vecino de ${person.neighborhood}",
+                text = if (person.isCurrentUser) {
+                    stringResource(R.string.detail_person_you_attend)
+                } else {
+                    stringResource(R.string.detail_person_neighbor_of, person.neighborhood)
+                },
                 fontSize = 12.sp,
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp)
@@ -799,16 +942,20 @@ private fun AttendeeRow(person: PersonItem, seed: Int) {
 @Composable
 private fun CommentsHeader(detail: EventDetail) {
     val average = detail.averageRating
-    val ratingsLabel = if (detail.ratingsCount == 1) "1 reseña" else "${detail.ratingsCount} reseñas"
+    val ratingsLabel = pluralStringResource(R.plurals.detail_reviews_count, detail.ratingsCount, detail.ratingsCount)
 
     Row(
         modifier = Modifier.padding(start = ContentPadding, end = ContentPadding, top = 24.dp, bottom = 5.dp),
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Text("Comentarios · ${detail.comments.size}", fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        Text(stringResource(R.string.detail_comments_count, detail.comments.size), fontSize = 16.sp, fontWeight = FontWeight.Medium)
         Text(
-            text = if (average != null) "${String.format(Locale.US, "%.1f", average)} ★ de $ratingsLabel" else "Sin reseñas aún",
+            text = if (average != null) {
+                stringResource(R.string.detail_rating_summary, String.format(Locale.US, "%.1f", average), ratingsLabel)
+            } else {
+                stringResource(R.string.detail_no_reviews)
+            },
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(bottom = 1.dp)
@@ -817,7 +964,8 @@ private fun CommentsHeader(detail: EventDetail) {
 }
 
 @Composable
-private fun CommentCard(comment: CommentItem, modifier: Modifier = Modifier) {
+private fun CommentCard(comment: CommentItem, onOpenProfile: () -> Unit, modifier: Modifier = Modifier) {
+    val rp = rememberResourceProvider()
     val colors = MaterialTheme.colorScheme
     val (bg, fg) = avatarColors(comment.author.id.hashCode())
 
@@ -826,11 +974,21 @@ private fun CommentCard(comment: CommentItem, modifier: Modifier = Modifier) {
             modifier = Modifier.padding(horizontal = 15.dp, vertical = 13.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            InitialsAvatar(initials = comment.author.initials, container = bg, content = fg)
+            InitialsAvatar(
+                initials = comment.author.initials,
+                container = bg,
+                content = fg,
+                modifier = if (comment.author.isCurrentUser) Modifier else Modifier.clickable(onClick = onOpenProfile),
+                photo = comment.author.photo
+            )
             Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = if (comment.author.isCurrentUser) Modifier else Modifier.clickable(onClick = onOpenProfile),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Text(comment.author.name, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
-                    Text(comment.date.agoLabel(), fontSize = 11.sp, color = colors.onSurfaceVariant)
+                    Text(comment.date.agoLabel(rp), fontSize = 11.sp, color = colors.onSurfaceVariant)
                     comment.rating?.let { rating ->
                         Pill(
                             icon = Icons.Rounded.Star,
@@ -860,7 +1018,7 @@ private fun CommentCard(comment: CommentItem, modifier: Modifier = Modifier) {
 @Composable
 private fun CommentForm(draft: CommentDraft, onAction: (EventDetailAction) -> Unit) {
     val colors = MaterialTheme.colorScheme
-    val canSend = draft.text.isNotBlank()
+    val resources = rememberResourceProvider()
 
     // Cuando el teclado termina de abrir, el campo completo (con el botón) queda visible
     val inputRequester = remember { BringIntoViewRequester() }
@@ -873,22 +1031,25 @@ private fun CommentForm(draft: CommentDraft, onAction: (EventDetailAction) -> Un
     val focusManager = LocalFocusManager.current
     val send = {
         onAction(EventDetailAction.SendComment)
-        focusManager.clearFocus()
+        // Con el comentario vacío el foco debe quedarse (o volver) en el campo
+        if (draft.text.isNotBlank()) focusManager.clearFocus()
     }
 
     Column(modifier = Modifier.padding(start = ContentPadding, end = ContentPadding, top = 7.dp)) {
+        RequiredLegend(modifier = Modifier.padding(bottom = 6.dp))
+
         // Calificación opcional
         DetailCard(shape = RoundedCornerShape(20.dp)) {
             Column(modifier = Modifier.padding(start = 12.dp, end = 12.dp, top = 10.dp, bottom = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        "Calificación (opcional)",
+                        stringResource(R.string.detail_rating_optional),
                         fontSize = 12.sp,
                         color = colors.onSurfaceVariant,
                         modifier = Modifier.weight(1f)
                     )
                     Text(
-                        text = if (draft.rating > 0) "${draft.rating} / 5" else "Sin calificar",
+                        text = if (draft.rating > 0) stringResource(R.string.detail_rating_value, draft.rating) else stringResource(R.string.detail_rating_none),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium,
                         color = if (draft.rating > 0) colors.primary else colors.onSurfaceVariant
@@ -907,7 +1068,7 @@ private fun CommentForm(draft: CommentDraft, onAction: (EventDetailAction) -> Un
                                 horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 Icon(Icons.Rounded.Close, contentDescription = null, modifier = Modifier.size(14.dp))
-                                Text("Quitar", fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                Text(stringResource(R.string.detail_rating_clear), fontSize = 11.sp, fontWeight = FontWeight.Medium)
                             }
                         }
                     }
@@ -918,14 +1079,14 @@ private fun CommentForm(draft: CommentDraft, onAction: (EventDetailAction) -> Un
                         IconButton(onClick = { onAction(EventDetailAction.RatingChange(star)) }) {
                             Icon(
                                 imageVector = if (filled) Icons.Rounded.Star else Icons.Rounded.StarBorder,
-                                contentDescription = "$star de 5",
+                                contentDescription = stringResource(R.string.detail_rating_star, star),
                                 tint = if (filled) colors.primary else colors.outlineVariant,
                                 modifier = Modifier.size(27.dp)
                             )
                         }
                     }
                 }
-                Text("Toca de nuevo la misma estrella para quitarla.", fontSize = 11.sp, color = colors.onSurfaceVariant)
+                Text(stringResource(R.string.detail_rating_hint), fontSize = 11.sp, color = colors.onSurfaceVariant)
             }
         }
 
@@ -937,6 +1098,7 @@ private fun CommentForm(draft: CommentDraft, onAction: (EventDetailAction) -> Un
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
                 .background(colors.surfaceContainer)
+                .then(if (draft.error(resources) != null) Modifier.border(1.dp, colors.error, RoundedCornerShape(24.dp)) else Modifier)
                 .padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -952,33 +1114,46 @@ private fun CommentForm(draft: CommentDraft, onAction: (EventDetailAction) -> Un
                 modifier = Modifier
                     .weight(1f)
                     .padding(vertical = 10.dp)
+                    .errorSemantics(draft.error(resources))
+                    .formTarget(draft.focusRequested, { onAction(EventDetailAction.CommentFocusHandled) })
                     .onFocusChanged { inputFocused = it.isFocused },
                 decorationBox = { inner ->
                     if (draft.text.isEmpty()) {
-                        Text("Escribe un comentario", fontSize = 14.sp, color = colors.onSurfaceVariant)
+                        Text(stringResource(R.string.detail_comment_placeholder), fontSize = 14.sp, color = colors.onSurfaceVariant)
                     }
                     inner()
                 }
             )
             Surface(
                 onClick = send,
-                enabled = canSend,
+                enabled = !draft.isSending,
                 shape = CircleShape,
-                color = if (canSend) colors.primary else colors.surfaceContainerHigh,
-                contentColor = if (canSend) colors.onPrimary else colors.onSurfaceVariant,
+                color = colors.primary,
+                contentColor = colors.onPrimary,
                 modifier = Modifier.size(40.dp)
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = "Publicar comentario", modifier = Modifier.size(19.dp))
+                    if (draft.isSending) {
+                        CircularProgressIndicator(modifier = Modifier.size(19.dp), strokeWidth = 2.dp, color = colors.onPrimary)
+                    } else {
+                        Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = stringResource(R.string.detail_comment_send), modifier = Modifier.size(19.dp))
+                    }
                 }
             }
         }
+        FieldSupport(
+            error = draft.error(resources),
+            hint = stringResource(R.string.form_comment_hint),
+            counter = draft.text.length to FormLimits.COMMENT,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp)
+        )
     }
 }
 
 @Composable
 private fun DetailBottomBar(detail: EventDetail, onAction: (EventDetailAction) -> Unit) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
 
     Surface(color = colors.surfaceContainerLow, shadowElevation = 8.dp) {
         Row(
@@ -1009,23 +1184,49 @@ private fun DetailBottomBar(detail: EventDetail, onAction: (EventDetailAction) -
                     )
                     Column {
                         Text(detail.interestCount.formatThousands(), fontSize = 15.sp, lineHeight = 17.sp, fontWeight = FontWeight.Medium)
-                        Text("Me interesa", fontSize = 10.sp, lineHeight = 12.sp, modifier = Modifier.padding(top = 2.dp))
+                        Text(stringResource(R.string.detail_interested), fontSize = 10.sp, lineHeight = 12.sp, modifier = Modifier.padding(top = 2.dp))
                     }
                 }
             }
 
-            val waitlist = !detail.canToggleAttendance
+            if (detail.mainAction == MainAction.FINALIZE) {
+                MainActionButton(
+                    label = stringResource(R.string.detail_finalize_confirm),
+                    container = colors.secondaryContainer,
+                    content = colors.onSecondaryContainer,
+                    enabled = true,
+                    onClick = { onAction(EventDetailAction.FinalizeEvent) },
+                    modifier = Modifier.weight(1f)
+                )
+                return@Row
+            }
+            if (detail.mainAction == MainAction.FINALIZED) {
+                MainActionButton(
+                    label = stringResource(R.string.detail_finalized),
+                    container = colors.surfaceContainerHigh,
+                    content = colors.onSurfaceVariant,
+                    enabled = false,
+                    onClick = {},
+                    modifier = Modifier.weight(1f)
+                )
+                return@Row
+            }
+
+            val waitlist = detail.isWaitlistMode
+            val position = detail.waitlistPosition.takeIf { waitlist }
             Surface(
                 onClick = { onAction(EventDetailAction.ToggleAttendance) },
-                enabled = !waitlist,
+                enabled = detail.canToggleAttendance,
                 shape = RoundedCornerShape(18.dp),
                 color = when {
                     detail.isAttending -> colors.errorContainer
+                    position != null -> colors.secondaryContainer
                     waitlist -> colors.surfaceContainerHigh
                     else -> colors.primary
                 },
                 contentColor = when {
                     detail.isAttending -> colors.onErrorContainer
+                    position != null -> colors.onSecondaryContainer
                     waitlist -> colors.onSurfaceVariant
                     else -> colors.onPrimary
                 },
@@ -1044,15 +1245,44 @@ private fun DetailBottomBar(detail: EventDetail, onAction: (EventDetailAction) -
                     )
                     Text(
                         text = when {
-                            detail.isAttending -> "Cancelar asistencia"
-                            waitlist -> "Lista de espera"
-                            else -> "Confirmar"
+                            detail.isAttending -> stringResource(R.string.detail_cancel_attendance)
+                            position != null -> waitlistLabel(rp, position)
+                            waitlist -> stringResource(R.string.event_card_waitlist)
+                            else -> stringResource(R.string.detail_confirm)
                         },
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Medium
                     )
                 }
             }
+        }
+    }
+}
+
+/** Botón principal de la barra inferior para los estados del evento (finalizar / ya finalizado). */
+@Composable
+private fun MainActionButton(
+    label: String,
+    container: Color,
+    content: Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        shape = RoundedCornerShape(18.dp),
+        color = container,
+        contentColor = content,
+        modifier = modifier.height(56.dp)
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(imageVector = Icons.Rounded.TaskAlt, contentDescription = null, modifier = Modifier.size(20.dp))
+            Text(text = label, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -1136,15 +1366,16 @@ private fun FloatingCircleButton(
 
 /** Comparte el evento como texto con las apps instaladas. */
 private fun Context.shareEvent(event: Event) {
+    val rp = ResourceProviderImpl(this)
     val text = buildString {
         appendLine(event.title)
-        appendLine(eventWhenLabel(event.startDate, event.endDate))
-        appendLine("${event.place} · ${event.neighborhood}")
-        append("Nos vemos en Triboo.")
+        appendLine(eventWhenLabel(rp, event.startDate, event.endDate))
+        appendLine(rp.getString(R.string.common_dot_join, event.place, event.neighborhood))
+        append(rp.getString(R.string.detail_share_footer))
     }
     val intent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
         putExtra(Intent.EXTRA_TEXT, text)
     }
-    startActivity(Intent.createChooser(intent, "Compartir evento"))
+    startActivity(Intent.createChooser(intent, getString(R.string.detail_share)))
 }

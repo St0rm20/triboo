@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.core.component
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -9,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,10 +21,12 @@ import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Map
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Gavel
 import androidx.compose.material.icons.rounded.CalendarMonth
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material3.Badge
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -33,31 +37,38 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.R
 
 enum class MainTab(
-    val label: String,
+    @StringRes val label: Int,
     val icon: ImageVector,
     val selectedIcon: ImageVector
 ) {
-    FEED("Inicio", Icons.Outlined.Home, Icons.Rounded.Home),
-    EXPLORE("Explorar", Icons.Outlined.Map, Icons.Rounded.Map),
-    AGENDA("Agenda", Icons.Outlined.CalendarMonth, Icons.Rounded.CalendarMonth),
-    PROFILE("Perfil", Icons.Outlined.Person, Icons.Rounded.Person)
+    FEED(R.string.nav_home, Icons.Outlined.Home, Icons.Rounded.Home),
+    EXPLORE(R.string.nav_explore, Icons.Outlined.Map, Icons.Rounded.Map),
+    AGENDA(R.string.nav_agenda, Icons.Outlined.CalendarMonth, Icons.Rounded.CalendarMonth),
+    PROFILE(R.string.nav_profile, Icons.Outlined.Person, Icons.Rounded.Person)
 }
 
 /**
  * Barra inferior del prototipo: dos pestañas a cada lado y botón central para crear evento.
  * Las pestañas que no están en [enabledTabs] (aún sin pantalla) se muestran deshabilitadas.
+ * [selected] es null cuando la pantalla no pertenece a ninguna pestaña. Para el administrador
+ * ([isAdmin]) el botón central es un martillo con la insignia [moderationBadge] (si es mayor que 0);
+ * [onCreateClick] es siempre la acción central.
  */
 @Composable
 fun MainBottomBar(
-    selected: MainTab,
+    selected: MainTab?,
     onCreateClick: () -> Unit,
     enabledTabs: Set<MainTab>,
-    onTabSelected: (MainTab) -> Unit
+    onTabSelected: (MainTab) -> Unit,
+    isAdmin: Boolean = false,
+    moderationBadge: Int = 0
 ) {
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Row(
@@ -80,8 +91,19 @@ fun MainBottomBar(
                     modifier = Modifier.size(58.dp)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.Add, contentDescription = "Crear evento", modifier = Modifier.size(29.dp))
+                        Icon(
+                            imageVector = if (isAdmin) Icons.Rounded.Gavel else Icons.Rounded.Add,
+                            contentDescription = stringResource(if (isAdmin) R.string.nav_moderation else R.string.nav_create_event),
+                            modifier = Modifier.size(29.dp)
+                        )
                     }
+                }
+                if (isAdmin && moderationBadge > 0) {
+                    Badge(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError,
+                        modifier = Modifier.align(Alignment.TopEnd).offset(x = (-6).dp, y = 8.dp)
+                    ) { Text(moderationBadge.toString()) }
                 }
             }
             TabItem(MainTab.AGENDA, selected, enabledTabs, onTabSelected)
@@ -93,7 +115,7 @@ fun MainBottomBar(
 @Composable
 private fun RowScope.TabItem(
     tab: MainTab,
-    selected: MainTab,
+    selected: MainTab?,
     enabledTabs: Set<MainTab>,
     onTabSelected: (MainTab) -> Unit
 ) {
@@ -124,7 +146,7 @@ private fun RowScope.TabItem(
             )
         }
         Text(
-            text = tab.label,
+            text = stringResource(tab.label),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             color = if (isSelected) colors.onSurface else colors.onSurfaceVariant

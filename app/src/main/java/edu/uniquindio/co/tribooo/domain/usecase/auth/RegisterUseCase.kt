@@ -1,16 +1,14 @@
 package edu.uniquindio.co.tribooo.domain.usecase.auth
 
 import edu.uniquindio.co.tribooo.domain.model.User
-import edu.uniquindio.co.tribooo.domain.repository.SessionRepository
 import edu.uniquindio.co.tribooo.domain.repository.UserRepository
 import jakarta.inject.Inject
 import java.util.UUID
 
 class RegisterUseCase @Inject constructor(
-    private val userRepository: UserRepository,
-    private val sessionRepository: SessionRepository
+    private val userRepository: UserRepository
 ) {
-    /** Crea la cuenta e inicia sesión; retorna null si ya existe una cuenta con ese email. */
+    /** Crea la cuenta; retorna null si ya existe una cuenta con ese email. */
     suspend operator fun invoke(
         name: String,
         city: String,
@@ -30,7 +28,6 @@ class RegisterUseCase @Inject constructor(
             neighborhood = address.trim()
         )
         userRepository.save(user)
-        sessionRepository.saveSession(userId = user.id, role = user.role)
         return user
     }
 }

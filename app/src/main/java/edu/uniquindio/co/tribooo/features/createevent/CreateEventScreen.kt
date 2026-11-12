@@ -28,10 +28,10 @@ import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.EventAvailable
 import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Map
 import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Remove
 import androidx.compose.material.icons.rounded.Add
@@ -40,6 +40,7 @@ import androidx.compose.material.icons.rounded.Shield
 import androidx.compose.material.icons.rounded.VolunteerActivism
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,7 +48,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SelectableDates
@@ -77,28 +77,38 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.CategoryChip
 import edu.uniquindio.co.tribooo.core.component.WrapRow
+import edu.uniquindio.co.tribooo.core.component.FormErrorText
+import edu.uniquindio.co.tribooo.core.component.FormTextField
+import edu.uniquindio.co.tribooo.core.component.RequiredLegend
+import edu.uniquindio.co.tribooo.core.component.formTarget
 import edu.uniquindio.co.tribooo.core.util.APP_ZONE
+import edu.uniquindio.co.tribooo.core.util.FormLimits
+import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.dateTimeLabel
 import edu.uniquindio.co.tribooo.core.util.formatMoney
 import edu.uniquindio.co.tribooo.core.util.label
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.core.util.shortLabelWithYear
 import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
+import edu.uniquindio.co.tribooo.domain.usecase.location.MAX_NEIGHBORHOOD_LENGTH
+import edu.uniquindio.co.tribooo.domain.usecase.location.MAX_PLACE_NAME_LENGTH
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneOffset
-
-/** Selector abierto en la pantalla. Algunos encadenan al siguiente (fecha → hora). */
-private enum class PickerTarget { START_DATE, START_TIME, END_DATE, END_TIME, PLACE }
 
 @Composable
 fun CreateEventScreen(
@@ -108,18 +118,26 @@ fun CreateEventScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
-    var picker by rememberSaveable { mutableStateOf<PickerTarget?>(null) }
 
     val imagePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickMultipleVisualMedia(maxItems = 5)
+        ActivityResultContracts.PickMultipleVisualMedia(maxItems = FormLimits.MAX_IMAGES)
     ) { uris -> viewModel.onImagesSelected(uris.map { it.toString() }) }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            CreateEventTopBar(onClose = onClose, onPublish = viewModel::publish)
+            CreateEventTopBar(
+                mode = state.mode,
+                isPublishing = state.isPublishing,
+                onClose = onClose,
+                onPublish = viewModel::publish
+            )
         }
     ) { innerPadding ->
+        if (state.isLoading || state.loadError != null) {
+            LoadStatus(error = state.loadError, onClose = onClose, modifier = Modifier.padding(innerPadding))
+            return@Scaffold
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -130,37 +148,36 @@ fun CreateEventScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             InfoBanner(
-                text = "Todo evento pasa por moderación antes de aparecer en el feed. Suele tardar menos de 24 h.",
+                text = stringResource(R.string.create_event_banner),
                 container = MaterialTheme.colorScheme.secondaryContainer,
                 content = MaterialTheme.colorScheme.onSecondaryContainer
             )
 
-            TitleField(state = state, onValueChange = viewModel::onTitleChange)
+            RequiredLegend()
+
+            TitleField(state = state, viewModel = viewModel)
 
             CategoryField(
                 state = state,
                 viewModel = viewModel
             )
 
-            Column {
-                FieldLabel("Descripción")
-                OutlinedTextField(
-                    value = state.description,
-                    onValueChange = viewModel::onDescriptionChange,
-                    placeholder = { Text("Qué se hará, qué llevar, para quién es…") },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = fieldColors(),
-                    minLines = 3,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(104.dp)
-                )
-            }
+            FormTextField(
+                value = state.description,
+                onValueChange = viewModel::onDescriptionChange,
+                label = stringResource(R.string.create_event_description_label),
+                placeholder = stringResource(R.string.create_event_description_placeholder),
+                hint = stringResource(R.string.form_event_description_hint),
+                maxLength = FormLimits.EVENT_DESCRIPTION,
+                minLines = 3
+            )
 
             ScheduleAndPlaceCard(
                 state = state,
                 onMultiDayChange = viewModel::onMultiDayChange,
-                onOpenPicker = { picker = it }
+                onOpenPicker = viewModel::openPicker,
+                onOpenLocationPicker = viewModel::onOpenLocationPicker,
+                onFocusHandled = viewModel::onFocusHandled
             )
 
             CupoCard(state = state, viewModel = viewModel)
@@ -169,6 +186,7 @@ fun CreateEventScreen(
 
             ImagesButton(
                 count = state.imageUris.size,
+                notice = state.imageNotice,
                 onClick = {
                     imagePicker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                 }
@@ -176,21 +194,26 @@ fun CreateEventScreen(
         }
     }
 
-    when (val target = picker) {
+    if (state.showLocationPicker) {
+        val initialLocation = state.pickedLocation ?: state.place?.location ?: state.userLocation
+        if (initialLocation != null) {
+            LocationPickerScreen(
+                initialLocation = initialLocation,
+                onConfirm = viewModel::onLocationPicked,
+                onDismiss = viewModel::onCloseLocationPicker
+            )
+        }
+    }
+
+    when (val target = state.picker) {
         PickerTarget.START_DATE, PickerTarget.END_DATE -> {
             val isStart = target == PickerTarget.START_DATE
             EventDatePickerDialog(
                 initialDate = if (isStart) state.startDate else state.endDate,
                 minDate = if (isStart) LocalDate.now(APP_ZONE) else state.startDate,
-                onDismiss = { picker = null },
+                onDismiss = viewModel::closePicker,
                 onConfirm = { date ->
                     if (isStart) viewModel.onStartDateChange(date) else viewModel.onEndDateChange(date)
-                    // En eventos de varios días se pide también la hora
-                    picker = when {
-                        isStart && state.multiDay -> PickerTarget.START_TIME
-                        !isStart -> PickerTarget.END_TIME
-                        else -> null
-                    }
                 }
             )
         }
@@ -198,25 +221,20 @@ fun CreateEventScreen(
         PickerTarget.START_TIME, PickerTarget.END_TIME -> {
             val isStart = target == PickerTarget.START_TIME
             EventTimePickerDialog(
-                title = if (isStart) "Hora de inicio" else "Hora de fin",
+                title = stringResource(if (isStart) R.string.create_event_start_time else R.string.create_event_end_time),
                 initialTime = if (isStart) state.startTime else state.endTime,
-                onDismiss = { picker = null },
+                onDismiss = viewModel::closePicker,
                 onConfirm = { time ->
                     if (isStart) viewModel.onStartTimeChange(time) else viewModel.onEndTimeChange(time)
-                    // En eventos de un día el horario se elige como inicio → fin
-                    picker = if (isStart && !state.multiDay) PickerTarget.END_TIME else null
                 }
             )
         }
 
         PickerTarget.PLACE -> PlacePickerDialog(
-            places = viewModel.placeSuggestions,
             selected = state.place,
-            onDismiss = { picker = null },
-            onConfirm = {
-                viewModel.onPlaceSelected(it)
-                picker = null
-            }
+            suggestionsFor = viewModel::suggestionsFor,
+            onDismiss = viewModel::closePicker,
+            onConfirm = viewModel::onPlaceConfirmed
         )
 
         null -> Unit
@@ -240,7 +258,38 @@ fun CreateEventScreen(
 }
 
 @Composable
-private fun CreateEventTopBar(onClose: () -> Unit, onPublish: () -> Unit) {
+private fun LoadStatus(error: String?, onClose: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
+    ) {
+        if (error == null) {
+            CircularProgressIndicator()
+        } else {
+            Text(error, textAlign = TextAlign.Center)
+            Button(onClick = onClose) { Text(stringResource(R.string.common_close)) }
+        }
+    }
+}
+
+@Composable
+private fun CreateEventTopBar(
+    mode: EventFormMode?,
+    isPublishing: Boolean,
+    onClose: () -> Unit,
+    onPublish: () -> Unit
+) {
+    val (title, action) = when (mode) {
+        null -> stringResource(R.string.create_event_title_create) to stringResource(R.string.create_event_action_publish)
+        EventFormMode.EDIT -> stringResource(R.string.create_event_title_edit) to stringResource(R.string.create_event_action_save)
+        EventFormMode.RESUBMIT ->
+            stringResource(R.string.create_event_title_resubmit) to stringResource(R.string.create_event_action_resubmit)
+        EventFormMode.DUPLICATE ->
+            stringResource(R.string.create_event_title_duplicate) to stringResource(R.string.create_event_action_publish)
+    }
     Surface(color = MaterialTheme.colorScheme.surfaceContainerLow) {
         Row(
             modifier = Modifier
@@ -251,11 +300,24 @@ private fun CreateEventTopBar(onClose: () -> Unit, onPublish: () -> Unit) {
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             IconButton(onClick = onClose) {
-                Icon(Icons.Rounded.Close, contentDescription = "Cerrar")
+                Icon(Icons.Rounded.Close, contentDescription = stringResource(R.string.common_close))
             }
-            Text("Crear evento", fontSize = 20.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-            Button(onClick = onPublish, shape = RoundedCornerShape(14.dp), modifier = Modifier.height(40.dp)) {
-                Text("Publicar")
+            Text(title, fontSize = 20.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            Button(
+                onClick = onPublish,
+                enabled = !isPublishing,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.height(40.dp)
+            ) {
+                if (isPublishing) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                } else {
+                    Text(action)
+                }
             }
         }
     }
@@ -295,27 +357,33 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 @Composable
-private fun TitleField(state: CreateEventUiState, onValueChange: (String) -> Unit) {
-    Column {
-        FieldLabel("Nombre del evento *", isError = state.titleError != null)
-        OutlinedTextField(
-            value = state.title,
-            onValueChange = onValueChange,
-            placeholder = { Text("Ej. Ciclopaseo nocturno por la Av. Bolívar") },
-            singleLine = true,
-            isError = state.titleError != null,
-            supportingText = state.titleError?.let { { Text(it) } },
-            shape = RoundedCornerShape(16.dp),
-            colors = fieldColors(),
-            modifier = Modifier.fillMaxWidth()
-        )
-    }
+private fun TitleField(state: CreateEventUiState, viewModel: CreateEventViewModel) {
+    val resources = rememberResourceProvider()
+    FormTextField(
+        value = state.title,
+        onValueChange = viewModel::onTitleChange,
+        label = stringResource(R.string.create_event_title_label),
+        required = true,
+        placeholder = stringResource(R.string.create_event_title_placeholder),
+        hint = stringResource(R.string.form_event_title_hint),
+        error = state.titleError(resources),
+        singleLine = true,
+        onFocusLost = { viewModel.onFieldFocusLost(EventField.TITLE) },
+        modifier = Modifier.formTarget(state.focusField == EventField.TITLE, viewModel::onFocusHandled)
+    )
 }
 
 @Composable
 private fun CategoryField(state: CreateEventUiState, viewModel: CreateEventViewModel) {
-    Column {
-        FieldLabel("Categoría *", isError = state.categoryError)
+    val resources = rememberResourceProvider()
+    Column(
+        modifier = Modifier.formTarget(
+            state.focusField == EventField.CATEGORY,
+            viewModel::onFocusHandled,
+            takesFocus = false
+        )
+    ) {
+        FieldLabel(stringResource(R.string.create_event_category_label), isError = state.categoryError(resources) != null)
         WrapRow {
             viewModel.categories.forEach { category ->
                 CategoryChip(
@@ -327,6 +395,7 @@ private fun CategoryField(state: CreateEventUiState, viewModel: CreateEventViewM
                 )
             }
         }
+        state.categoryError(resources)?.let { FormErrorText(it, Modifier.padding(start = 4.dp, top = 6.dp)) }
     }
 }
 
@@ -401,15 +470,18 @@ private fun PickerRow(
 private fun ScheduleAndPlaceCard(
     state: CreateEventUiState,
     onMultiDayChange: (Boolean) -> Unit,
-    onOpenPicker: (PickerTarget) -> Unit
+    onOpenPicker: (PickerTarget) -> Unit,
+    onOpenLocationPicker: () -> Unit,
+    onFocusHandled: () -> Unit
 ) {
     val divider = MaterialTheme.colorScheme.surfaceContainer
+    val resources = rememberResourceProvider()
     SectionCard {
         Column(modifier = Modifier.padding(vertical = 6.dp)) {
             ToggleRow(
                 icon = Icons.Rounded.DateRange,
-                title = "Varios días",
-                subtitle = if (state.multiDay) "Fechas y horas de inicio y fin" else "Un solo día con hora de inicio y fin",
+                title = stringResource(R.string.create_event_multi_day),
+                subtitle = stringResource(if (state.multiDay) R.string.create_event_multi_day_on else R.string.create_event_multi_day_off),
                 checked = state.multiDay,
                 onCheckedChange = onMultiDayChange,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -419,43 +491,74 @@ private fun ScheduleAndPlaceCard(
             if (state.multiDay) {
                 PickerRow(
                     icon = Icons.Rounded.Event,
-                    label = "Inicio",
-                    value = dateTimeLabel(state.startDate, state.startTime),
+                    label = stringResource(R.string.create_event_start),
+                    value = dateTimeLabel(resources, state.startDate, state.startTime),
                     onClick = { onOpenPicker(PickerTarget.START_DATE) }
                 )
                 HorizontalDivider(color = divider)
                 PickerRow(
                     icon = Icons.Rounded.EventAvailable,
-                    label = "Fin",
-                    value = dateTimeLabel(state.endDate, state.endTime),
-                    labelIsError = !state.isRangeValid,
+                    label = stringResource(R.string.create_event_end),
+                    value = dateTimeLabel(resources, state.endDate, state.endTime),
+                    labelIsError = state.scheduleError(resources) != null,
                     onClick = { onOpenPicker(PickerTarget.END_DATE) }
                 )
             } else {
                 PickerRow(
                     icon = Icons.Rounded.Event,
-                    label = "Fecha",
-                    value = state.startDate.shortLabelWithYear(),
+                    label = stringResource(R.string.create_event_date),
+                    value = state.startDate.shortLabelWithYear(resources),
                     onClick = { onOpenPicker(PickerTarget.START_DATE) }
                 )
                 HorizontalDivider(color = divider)
                 PickerRow(
                     icon = Icons.Rounded.Schedule,
-                    label = "Horario",
+                    label = stringResource(R.string.create_event_schedule),
                     value = "${state.startTime.label()} – ${state.endTime.label()}",
-                    labelIsError = !state.isRangeValid,
+                    labelIsError = state.scheduleError(resources) != null,
                     onClick = { onOpenPicker(PickerTarget.START_TIME) }
                 )
+            }
+            Box(
+                modifier = Modifier.formTarget(
+                    state.focusField == EventField.SCHEDULE,
+                    onFocusHandled,
+                    takesFocus = false
+                )
+            ) {
+                state.scheduleError(resources)?.let {
+                    FormErrorText(it, Modifier.padding(start = 52.dp, end = 16.dp, bottom = 8.dp))
+                }
             }
             HorizontalDivider(color = divider)
 
             PickerRow(
                 icon = Icons.Rounded.AddLocationAlt,
-                label = "Ubicación *",
-                value = state.place?.name ?: "Elegir lugar",
-                labelIsError = state.placeError,
+                label = stringResource(R.string.create_event_place_label),
+                value = state.place?.name ?: stringResource(R.string.create_event_place_choose),
+                labelIsError = state.placeError(resources) != null,
                 trailingIcon = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                 onClick = { onOpenPicker(PickerTarget.PLACE) }
+            )
+            Box(
+                modifier = Modifier.formTarget(
+                    state.focusField == EventField.PLACE,
+                    onFocusHandled,
+                    takesFocus = false
+                )
+            ) {
+                state.placeError(resources)?.let {
+                    FormErrorText(it, Modifier.padding(start = 52.dp, end = 16.dp, bottom = 8.dp))
+                }
+            }
+            HorizontalDivider(color = divider)
+
+            PickerRow(
+                icon = Icons.Rounded.Map,
+                label = stringResource(R.string.create_event_place_mark_on_map),
+                value = if (state.pickedLocation != null) stringResource(R.string.create_event_place_marked) else "",
+                trailingIcon = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                onClick = onOpenLocationPicker
             )
         }
     }
@@ -467,8 +570,8 @@ private fun CupoCard(state: CreateEventUiState, viewModel: CreateEventViewModel)
         Column(modifier = Modifier.padding(16.dp)) {
             ToggleRow(
                 icon = Icons.Rounded.Groups,
-                title = "Cupo máximo",
-                subtitle = "Opcional · limita las confirmaciones",
+                title = stringResource(R.string.create_event_cupo_title),
+                subtitle = stringResource(R.string.create_event_cupo_subtitle),
                 checked = state.cupoEnabled,
                 onCheckedChange = viewModel::onCupoEnabledChange
             )
@@ -480,7 +583,7 @@ private fun CupoCard(state: CreateEventUiState, viewModel: CreateEventViewModel)
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    StepperButton(Icons.Rounded.Remove, "Disminuir cupo", viewModel::decreaseCupo)
+                    StepperButton(Icons.Rounded.Remove, stringResource(R.string.create_event_cupo_decrease), viewModel::decreaseCupo)
                     Row(
                         modifier = Modifier.weight(1f),
                         horizontalArrangement = Arrangement.Center,
@@ -488,13 +591,13 @@ private fun CupoCard(state: CreateEventUiState, viewModel: CreateEventViewModel)
                     ) {
                         Text(state.cupo.toString(), fontSize = 24.sp)
                         Text(
-                            " personas",
+                            " " + stringResource(R.string.create_event_cupo_people),
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 3.dp)
                         )
                     }
-                    StepperButton(Icons.Rounded.Add, "Aumentar cupo", viewModel::increaseCupo)
+                    StepperButton(Icons.Rounded.Add, stringResource(R.string.create_event_cupo_increase), viewModel::increaseCupo)
                 }
             }
         }
@@ -520,39 +623,40 @@ private fun StepperButton(icon: ImageVector, description: String, onClick: () ->
 @Composable
 private fun ContributionCard(state: CreateEventUiState, viewModel: CreateEventViewModel) {
     val colors = MaterialTheme.colorScheme
+    val resources = rememberResourceProvider()
     SectionCard {
         Column(modifier = Modifier.padding(16.dp)) {
             ToggleRow(
                 icon = Icons.Rounded.VolunteerActivism,
-                title = "Aporte con causa",
-                subtitle = if (state.contributionEnabled) {
-                    "Solo eventos benéficos · el monto se paga en el lugar"
-                } else {
-                    "Opcional · solo para eventos benéficos, sin ánimo de lucro"
-                },
+                title = stringResource(R.string.create_event_contribution_title),
+                subtitle = stringResource(
+                    if (state.contributionEnabled) {
+                        R.string.create_event_contribution_on
+                    } else {
+                        R.string.create_event_contribution_off
+                    }
+                ),
                 checked = state.contributionEnabled,
                 onCheckedChange = viewModel::onContributionEnabledChange
             )
             if (state.contributionEnabled) {
-                OutlinedTextField(
+                FormTextField(
                     value = if (state.contributionAmount > 0) state.contributionAmount.toString() else "",
                     onValueChange = viewModel::onContributionAmountChange,
-                    placeholder = { Text("5000") },
-                    prefix = { Text("$ ") },
-                    suffix = { Text("COP por persona", fontSize = 12.sp) },
+                    label = stringResource(R.string.create_event_amount_label),
+                    required = true,
+                    placeholder = "5000",
+                    prefix = "$ ",
+                    suffix = stringResource(R.string.create_event_amount_suffix),
+                    hint = stringResource(R.string.form_contribution_amount_hint),
+                    error = state.contributionError(resources),
                     singleLine = true,
-                    isError = state.contributionError != null,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedContainerColor = colors.surfaceContainerLow,
-                        unfocusedContainerColor = colors.surfaceContainerLow,
-                        errorContainerColor = colors.surfaceContainerLow,
-                        unfocusedBorderColor = colors.outlineVariant
-                    ),
+                    containerColor = colors.surfaceContainerLow,
+                    onFocusLost = { viewModel.onFieldFocusLost(EventField.CONTRIBUTION_AMOUNT) },
                     modifier = Modifier
-                        .fillMaxWidth()
                         .padding(top = 14.dp)
+                        .formTarget(state.focusField == EventField.CONTRIBUTION_AMOUNT, viewModel::onFocusHandled)
                 )
                 Row(
                     modifier = Modifier.padding(top = 10.dp),
@@ -574,19 +678,25 @@ private fun ContributionCard(state: CreateEventUiState, viewModel: CreateEventVi
                         }
                     }
                 }
-                state.contributionError?.let { error ->
-                    Row(
-                        modifier = Modifier.padding(top = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(Icons.Rounded.Error, contentDescription = null, tint = colors.error, modifier = Modifier.size(15.dp))
-                        Text(error, fontSize = 12.sp, color = colors.error)
-                    }
-                }
+                FormTextField(
+                    value = state.contributionCause,
+                    onValueChange = viewModel::onContributionCauseChange,
+                    label = stringResource(R.string.create_event_cause_label),
+                    required = true,
+                    placeholder = stringResource(R.string.create_event_cause_placeholder),
+                    hint = stringResource(R.string.form_contribution_cause_hint),
+                    error = state.contributionCauseError(resources),
+                    maxLength = FormLimits.CONTRIBUTION_CAUSE,
+                    singleLine = true,
+                    containerColor = colors.surfaceContainerLow,
+                    onFocusLost = { viewModel.onFieldFocusLost(EventField.CONTRIBUTION_CAUSE) },
+                    modifier = Modifier
+                        .padding(top = 14.dp)
+                        .formTarget(state.focusField == EventField.CONTRIBUTION_CAUSE, viewModel::onFocusHandled)
+                )
                 Box(modifier = Modifier.padding(top = 12.dp)) {
                     InfoBanner(
-                        text = "Solo eventos benéficos pueden pedir un aporte. La plataforma no admite eventos con fines lucrativos: moderación puede pedirte el destino de los fondos.",
+                        text = stringResource(R.string.create_event_contribution_banner),
                         container = colors.tertiaryContainer,
                         content = colors.onTertiaryContainer
                     )
@@ -597,8 +707,9 @@ private fun ContributionCard(state: CreateEventUiState, viewModel: CreateEventVi
 }
 
 @Composable
-private fun ImagesButton(count: Int, onClick: () -> Unit) {
+private fun ImagesButton(count: Int, notice: String?, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -621,21 +732,27 @@ private fun ImagesButton(count: Int, onClick: () -> Unit) {
         Icon(Icons.Rounded.AddPhotoAlternate, contentDescription = null, tint = colors.primary, modifier = Modifier.size(23.dp))
         Column {
             Text(
-                text = when (count) {
-                    0 -> "Agregar imágenes"
-                    1 -> "1 imagen seleccionada"
-                    else -> "$count imágenes seleccionadas"
+                text = if (count == 0) {
+                    stringResource(R.string.create_event_images_add)
+                } else {
+                    pluralStringResource(R.plurals.create_event_images_selected, count, count)
                 },
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Medium
             )
             Text(
-                text = if (count == 0) "Hasta 5 fotos · la primera será la portada" else "Toca para cambiar la selección",
+                text = if (count == 0) {
+                    stringResource(R.string.create_event_images_hint, FormLimits.MAX_IMAGES)
+                } else {
+                    stringResource(R.string.create_event_images_change)
+                },
                 fontSize = 12.sp,
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp)
             )
         }
+    }
+    notice?.let { FormErrorText(it, Modifier.padding(start = 4.dp)) }
     }
 }
 
@@ -666,9 +783,9 @@ private fun EventDatePickerDialog(
                             onConfirm(Instant.ofEpochMilli(millis).atZone(ZoneOffset.UTC).toLocalDate())
                         }
                     }
-                ) { Text("Aceptar") }
+                ) { Text(stringResource(R.string.common_accept)) }
             },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+            dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } }
         ) {
             DatePicker(state = pickerState)
         }
@@ -699,41 +816,70 @@ private fun EventTimePickerDialog(
             },
             confirmButton = {
                 TextButton(onClick = { onConfirm(LocalTime.of(pickerState.hour, pickerState.minute)) }) {
-                    Text("Aceptar")
+                    Text(stringResource(R.string.common_accept))
                 }
             },
-            dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+            dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } }
         )
     }
 }
 
 @Composable
 private fun PlacePickerDialog(
-    places: List<PlaceSuggestion>,
     selected: PlaceSuggestion?,
+    suggestionsFor: (query: String) -> List<PlaceSuggestion>,
     onDismiss: () -> Unit,
-    onConfirm: (PlaceSuggestion) -> Unit
+    onConfirm: (name: String, neighborhood: String) -> Unit
 ) {
-    var current by remember { mutableStateOf(selected) }
+    var name by remember { mutableStateOf(selected?.name.orEmpty()) }
+    var neighborhood by remember { mutableStateOf(selected?.neighborhood.orEmpty()) }
+    var nameTouched by remember { mutableStateOf(false) }
     val colors = MaterialTheme.colorScheme
+    val resources = rememberResourceProvider()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Ubicación del evento") },
+        title = { Text(stringResource(R.string.create_event_place_dialog_title)) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(modifier = Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    "Elige el punto de encuentro. Los asistentes verán esta ubicación.",
+                    stringResource(R.string.create_event_place_dialog_message),
                     fontSize = 13.sp,
                     color = colors.onSurfaceVariant
                 )
-                places.forEach { place ->
-                    val isSelected = current?.name == place.name
+                FormTextField(
+                    value = name,
+                    onValueChange = {
+                        name = it
+                        nameTouched = true
+                    },
+                    label = stringResource(R.string.create_event_place_name_label),
+                    required = true,
+                    hint = stringResource(R.string.form_place_name_hint),
+                    error = Validators.placeName(resources, name).takeIf { nameTouched },
+                    maxLength = MAX_PLACE_NAME_LENGTH,
+                    singleLine = true,
+                    containerColor = Color.Transparent,
+                    onFocusLost = { nameTouched = true }
+                )
+                FormTextField(
+                    value = neighborhood,
+                    onValueChange = { neighborhood = it },
+                    label = stringResource(R.string.create_event_place_neighborhood_label),
+                    hint = stringResource(R.string.form_place_neighborhood_hint),
+                    maxLength = MAX_NEIGHBORHOOD_LENGTH,
+                    singleLine = true,
+                    containerColor = Color.Transparent
+                )
+                suggestionsFor(name).forEach { place ->
                     Surface(
-                        onClick = { current = place },
+                        onClick = {
+                            name = place.name
+                            neighborhood = place.neighborhood
+                        },
                         shape = RoundedCornerShape(16.dp),
-                        color = if (isSelected) colors.secondaryContainer else Color.Transparent,
-                        border = BorderStroke(1.dp, if (isSelected) colors.primary else colors.outlineVariant),
+                        color = Color.Transparent,
+                        border = BorderStroke(1.dp, colors.outlineVariant),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Row(
@@ -752,10 +898,14 @@ private fun PlacePickerDialog(
             }
         },
         confirmButton = {
-            TextButton(enabled = current != null, onClick = { current?.let(onConfirm) }) {
-                Text("Usar esta ubicación")
+            TextButton(
+                onClick = {
+                    if (Validators.placeName(resources, name) == null) onConfirm(name, neighborhood) else nameTouched = true
+                }
+            ) {
+                Text(stringResource(R.string.create_event_place_use))
             }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } }
     )
 }

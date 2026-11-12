@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Lock
@@ -29,6 +30,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -44,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -51,8 +54,12 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.AuthTextField
+import edu.uniquindio.co.tribooo.core.component.RequiredLegend
+import edu.uniquindio.co.tribooo.core.component.formTarget
 import edu.uniquindio.co.tribooo.core.util.RequestResult
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 
 @Composable
 fun LoginScreen(
@@ -62,6 +69,7 @@ fun LoginScreen(
     viewModel: LoginViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val resources = rememberResourceProvider()
     val snackbarHostState = remember { SnackbarHostState() }
     val isLoading = state.loginResult is RequestResult.Loading
     var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
@@ -95,13 +103,13 @@ fun LoginScreen(
             }
 
             Text(
-                text = "Bienvenido de vuelta",
+                text = stringResource(R.string.login_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Normal,
                 modifier = Modifier.padding(top = 22.dp)
             )
             Text(
-                text = "Entra para ver los eventos de tu comunidad y confirmar tu asistencia.",
+                text = stringResource(R.string.login_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 8.dp)
@@ -113,25 +121,40 @@ fun LoginScreen(
                     .padding(top = 28.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                RequiredLegend()
+
                 AuthTextField(
                     value = state.email,
                     onValueChange = viewModel::onEmailChange,
-                    label = "Correo",
+                    label = stringResource(R.string.login_email_label),
                     leadingIcon = Icons.Rounded.Email,
-                    placeholder = "tunombre@correo.com",
-                    isError = state.emailError != null,
+                    placeholder = stringResource(R.string.login_email_placeholder),
+                    required = true,
+                    hint = stringResource(R.string.form_email_hint),
+                    error = state.emailError(resources),
+                    isValid = state.isEmailValid,
+                    onFocusLost = { viewModel.onFieldFocusLost(LoginField.EMAIL) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                    supportingText = state.emailError
+                    modifier = Modifier.formTarget(
+                        active = state.focusField == LoginField.EMAIL,
+                        onHandled = viewModel::onFocusHandled
+                    )
                 )
 
                 AuthTextField(
                     value = state.password,
                     onValueChange = viewModel::onPasswordChange,
-                    label = "Contraseña",
+                    label = stringResource(R.string.login_password_label),
                     leadingIcon = Icons.Rounded.Lock,
                     placeholder = "••••••••",
-                    isError = state.passwordError != null,
-                    supportingText = state.passwordError,
+                    required = true,
+                    hint = stringResource(R.string.form_password_hint),
+                    error = state.passwordError(resources),
+                    onFocusLost = { viewModel.onFieldFocusLost(LoginField.PASSWORD) },
+                    modifier = Modifier.formTarget(
+                        active = state.focusField == LoginField.PASSWORD,
+                        onHandled = viewModel::onFocusHandled
+                    ),
                     visualTransformation = if (isPasswordVisible) {
                         VisualTransformation.None
                     } else {
@@ -147,9 +170,9 @@ fun LoginScreen(
                                     Icons.Rounded.Visibility
                                 },
                                 contentDescription = if (isPasswordVisible) {
-                                    "Ocultar contraseña"
+                                    stringResource(R.string.login_hide_password)
                                 } else {
-                                    "Mostrar contraseña"
+                                    stringResource(R.string.login_show_password)
                                 }
                             )
                         }
@@ -164,13 +187,13 @@ fun LoginScreen(
                 horizontalArrangement = Arrangement.End
             ) {
                 TextButton(onClick = onNavigateToPasswordRecovery) {
-                    Text("¿Olvidaste tu contraseña?")
+                    Text(stringResource(R.string.login_forgot_password))
                 }
             }
 
             Button(
                 onClick = { viewModel.login() },
-                enabled = state.isFormValid && !isLoading,
+                enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 24.dp),
@@ -189,7 +212,7 @@ fun LoginScreen(
                         color = MaterialTheme.colorScheme.onPrimary
                     )
                 } else {
-                    Text("Iniciar sesión", modifier = Modifier.padding(vertical = 8.dp))
+                    Text(stringResource(R.string.login_sign_in), modifier = Modifier.padding(vertical = 8.dp))
                 }
             }
 
@@ -201,12 +224,25 @@ fun LoginScreen(
             ) {
                 HorizontalDivider(modifier = Modifier.weight(1f))
                 Text(
-                    text = "o",
+                    text = stringResource(R.string.login_or),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 14.dp)
                 )
                 HorizontalDivider(modifier = Modifier.weight(1f))
+            }
+
+            OutlinedButton(
+                onClick = { viewModel.loginWithGoogle() },
+                enabled = !isLoading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+                    .height(54.dp),
+                shape = RoundedCornerShape(18.dp)
+            ) {
+                Icon(Icons.Rounded.AccountCircle, contentDescription = null, modifier = Modifier.size(22.dp))
+                Text(stringResource(R.string.login_continue_google), modifier = Modifier.padding(start = 10.dp))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -216,12 +252,12 @@ fun LoginScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "¿Nuevo por aquí?",
+                    text = stringResource(R.string.login_new_here),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodyMedium
                 )
                 TextButton(onClick = onNavigateToRegister) {
-                    Text("Crear cuenta")
+                    Text(stringResource(R.string.login_create_account))
                 }
             }
         }
@@ -230,7 +266,7 @@ fun LoginScreen(
     LaunchedEffect(state.loginResult) {
         when (val result = state.loginResult) {
             is RequestResult.Success -> {
-                snackbarHostState.showSnackbar(result.message)
+                // El aviso viaja por SnackbarMessenger al feed: se entra sin esperar al snackbar
                 viewModel.resetLoginResult()
                 onNavigateToHome()
             }
@@ -242,5 +278,17 @@ fun LoginScreen(
 
             else -> Unit
         }
+    }
+
+
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onMessageShown()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
     }
 }

@@ -13,4 +13,7 @@ interface LocationRepository {
 
     /** Lugares sugeridos en el selector de ubicación al crear un evento. */
     val placeSuggestions: List<PlaceSuggestion>
+
+    /** Guarda la ubicación real del usuario (la que reporta el mapa). */
+    suspend fun updateCurrentLocation(location: Location)
 }

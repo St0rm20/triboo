@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.navigation
 
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -7,20 +8,35 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.Lifecycle
+import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.toRoute
+import edu.uniquindio.co.tribooo.domain.model.ModerationTab
+import edu.uniquindio.co.tribooo.features.agenda.AgendaScreen
 import edu.uniquindio.co.tribooo.features.createevent.CreateEventScreen
+import edu.uniquindio.co.tribooo.features.createevent.EventFormMode
 import edu.uniquindio.co.tribooo.features.eventdetail.EventDetailScreen
+import edu.uniquindio.co.tribooo.features.explore.ExploreScreen
 import edu.uniquindio.co.tribooo.features.feed.FeedScreen
+import edu.uniquindio.co.tribooo.features.eventstatus.EventStatusScreen
+import edu.uniquindio.co.tribooo.features.followers.FollowersScreen
 import edu.uniquindio.co.tribooo.features.login.LoginScreen
 import edu.uniquindio.co.tribooo.features.login.PasswordRecoveryScreen
+import edu.uniquindio.co.tribooo.features.moderation.ModerationScreen
+import edu.uniquindio.co.tribooo.features.myevents.MyEventsScreen
+import edu.uniquindio.co.tribooo.features.notifications.NotificationsScreen
 import edu.uniquindio.co.tribooo.features.onboarding.OnboardingScreen
+import edu.uniquindio.co.tribooo.features.profile.ProfileScreen
 import edu.uniquindio.co.tribooo.features.register.RegisterScreen
+import edu.uniquindio.co.tribooo.features.saved.SavedEventsScreen
 import edu.uniquindio.co.tribooo.features.splash.SplashScreen
+import edu.uniquindio.co.tribooo.features.userprofile.UserProfileScreen
 
-// Clave para pasar el mensaje del snackbar de una pantalla al feed
+// Clave para pasar el mensaje del snackbar de una pantalla al feed o al perfil
 private const val FEED_MESSAGE_KEY = "feed_message"
 
 @Composable
@@ -30,6 +46,7 @@ fun AppNavigation(
     // Controlador que maneja la navegación entre pantallas
     val navController = rememberNavController()
     val startDestination by appViewModel.startDestination.collectAsStateWithLifecycle()
+    val darkTheme by appViewModel.darkTheme.collectAsStateWithLifecycle()
 
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -83,9 +100,6 @@ fun AppNavigation(
 
             composable<MainRoutes.Register> {
                 RegisterScreen(
-                    onNavigateToHome = {
-                        navController.navigateToFeed()
-                    },
                     onNavigateToLogin = {
                         navController.replaceWith(MainRoutes.Login)
                     }
@@ -102,8 +116,179 @@ fun AppNavigation(
                     onNavigateToCreateEvent = {
                         navController.navigate(MainRoutes.CreateEvent)
                     },
+                    onNavigateToModeration = {
+                        navController.navigate(MainRoutes.Moderation(ModerationTab.PENDIENTES.name)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToExplore = {
+                        navController.navigateToTab(MainRoutes.Explore)
+                    },
+                    onNavigateToAgenda = {
+                        navController.navigateToTab(MainRoutes.Agenda)
+                    },
+                    onNavigateToProfile = {
+                        navController.navigateToTab(MainRoutes.Profile)
+                    },
                     onNavigateToEventDetail = { eventId ->
                         navController.navigate(MainRoutes.EventDetail(eventId))
+                    },
+                    onNavigateToNotifications = {
+                        navController.navigate(MainRoutes.Notifications) {
+                            launchSingleTop = true
+                        }
+                    },
+                    snackbarMessage = message,
+                    onSnackbarShown = {
+                        savedStateHandle[FEED_MESSAGE_KEY] = null
+                    }
+                )
+            }
+
+            composable<MainRoutes.Profile> { backStackEntry ->
+                val savedStateHandle = backStackEntry.savedStateHandle
+                val message by savedStateHandle
+                    .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
+                    .collectAsStateWithLifecycle()
+
+                ProfileScreen(
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToExplore = {
+                        navController.navigateToTab(MainRoutes.Explore)
+                    },
+                    onNavigateToAgenda = {
+                        navController.navigateToTab(MainRoutes.Agenda)
+                    },
+                    onNavigateToCreateEvent = {
+                        navController.navigate(MainRoutes.CreateEvent)
+                    },
+                    onNavigateToLogin = {
+                        navController.replaceWith(MainRoutes.Login)
+                    },
+                    onNavigateToMyEvents = {
+                        navController.navigate(MainRoutes.MyEvents) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToSaved = {
+                        navController.navigate(MainRoutes.Saved) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToFollowers = {
+                        navController.navigate(MainRoutes.Followers) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToNotifications = {
+                        navController.navigate(MainRoutes.Notifications) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToModeration = {
+                        navController.navigate(MainRoutes.Moderation(ModerationTab.PENDIENTES.name)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToCommunityReports = {
+                        navController.navigate(MainRoutes.Moderation(ModerationTab.REPORTES.name)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onNavigateToRejected = {
+                        navController.navigate(MainRoutes.Moderation(ModerationTab.RECHAZADAS.name)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    darkTheme = darkTheme ?: isSystemInDarkTheme(),
+                    onDarkThemeChange = appViewModel::setDarkTheme,
+                    snackbarMessage = message,
+                    onSnackbarShown = {
+                        savedStateHandle[FEED_MESSAGE_KEY] = null
+                    }
+                )
+            }
+
+            composable<MainRoutes.Notifications> { backStackEntry ->
+                val savedStateHandle = backStackEntry.savedStateHandle
+                val message by savedStateHandle
+                    .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
+                    .collectAsStateWithLifecycle()
+
+                NotificationsScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToEventDetail = { eventId, commentId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId, commentId))
+                    },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    snackbarMessage = message,
+                    onSnackbarShown = {
+                        savedStateHandle[FEED_MESSAGE_KEY] = null
+                    }
+                )
+            }
+
+            composable<MainRoutes.MyEvents> { backStackEntry ->
+                val savedStateHandle = backStackEntry.savedStateHandle
+                val message by savedStateHandle
+                    .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
+                    .collectAsStateWithLifecycle()
+
+                MyEventsScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
+                    },
+                    onNavigateToEventStatus = { eventId ->
+                        navController.navigate(MainRoutes.EventStatus(eventId)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    snackbarMessage = message,
+                    onSnackbarShown = {
+                        savedStateHandle[FEED_MESSAGE_KEY] = null
+                    }
+                )
+            }
+
+            composable<MainRoutes.Saved> {
+                SavedEventsScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
+                    },
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    }
+                )
+            }
+
+            composable<MainRoutes.Followers> { backStackEntry ->
+                val savedStateHandle = backStackEntry.savedStateHandle
+                val message by savedStateHandle
+                    .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
+                    .collectAsStateWithLifecycle()
+
+                FollowersScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
                     },
                     snackbarMessage = message,
                     onSnackbarShown = {
@@ -125,17 +310,179 @@ fun AppNavigation(
                 )
             }
 
-            composable<MainRoutes.EventDetail> {
+            composable<MainRoutes.EditEvent> { backStackEntry ->
+                val mode = backStackEntry.toRoute<MainRoutes.EditEvent>().mode
+
+                // El id y el modo llegan al ViewModel por su SavedStateHandle
+                CreateEventScreen(
+                    onClose = {
+                        navController.popBackStack()
+                    },
+                    onEventPublished = { message ->
+                        if (mode == EventFormMode.EDIT) {
+                            // El detalle por estado se actualiza solo y muestra la confirmación al volver
+                            navController.previousBackStackEntry?.savedStateHandle?.set(FEED_MESSAGE_KEY, message)
+                            navController.popBackStack()
+                        } else {
+                            // Reenviar y duplicar terminan en Mis eventos
+                            runCatching { navController.getBackStackEntry(MainRoutes.MyEvents) }
+                                .getOrNull()?.savedStateHandle?.set(FEED_MESSAGE_KEY, message)
+                            navController.popBackStack(MainRoutes.MyEvents, inclusive = false)
+                        }
+                    }
+                )
+            }
+
+            composable<MainRoutes.EventDetail> { backStackEntry ->
                 // El id del evento llega al ViewModel por su SavedStateHandle
                 EventDetailScreen(
                     onNavigateBack = {
+                        navController.safePopBackStack(backStackEntry)
+                    },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+
+            composable<MainRoutes.EventStatus> { backStackEntry ->
+                val savedStateHandle = backStackEntry.savedStateHandle
+                val message by savedStateHandle
+                    .getStateFlow<String?>(FEED_MESSAGE_KEY, null)
+                    .collectAsStateWithLifecycle()
+
+                // El id del evento llega al ViewModel por su SavedStateHandle
+                EventStatusScreen(
+                    onNavigateBack = {
                         navController.popBackStack()
+                    },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    },
+                    onEventRemoved = { message ->
+                        // Mis eventos muestra la confirmación al volver
+                        navController.previousBackStackEntry?.savedStateHandle?.set(FEED_MESSAGE_KEY, message)
+                        navController.popBackStack()
+                    },
+                    onResubmitEvent = { eventId ->
+                        navController.navigate(MainRoutes.EditEvent(eventId, EventFormMode.RESUBMIT))
+                    },
+                    onEditEvent = { eventId ->
+                        navController.navigate(MainRoutes.EditEvent(eventId, EventFormMode.EDIT))
+                    },
+                    onDuplicateEvent = { eventId ->
+                        navController.navigate(MainRoutes.EditEvent(eventId, EventFormMode.DUPLICATE))
+                    },
+                    snackbarMessage = message,
+                    onSnackbarShown = {
+                        savedStateHandle[FEED_MESSAGE_KEY] = null
+                    }
+                )
+            }
+
+            composable<MainRoutes.Explore> {
+                ExploreScreen(
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToAgenda = {
+                        navController.navigateToTab(MainRoutes.Agenda)
+                    },
+                    onNavigateToProfile = {
+                        navController.navigateToTab(MainRoutes.Profile)
+                    },
+                    onNavigateToCreateEvent = {
+                        navController.navigate(MainRoutes.CreateEvent)
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
+                    }
+                )
+            }
+
+            composable<MainRoutes.Agenda> {
+                AgendaScreen(
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToExplore = {
+                        navController.navigateToTab(MainRoutes.Explore)
+                    },
+
+                    onNavigateToProfile = {
+                        navController.navigateToTab(MainRoutes.Profile)
+                    },
+                    onNavigateToCreateEvent = {
+                        navController.navigate(MainRoutes.CreateEvent)
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
+                    }
+                )
+            }
+
+            composable<MainRoutes.Moderation> {
+                // La pestaña inicial llega al ViewModel por su SavedStateHandle
+                ModerationScreen(
+                    onNavigateToFeed = {
+                        navController.navigateToTab(MainRoutes.Feed)
+                    },
+                    onNavigateToExplore = {
+                        navController.navigateToTab(MainRoutes.Explore)
+                    },
+                    onNavigateToAgenda = {
+                        navController.navigateToTab(MainRoutes.Agenda)
+                    },
+                    onNavigateToProfile = {
+                        navController.navigateToTab(MainRoutes.Profile)
+                    },
+                    onNavigateToUser = { userId ->
+                        navController.navigate(MainRoutes.UserProfile(userId)) {
+                            launchSingleTop = true
+                        }
+                    }
+                )
+            }
+
+            composable<MainRoutes.UserProfile> {
+                // El id del usuario llega al ViewModel por su SavedStateHandle
+                UserProfileScreen(
+                    onNavigateBack = {
+                        navController.popBackStack()
+                    },
+                    onNavigateToEventDetail = { eventId ->
+                        navController.navigate(MainRoutes.EventDetail(eventId))
                     }
                 )
             }
 
         }
     }
+}
+
+/** Cambia de pestaña (Inicio/Perfil) sin apilar pantallas y conservando el estado de cada una. */
+private fun NavHostController.navigateToTab(route: MainRoutes) {
+    navigate(route) {
+        popUpTo(MainRoutes.Feed) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+/** Solo la pantalla visible y activa puede salir: durante la animación de salida un segundo toque no debe sacar otra entrada. */
+internal fun canPop(entryState: Lifecycle.State): Boolean = entryState == Lifecycle.State.RESUMED
+
+/**
+ * Sale de [entry] una sola vez aunque lleguen varios toques seguidos; si no queda pantalla anterior
+ * (la pila quedaría vacía y el NavHost sin dibujar nada) va al feed.
+ */
+private fun NavHostController.safePopBackStack(entry: NavBackStackEntry) {
+    if (!canPop(entry.lifecycle.currentState)) return
+    if (previousBackStackEntry == null) navigateToFeed() else popBackStack()
 }
 
 /** Entra al feed y elimina del historial la guía y las pantallas de autenticación. */

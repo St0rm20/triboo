@@ -1,5 +1,6 @@
 package edu.uniquindio.co.tribooo.features.onboarding
 
+import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.BorderStroke
@@ -44,33 +45,35 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.R
 import kotlinx.coroutines.launch
 
 /** Un paso de la guía inicial; los colores salen del tema para respetar el modo oscuro. */
 private data class OnboardingStep(
     val icon: ImageVector,
-    val title: String,
-    val body: String
+    @StringRes val title: Int,
+    @StringRes val body: Int
 )
 
 private val steps = listOf(
     OnboardingStep(
         icon = Icons.Rounded.TravelExplore,
-        title = "Descubre lo que pasa a dos cuadras",
-        body = "Un feed y un mapa con eventos deportivos, culturales, académicos y de voluntariado cerca de ti, filtrados por distancia y categoría."
+        title = R.string.onboarding_step1_title,
+        body = R.string.onboarding_step1_body
     ),
     OnboardingStep(
         icon = Icons.Rounded.HowToReg,
-        title = "Confirma tu cupo en un toque",
-        body = "Reserva tu lugar, guarda eventos para decidir después y te avisamos si algo cambia de hora o se queda sin cupo."
+        title = R.string.onboarding_step2_title,
+        body = R.string.onboarding_step2_body
     ),
     OnboardingStep(
         icon = Icons.Rounded.Campaign,
-        title = "Publica los eventos de tu comunidad",
-        body = "Crea un evento, defínele cupo y lugar, y envíalo a revisión. Sigue su estado y conversa con quienes asisten."
+        title = R.string.onboarding_step3_title,
+        body = R.string.onboarding_step3_body
     )
 )
 
@@ -104,14 +107,14 @@ fun OnboardingScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Paso ${current + 1} de ${steps.size}",
+                text = stringResource(R.string.onboarding_step_counter, current + 1, steps.size),
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Medium,
                 color = colors.onSurfaceVariant,
                 modifier = Modifier.padding(start = 8.dp)
             )
             TextButton(onClick = onNavigateToLogin) {
-                Text("Omitir", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Text(stringResource(R.string.onboarding_skip), fontSize = 14.sp, fontWeight = FontWeight.Medium)
             }
         }
 
@@ -139,7 +142,7 @@ fun OnboardingScreen(
                         contentPadding = PaddingValues(horizontal = 22.dp),
                         modifier = Modifier.height(56.dp)
                     ) {
-                        Text("Atrás", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                        Text(stringResource(R.string.onboarding_back), fontSize = 15.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
                     }
                 }
 
@@ -151,7 +154,7 @@ fun OnboardingScreen(
                         .height(56.dp)
                 ) {
                     Text(
-                        text = if (isLastStep) "Crear mi cuenta" else "Siguiente",
+                        text = stringResource(if (isLastStep) R.string.onboarding_create_account else R.string.onboarding_next),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
                     )
@@ -201,7 +204,7 @@ private fun StepContent(step: OnboardingStep, index: Int) {
         }
 
         Text(
-            text = step.title,
+            text = stringResource(step.title),
             fontSize = 29.sp,
             lineHeight = 35.sp,
             letterSpacing = (-0.58).sp,
@@ -210,7 +213,7 @@ private fun StepContent(step: OnboardingStep, index: Int) {
         )
 
         Text(
-            text = step.body,
+            text = stringResource(step.body),
             fontSize = 15.sp,
             lineHeight = 24.sp,
             color = colors.onSurfaceVariant,

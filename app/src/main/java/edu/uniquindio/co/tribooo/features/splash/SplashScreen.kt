@@ -23,10 +23,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -88,7 +90,7 @@ fun SplashScreen() {
             }
 
             Text(
-                text = "Triboo",
+                text = stringResource(R.string.splash_title),
                 fontSize = 38.sp,
                 lineHeight = 44.sp,
                 letterSpacing = (-0.95).sp,
@@ -102,7 +104,7 @@ fun SplashScreen() {
             )
 
             Text(
-                text = "Eventos comunitarios en tu barrio",
+                text = stringResource(R.string.splash_subtitle),
                 fontSize = 15.sp,
                 lineHeight = 22.sp,
                 color = colors.onPrimary,
@@ -117,7 +119,7 @@ fun SplashScreen() {
         }
 
         Text(
-            text = "ARMENIA, QUINDÍO",
+            text = stringResource(R.string.splash_location),
             fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             letterSpacing = 1.2.sp,

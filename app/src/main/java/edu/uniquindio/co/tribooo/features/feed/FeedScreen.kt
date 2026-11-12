@@ -1,12 +1,14 @@
 package edu.uniquindio.co.tribooo.features.feed
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,7 +16,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -22,11 +23,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.EventBusy
-import androidx.compose.material.icons.rounded.Place
-import androidx.compose.material.icons.rounded.Schedule
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,37 +42,38 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
+import edu.uniquindio.co.tribooo.R
+import edu.uniquindio.co.tribooo.core.component.AttendanceDialogs
 import edu.uniquindio.co.tribooo.core.component.CategoryChip
+import edu.uniquindio.co.tribooo.core.component.EventCard
+import edu.uniquindio.co.tribooo.core.component.EventFiltersSheet
 import edu.uniquindio.co.tribooo.core.component.MainBottomBar
 import edu.uniquindio.co.tribooo.core.component.MainTab
-import edu.uniquindio.co.tribooo.core.component.iconVector
-import edu.uniquindio.co.tribooo.core.theme.categoryColors
 import edu.uniquindio.co.tribooo.core.util.APP_ZONE
-import edu.uniquindio.co.tribooo.core.util.CUPO_WARNING
-import edu.uniquindio.co.tribooo.core.util.atAppZone
-import edu.uniquindio.co.tribooo.core.util.cupoLabel
-import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
-import edu.uniquindio.co.tribooo.core.util.formatThousands
 import edu.uniquindio.co.tribooo.core.util.longLabel
-import edu.uniquindio.co.tribooo.core.util.monthShort
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.domain.model.Category
 import java.time.LocalDate
 
 @Composable
 fun FeedScreen(
     onNavigateToCreateEvent: () -> Unit,
+    onNavigateToModeration: () -> Unit,
+    onNavigateToExplore: () -> Unit,
+    onNavigateToAgenda: () -> Unit,
+    onNavigateToProfile: () -> Unit,
     onNavigateToEventDetail: (eventId: String) -> Unit,
+    onNavigateToNotifications: () -> Unit,
     snackbarMessage: String?,
     onSnackbarShown: () -> Unit,
     viewModel: FeedViewModel = hiltViewModel()
@@ -85,9 +86,18 @@ fun FeedScreen(
         bottomBar = {
             MainBottomBar(
                 selected = MainTab.FEED,
-                onCreateClick = onNavigateToCreateEvent,
-                enabledTabs = setOf(MainTab.FEED),
-                onTabSelected = {}
+                onCreateClick = if (state.isAdmin) onNavigateToModeration else onNavigateToCreateEvent,
+                enabledTabs = setOf(MainTab.FEED, MainTab.EXPLORE, MainTab.AGENDA, MainTab.PROFILE),
+                onTabSelected = { tab ->
+                    when (tab) {
+                        MainTab.EXPLORE -> onNavigateToExplore()
+                        MainTab.AGENDA -> onNavigateToAgenda()
+                        MainTab.PROFILE -> onNavigateToProfile()
+                        else -> Unit
+                    }
+                },
+                isAdmin = state.isAdmin,
+                moderationBadge = state.pendingModeration
             )
         }
     ) { innerPadding ->
@@ -102,7 +112,11 @@ fun FeedScreen(
                 onQueryChange = viewModel::onQueryChange,
                 categories = state.categories,
                 selectedCategories = state.selectedCategories,
-                onToggleCategory = viewModel::toggleCategory
+                onToggleCategory = viewModel::toggleCategory,
+                activeFilters = state.filters.activeCount,
+                onOpenFilters = viewModel::onOpenFilters,
+                unreadNotifications = state.unreadNotifications,
+                onNavigateToNotifications = onNavigateToNotifications
             )
 
             LazyColumn(
@@ -119,12 +133,12 @@ fun FeedScreen(
                     ) {
                         val count = state.events.size
                         Text(
-                            text = if (count == 1) "1 evento cerca" else "$count eventos cerca",
+                            text = pluralStringResource(R.plurals.feed_events_nearby, count, count),
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Más cercanos primero",
+                            text = stringResource(R.string.feed_nearest_first),
                             fontSize = 13.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -146,11 +160,37 @@ fun FeedScreen(
         }
     }
 
+    AttendanceDialogs(
+        step = state.attendanceStep,
+        onCancel = viewModel::onAttendanceCancel,
+        onContinue = viewModel::onAttendanceContinue
+    )
+
+    if (state.showFilters) {
+        EventFiltersSheet(
+            filters = state.filters,
+            categories = state.categories,
+            onApply = viewModel::onApplyFilters,
+            onDismiss = viewModel::onDismissFilters
+        )
+    }
+
     LaunchedEffect(snackbarMessage) {
         if (snackbarMessage != null) {
             snackbarHostState.showSnackbar(snackbarMessage)
             onSnackbarShown()
         }
+    }
+
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onMessageShown()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
     }
 }
 
@@ -160,26 +200,37 @@ private fun FeedHeader(
     onQueryChange: (String) -> Unit,
     categories: List<Category>,
     selectedCategories: Set<String>,
-    onToggleCategory: (String) -> Unit
+    onToggleCategory: (String) -> Unit,
+    activeFilters: Int,
+    onOpenFilters: () -> Unit,
+    unreadNotifications: Int,
+    onNavigateToNotifications: () -> Unit
 ) {
     val colors = MaterialTheme.colorScheme
+    val rp = rememberResourceProvider()
 
     Column(modifier = Modifier.padding(start = 8.dp, end = 8.dp, top = 6.dp, bottom = 8.dp)) {
-        Column(modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 10.dp)) {
-            Text(
-                text = LocalDate.now(APP_ZONE).longLabel().uppercase(),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                letterSpacing = 0.5.sp,
-                color = colors.primary
-            )
-            Text(
-                text = "Cerca de ti",
-                fontSize = 26.sp,
-                lineHeight = 32.sp,
-                color = colors.onSurface,
-                modifier = Modifier.padding(top = 3.dp)
-            )
+        Row(
+            modifier = Modifier.padding(start = 12.dp, end = 4.dp, top = 2.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = LocalDate.now(APP_ZONE).longLabel(rp).uppercase(),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.5.sp,
+                    color = colors.primary
+                )
+                Text(
+                    text = stringResource(R.string.feed_near_you),
+                    fontSize = 26.sp,
+                    lineHeight = 32.sp,
+                    color = colors.onSurface,
+                    modifier = Modifier.padding(top = 3.dp)
+                )
+            }
+            NotificationsBell(count = unreadNotifications, onClick = onNavigateToNotifications)
         }
 
         // Barra de búsqueda
@@ -203,7 +254,7 @@ private fun FeedHeader(
                 modifier = Modifier.weight(1f),
                 decorationBox = { inner ->
                     if (query.isEmpty()) {
-                        Text("Buscar eventos, barrios, lugares", fontSize = 15.sp, color = colors.onSurfaceVariant)
+                        Text(stringResource(R.string.feed_search_placeholder), fontSize = 15.sp, color = colors.onSurfaceVariant)
                     }
                     inner()
                 }
@@ -215,6 +266,7 @@ private fun FeedHeader(
             contentPadding = PaddingValues(start = 4.dp, end = 4.dp, top = 12.dp, bottom = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            item(key = "filters") { FiltersChip(count = activeFilters, onClick = onOpenFilters) }
             items(categories, key = { it.key }) { category ->
                 CategoryChip(
                     category = category,
@@ -226,237 +278,27 @@ private fun FeedHeader(
     }
 }
 
+/** Chip "Filtros" con el número de filtros activos; toma el tono secundario cuando hay alguno. */
 @Composable
-private fun EventCard(item: FeedEventItem, onClick: () -> Unit, onToggleAttendance: () -> Unit) {
+private fun FiltersChip(count: Int, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    val event = item.event
-    val start = event.startDate.atAppZone().toLocalDate()
+    val active = count > 0
 
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(26.dp),
-        color = colors.surfaceContainerLowest,
-        shadowElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        Column {
-            // Portada
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(132.dp)
-            ) {
-                AsyncImage(
-                    model = event.imageUrl,
-                    contentDescription = event.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(colors.surfaceContainerHigh)
-                )
-
-                val tones = categoryColors(event.category)
-                Row(
-                    modifier = Modifier
-                        .align(Alignment.TopStart)
-                        .padding(10.dp)
-                        .height(30.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(tones.container)
-                        .padding(start = 9.dp, end = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(event.category.iconVector(), null, tint = tones.content, modifier = Modifier.size(16.dp))
-                    Text(event.category.name, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = tones.content)
-                }
-
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(10.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(colors.surfaceContainerLowest)
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
-                        .widthIn(min = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        start.monthShort().uppercase(),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        letterSpacing = 0.6.sp,
-                        color = colors.onSurfaceVariant
-                    )
-                    Text(
-                        start.dayOfMonth.toString(),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = colors.onSurface
-                    )
-                }
-
-                if (item.isMine) {
-                    Text(
-                        text = "Tú organizas",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = colors.onTertiaryContainer,
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(10.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(colors.tertiaryContainer)
-                            .padding(horizontal = 9.dp, vertical = 6.dp)
-                    )
-                }
-            }
-
-            Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 16.dp)) {
-                Text(
-                    text = event.title,
-                    fontSize = 18.sp,
-                    lineHeight = 23.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = colors.onSurface
-                )
-                Column(
-                    modifier = Modifier.padding(top = 9.dp),
-                    verticalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    InfoRow(Icons.Rounded.Schedule, eventWhenLabel(event.startDate, event.endDate))
-                    InfoRow(Icons.Rounded.Place, "${event.place} · ${event.neighborhood}")
-                }
-
-                if (event.cupo != null) CupoBar(item = item)
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                        val avatarColors = listOf(
-                            colors.primaryContainer to colors.onPrimaryContainer,
-                            colors.secondaryContainer to colors.onSecondaryContainer,
-                            colors.tertiaryContainer to colors.onTertiaryContainer
-                        )
-                        Row(horizontalArrangement = Arrangement.spacedBy((-7).dp)) {
-                            item.attendeeInitials.forEachIndexed { index, initials ->
-                                val (bg, fg) = avatarColors[index % avatarColors.size]
-                                Box(
-                                    modifier = Modifier
-                                        .size(28.dp)
-                                        .border(2.dp, colors.surfaceContainerLowest, CircleShape)
-                                        .padding(2.dp)
-                                        .clip(CircleShape)
-                                        .background(bg),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(initials, fontSize = 10.sp, fontWeight = FontWeight.Medium, color = fg)
-                                }
-                            }
-                        }
-                        Text(
-                            text = "${item.attendeesCount.formatThousands()} asistirán",
-                            fontSize = 13.sp,
-                            color = colors.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.padding(start = 8.dp)
-                        )
-                    }
-                    AttendButton(item = item, onClick = onToggleAttendance)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun InfoRow(icon: ImageVector, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(17.dp))
-        Text(text, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun CupoBar(item: FeedEventItem) {
-    val colors = MaterialTheme.colorScheme
-    val tight = item.occupancy >= CUPO_WARNING
-    val label = item.event.cupoLabel(item.attendeesCount)
-    val accent = if (tight) colors.error else colors.primary
-
-    Column(modifier = Modifier.padding(top = 12.dp)) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 5.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            val fg = if (tight) colors.error else colors.onSurfaceVariant
-            Text(label, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = fg)
-            Text("${(item.occupancy * 100).toInt()}% ocupado", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = fg)
-        }
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp))
-                .background(colors.surfaceContainerHigh)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth(item.occupancy)
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(accent)
-            )
-        }
-    }
-}
-
-@Composable
-private fun AttendButton(item: FeedEventItem, onClick: () -> Unit) {
-    val colors = MaterialTheme.colorScheme
-    val waitlist = item.isFull && !item.isAttending
-    Surface(
-        onClick = onClick,
-        enabled = !waitlist,
-        shape = RoundedCornerShape(14.dp),
-        color = when {
-            item.isAttending -> colors.errorContainer
-            waitlist -> colors.surfaceContainerHigh
-            else -> colors.primary
-        },
-        contentColor = when {
-            item.isAttending -> colors.onErrorContainer
-            waitlist -> colors.onSurfaceVariant
-            else -> colors.onPrimary
-        },
-        modifier = Modifier.height(40.dp)
+        shape = RoundedCornerShape(12.dp),
+        color = if (active) colors.secondaryContainer else Color.Transparent,
+        contentColor = if (active) colors.onSecondaryContainer else colors.onSurface,
+        border = if (active) null else BorderStroke(1.dp, colors.outline),
+        modifier = Modifier.height(36.dp)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 18.dp),
+            modifier = Modifier.padding(start = 11.dp, end = 14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(
-                imageVector = if (item.isAttending) Icons.Rounded.EventBusy else Icons.Rounded.Add,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
-            Text(
-                text = when {
-                    item.isAttending -> "Cancelar"
-                    waitlist -> "Lista de espera"
-                    else -> "Asistiré"
-                },
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
+            Icon(Icons.Rounded.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
+            Text(if (active) stringResource(R.string.feed_filters_count, count) else stringResource(R.string.filters_title), fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
@@ -472,21 +314,48 @@ private fun EmptyFeed(onClearFilters: () -> Unit) {
     ) {
         Icon(Icons.Rounded.EventBusy, contentDescription = null, tint = colors.outlineVariant, modifier = Modifier.size(44.dp))
         Text(
-            "Sin eventos con esos filtros",
+            stringResource(R.string.feed_empty_title),
             fontSize = 17.sp,
             fontWeight = FontWeight.Medium,
             color = colors.onSurface,
             modifier = Modifier.padding(top = 12.dp)
         )
         Text(
-            "Prueba con otra búsqueda o quitando categorías.",
+            stringResource(R.string.feed_empty_text),
             fontSize = 14.sp,
             color = colors.onSurfaceVariant,
             modifier = Modifier.padding(top = 6.dp)
         )
         Spacer(Modifier.height(18.dp))
         OutlinedButton(onClick = onClearFilters, shape = RoundedCornerShape(14.dp)) {
-            Text("Limpiar filtros")
+            Text(stringResource(R.string.feed_clear_filters))
+        }
+    }
+}
+
+/** Botón circular de campana; muestra la cantidad de avisos sin leer. */
+@Composable
+private fun NotificationsBell(count: Int, onClick: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+
+    Box {
+        Surface(onClick = onClick, shape = CircleShape, color = colors.surfaceContainer, modifier = Modifier.size(44.dp)) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Notifications, contentDescription = stringResource(R.string.feed_notifications), tint = colors.onSurface)
+            }
+        }
+        if (count > 0) {
+            Text(
+                text = if (count > 9) "9+" else count.toString(),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.onError,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .background(colors.error, CircleShape)
+                    .defaultMinSize(minWidth = 18.dp, minHeight = 18.dp)
+                    .wrapContentSize(Alignment.Center)
+            )
         }
     }
 }

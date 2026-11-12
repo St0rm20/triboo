@@ -1,0 +1,155 @@
+package edu.uniquindio.co.tribooo.features.moderation
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import edu.uniquindio.co.tribooo.R
+import edu.uniquindio.co.tribooo.core.component.FormInvalidNotice
+import edu.uniquindio.co.tribooo.core.component.FormTextField
+import edu.uniquindio.co.tribooo.core.component.RequiredLegend
+import edu.uniquindio.co.tribooo.core.component.WrapRow
+import edu.uniquindio.co.tribooo.core.component.formTarget
+import edu.uniquindio.co.tribooo.core.util.FormLimits
+import edu.uniquindio.co.tribooo.core.util.REJECTION_QUICK_REASONS
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
+
+/**
+ * Hoja "Motivo del rechazo". Sin estado propio: el texto y su error viven en [sheet]
+ * y cada cambio se reporta al ViewModel.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun RejectSheet(
+    sheet: RejectSheetState,
+    onReasonChange: (String) -> Unit,
+    onReasonFocusLost: () -> Unit,
+    onReasonFocusHandled: () -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val colors = MaterialTheme.colorScheme
+    val resources = rememberResourceProvider()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = colors.surfaceContainerLow
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .imePadding()
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(Icons.Rounded.Block, contentDescription = null, tint = colors.error, modifier = Modifier.size(24.dp))
+                Text(stringResource(R.string.reject_title), fontSize = 20.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+            }
+            Text(
+                stringResource(R.string.reject_intro),
+                fontSize = 13.sp,
+                lineHeight = 19.sp,
+                color = colors.onSurfaceVariant
+            )
+            RequiredLegend()
+
+            Surface(shape = RoundedCornerShape(16.dp), color = colors.surfaceContainerHigh, modifier = Modifier.fillMaxWidth()) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(sheet.title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = colors.onSurface)
+                    Text(sheet.authorName, fontSize = 13.sp, color = colors.onSurfaceVariant)
+                }
+            }
+
+            Text(stringResource(R.string.reject_quick_title), fontSize = 13.sp, fontWeight = FontWeight.Medium, color = colors.onSurfaceVariant)
+            WrapRow {
+                REJECTION_QUICK_REASONS.forEach { reasonRes ->
+                    val reason = stringResource(reasonRes)
+                    Surface(
+                        onClick = { onReasonChange(reason) },
+                        shape = RoundedCornerShape(10.dp),
+                        color = Color.Transparent,
+                        border = BorderStroke(1.dp, colors.outline)
+                    ) {
+                        Text(
+                            reason,
+                            fontSize = 13.sp,
+                            color = colors.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
+                        )
+                    }
+                }
+            }
+
+            FormTextField(
+                value = sheet.reason,
+                onValueChange = onReasonChange,
+                label = stringResource(R.string.reject_title),
+                required = true,
+                placeholder = stringResource(R.string.reject_placeholder),
+                hint = stringResource(R.string.form_reject_reason_hint),
+                error = sheet.error(resources),
+                maxLength = FormLimits.REJECT_REASON,
+                minLines = 4,
+                containerColor = Color.Transparent,
+                onFocusLost = onReasonFocusLost,
+                modifier = Modifier
+                    .heightIn(min = 110.dp)
+                    .formTarget(sheet.focusRequested, onReasonFocusHandled)
+            )
+
+            if (sheet.submitAttempted && sheet.error(resources) != null) FormInvalidNotice()
+
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(onClick = onDismiss, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.common_cancel)) }
+                Button(
+                    onClick = onConfirm,
+                    enabled = !sheet.isSubmitting,
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.error, contentColor = colors.onError),
+                    modifier = Modifier.weight(1.4f)
+                ) {
+                    if (sheet.isSubmitting) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = colors.onError)
+                    } else {
+                        Icon(Icons.Rounded.Block, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Text(stringResource(R.string.reject_submit), modifier = Modifier.padding(start = 6.dp), maxLines = 1)
+                    }
+                }
+            }
+        }
+    }
+}

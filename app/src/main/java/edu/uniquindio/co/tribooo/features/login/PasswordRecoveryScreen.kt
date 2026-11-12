@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -18,6 +19,9 @@ import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Email
 import androidx.compose.material.icons.rounded.MarkEmailRead
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,26 +31,40 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.component.AuthTextField
+import edu.uniquindio.co.tribooo.core.component.RequiredLegend
+import edu.uniquindio.co.tribooo.core.component.formTarget
+import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 
 @Composable
 fun PasswordRecoveryScreen(
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    viewModel: PasswordRecoveryViewModel = hiltViewModel()
 ) {
-    var email by rememberSaveable { mutableStateOf("") }
-    var codeSent by rememberSaveable { mutableStateOf(false) }
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val codeSent = state.sentTo != null
+    val resources = rememberResourceProvider()
+    val backToLogin = {
+        viewModel.onBackToLogin()
+        onNavigateToLogin()
+    }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.surface
+        containerColor = MaterialTheme.colorScheme.surface,
+        snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { innerPadding ->
         Column(
             modifier = Modifier
@@ -62,7 +80,7 @@ fun PasswordRecoveryScreen(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
-                    contentDescription = "Volver al inicio de sesión"
+                    contentDescription = stringResource(R.string.recovery_back_to_login)
                 )
             }
 
@@ -97,7 +115,7 @@ fun PasswordRecoveryScreen(
             }
 
             Text(
-                text = if (codeSent) "Revisa tu correo" else "Recupera tu contraseña",
+                text = stringResource(if (codeSent) R.string.recovery_title_sent else R.string.recovery_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Normal,
                 modifier = Modifier.padding(top = 22.dp)
@@ -105,9 +123,9 @@ fun PasswordRecoveryScreen(
 
             Text(
                 text = if (codeSent) {
-                    "Enviamos un código a ${email.ifBlank { "tu correo electrónico" }}. Revisa la bandeja de entrada y espera el código para continuar."
+                    stringResource(R.string.recovery_message_sent, state.sentTo.orEmpty())
                 } else {
-                    "Escribe el correo asociado a tu cuenta. Te enviaremos un código para recuperar el acceso."
+                    stringResource(R.string.recovery_message)
                 },
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -115,20 +133,28 @@ fun PasswordRecoveryScreen(
             )
 
             if (!codeSent) {
+                RequiredLegend(modifier = Modifier.padding(top = 24.dp))
+
                 AuthTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = "Correo",
+                    value = state.email,
+                    onValueChange = viewModel::onEmailChange,
+                    label = stringResource(R.string.login_email_label),
                     leadingIcon = Icons.Rounded.Email,
-                    placeholder = "tunombre@correo.com",
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = KeyboardType.Email
-                    ),
-                    modifier = Modifier.padding(top = 28.dp)
+                    placeholder = stringResource(R.string.login_email_placeholder),
+                    required = true,
+                    hint = stringResource(R.string.form_email_hint),
+                    error = state.emailError(resources),
+                    isValid = state.isEmailValid,
+                    onFocusLost = viewModel::onEmailFocusLost,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    modifier = Modifier
+                        .padding(top = 8.dp)
+                        .formTarget(state.focusEmail, viewModel::onFocusHandled)
                 )
 
                 Button(
-                    onClick = { codeSent = true },
+                    onClick = viewModel::onSend,
+                    enabled = !state.isSending,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(top = 24.dp),
@@ -138,7 +164,17 @@ fun PasswordRecoveryScreen(
                         contentColor = MaterialTheme.colorScheme.onPrimary
                     )
                 ) {
-                    Text("Enviar código", modifier = Modifier.padding(vertical = 8.dp))
+                    if (state.isSending) {
+                        CircularProgressIndicator(
+                            modifier = Modifier
+                                .padding(4.dp)
+                                .size(22.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text(stringResource(R.string.recovery_send_code), modifier = Modifier.padding(vertical = 8.dp))
+                    }
                 }
             } else {
                 Row(
@@ -147,14 +183,21 @@ fun PasswordRecoveryScreen(
                         .padding(top = 24.dp),
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    TextButton(onClick = { codeSent = false }) {
-                        Text("Usar otro correo")
+                    TextButton(onClick = viewModel::onUseAnotherEmail) {
+                        Text(stringResource(R.string.recovery_use_another_email))
                     }
-                    TextButton(onClick = onNavigateToLogin) {
-                        Text("Volver al inicio")
+                    TextButton(onClick = backToLogin) {
+                        Text(stringResource(R.string.recovery_back_home))
                     }
                 }
             }
+        }
+    }
+
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onMessageShown()
         }
     }
 }

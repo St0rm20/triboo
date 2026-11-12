@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-/** Ubicación fija (centro de Armenia) mientras no se use el GPS. */
+/** Ubicación del usuario: parte del centro de Armenia (respaldo sin permiso) y se actualiza con la que reporta el mapa. */
 @Singleton
 class LocationRepositoryImpl @Inject constructor() : LocationRepository {
 
@@ -19,4 +19,8 @@ class LocationRepositoryImpl @Inject constructor() : LocationRepository {
     override val cities: List<String> = MockData.cities
 
     override val placeSuggestions: List<PlaceSuggestion> = MockData.placeSuggestions
+
+    override suspend fun updateCurrentLocation(location: Location) {
+        _currentLocation.value = location
+    }
 }
