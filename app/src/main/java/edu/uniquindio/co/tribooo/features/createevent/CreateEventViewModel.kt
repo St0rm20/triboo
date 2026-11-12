@@ -15,6 +15,7 @@ import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Contribution
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.ImageEvent
+import edu.uniquindio.co.tribooo.domain.model.Location
 import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
 import edu.uniquindio.co.tribooo.domain.usecase.auth.GetCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.CreateEventUseCase
@@ -23,6 +24,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventImagesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ResubmitEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.UpdateEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetPlaceSuggestionsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.location.ObserveCurrentLocationUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.ResolvePlaceUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.filterPlaceSuggestions
 import jakarta.inject.Inject
@@ -62,6 +64,11 @@ data class CreateEventUiState(
     val endDate: LocalDate = LocalDate.now(APP_ZONE).plusDays(1),
     val endTime: LocalTime = LocalTime.of(20, 30),
     val place: PlaceSuggestion? = null,
+    /** Punto exacto marcado en el mapa; si es null el evento usa la ubicación de [place]. */
+    val pickedLocation: Location? = null,
+    val showLocationPicker: Boolean = false,
+    /** Ubicación actual del usuario; punto inicial del mapa cuando no hay lugar ni punto marcado. */
+    val userLocation: Location? = null,
     val cupoEnabled: Boolean = true,
     val cupo: Int = 40,
     val contributionEnabled: Boolean = false,
@@ -124,6 +131,7 @@ class CreateEventViewModel @Inject constructor(
     private val resubmitEventUseCase: ResubmitEventUseCase,
     private val resolvePlaceUseCase: ResolvePlaceUseCase,
     observeEventImages: ObserveEventImagesUseCase,
+    observeCurrentLocation: ObserveCurrentLocationUseCase,
     savedStateHandle: SavedStateHandle,
     private val resources: ResourceProvider
 ) : ViewModel() {
@@ -144,6 +152,9 @@ class CreateEventViewModel @Inject constructor(
     val contributionPresets: List<Long> = listOf(2000, 5000, 10000)
 
     init {
+        viewModelScope.launch {
+            observeCurrentLocation().collect { location -> _uiState.update { it.copy(userLocation = location) } }
+        }
         if (mode != null && eventId != null) {
             viewModelScope.launch { preload(eventId, mode, observeEventImages()) }
         } else if (mode != null) {
@@ -161,7 +172,7 @@ class CreateEventViewModel @Inject constructor(
         }
         val gallery = images.value.filter { it.event.id == eventId }.sortedBy { it.order }.map { it.url }
         val imageUris = (listOfNotNull(event.imageUrl) + gallery).distinct()
-        _uiState.value = event.toFormState(mode, imageUris, placeSuggestions, Instant.now())
+        _uiState.update { event.toFormState(mode, imageUris, placeSuggestions, Instant.now()).copy(userLocation = it.userLocation) }
     }
 
     fun onTitleChange(value: String) {
@@ -225,8 +236,21 @@ class CreateEventViewModel @Inject constructor(
     fun onPlaceConfirmed(name: String, neighborhood: String) {
         viewModelScope.launch {
             val place = resolvePlaceUseCase(name, neighborhood) ?: return@launch
-            _uiState.update { it.copy(place = place, picker = null) }
+            _uiState.update { it.copy(place = place, pickedLocation = null, picker = null) }
         }
+    }
+
+    fun onOpenLocationPicker() {
+        _uiState.update { it.copy(showLocationPicker = true) }
+    }
+
+    fun onCloseLocationPicker() {
+        _uiState.update { it.copy(showLocationPicker = false) }
+    }
+
+    /** Guarda el punto marcado en el mapa y cierra el selector. */
+    fun onLocationPicked(location: Location) {
+        _uiState.update { it.copy(pickedLocation = location, showLocationPicker = false) }
     }
 
     fun onCupoEnabledChange(enabled: Boolean) {
@@ -306,7 +330,7 @@ class CreateEventViewModel @Inject constructor(
                 multidia = state.multiDay,
                 place = place.name,
                 neighborhood = place.neighborhood,
-                location = place.location,
+                location = state.pickedLocation ?: place.location,
                 cupo = if (state.cupoEnabled) state.cupo else null,
                 contribution = if (state.contributionEnabled) Contribution(amount = state.contributionAmount.toDouble(), cause = state.contributionCause.trim()) else null,
                 organizer = organizer,

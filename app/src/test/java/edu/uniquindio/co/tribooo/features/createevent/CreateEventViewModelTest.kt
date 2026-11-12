@@ -7,7 +7,9 @@ import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.memory.MockData
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
+import edu.uniquindio.co.tribooo.domain.model.Location
 import edu.uniquindio.co.tribooo.domain.model.User
 import edu.uniquindio.co.tribooo.domain.repository.EventRepository
 import edu.uniquindio.co.tribooo.domain.usecase.event.CreateEventUseCase
@@ -19,6 +21,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.event.currentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.emptyEventRepository
 import edu.uniquindio.co.tribooo.domain.usecase.event.testEvent
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetPlaceSuggestionsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.location.ObserveCurrentLocationUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.ResolvePlaceUseCase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -78,6 +81,7 @@ class CreateEventViewModelTest {
             resubmitEventUseCase = ResubmitEventUseCase(repository, user, testResources),
             resolvePlaceUseCase = ResolvePlaceUseCase(LocationRepositoryImpl(), user),
             observeEventImages = ObserveEventImagesUseCase(repository),
+            observeCurrentLocation = ObserveCurrentLocationUseCase(LocationRepositoryImpl()),
             savedStateHandle = SavedStateHandle(args),
             resources = testResources
         )
@@ -217,6 +221,53 @@ class CreateEventViewModelTest {
         vm.onPlaceConfirmed("   ", "Sur")
 
         assertEquals("Parque X", vm.uiState.value.place?.name)
+    }
+
+    @Test
+    fun publishedEventUsesThePickedLocation() = runTest {
+        val vm = viewModel()
+        vm.onTitleChange("Chocolatada")
+        vm.onCategorySelected(vm.categories.first())
+        vm.onPlaceConfirmed("Cancha del barrio", "")
+        val picked = Location(4.6, -75.7)
+
+        vm.onOpenLocationPicker()
+        assertTrue(vm.uiState.value.showLocationPicker)
+        vm.onLocationPicked(picked)
+        assertFalse(vm.uiState.value.showLocationPicker)
+        vm.publish()
+
+        assertTrue(vm.uiState.value.publishResult is RequestResult.Success)
+        assertEquals(picked, repository.events.value.single { it.title == "Chocolatada" }.location)
+    }
+
+    @Test
+    fun withoutPickedLocationTheEventUsesThePlaceLocation() = runTest {
+        val vm = viewModel()
+        vm.onTitleChange("Chocolatada")
+        vm.onCategorySelected(vm.categories.first())
+        vm.onPlaceConfirmed("Cancha del barrio", "")
+        val placeLocation = vm.uiState.value.place!!.location
+
+        vm.publish()
+
+        assertEquals(placeLocation, repository.events.value.single { it.title == "Chocolatada" }.location)
+    }
+
+    @Test
+    fun choosingAnotherPlaceResetsThePickedLocation() = runTest {
+        val vm = viewModel()
+        vm.onPlaceConfirmed("Parque X", "Norte")
+        vm.onLocationPicked(Location(4.6, -75.7))
+
+        vm.onPlaceConfirmed("Parque Y", "Sur")
+
+        assertNull(vm.uiState.value.pickedLocation)
+    }
+
+    @Test
+    fun formExposesTheCurrentLocationAsTheMapStart() {
+        assertEquals(MockData.currentLocation, viewModel().uiState.value.userLocation)
     }
 
     private fun readyToPublish(): CreateEventViewModel {

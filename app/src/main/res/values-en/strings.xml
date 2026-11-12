@@ -180,7 +180,6 @@
     <string name="filters_distance_up_to">Up to %1$d km</string>
     <string name="filters_only_available">Only with spots available</string>
     <string name="filters_only_available_hint">Hides full events</string>
-    <string name="map_read_only">map — read only</string>
 
     <!-- Use cases -->
     <string name="usecase_event_not_found">The event no longer exists.</string>
@@ -368,8 +367,6 @@
     <string name="explore_attending">I\'m going</string>
     <string name="explore_attend">Go</string>
     <string name="explore_empty_title">No events match these filters</string>
-    <string name="map_placeholder_park">parque de la vida</string>
-    <string name="map_placeholder_label">map — placeholder</string>
     <string name="decimal_separator">.</string>
 
     <!-- Schedule -->
@@ -532,6 +529,9 @@
     <string name="create_event_place_dialog_message">Type the meeting point. Attendees will see this location.</string>
     <string name="create_event_place_name_label">Place name</string>
     <string name="create_event_place_neighborhood_label">Neighborhood or area</string>
+    <string name="create_event_place_mark_on_map">Mark on the map</string>
+    <string name="create_event_place_marked">Spot marked on the map</string>
+    <string name="location_picker_confirm">Confirm location</string>
     <string name="create_event_place_use">Use this place</string>
 
     <!-- My events -->

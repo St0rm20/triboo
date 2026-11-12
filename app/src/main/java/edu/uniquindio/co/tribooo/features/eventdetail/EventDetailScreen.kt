@@ -128,7 +128,9 @@ import edu.uniquindio.co.tribooo.core.component.errorSemantics
 import edu.uniquindio.co.tribooo.core.component.formTarget
 import edu.uniquindio.co.tribooo.core.util.FormLimits
 import edu.uniquindio.co.tribooo.core.component.InitialsAvatar
-import edu.uniquindio.co.tribooo.core.component.MapPlaceholder
+import com.mapbox.geojson.Point
+import edu.uniquindio.co.tribooo.core.component.MapBox
+import edu.uniquindio.co.tribooo.core.component.MapPin
 import edu.uniquindio.co.tribooo.core.component.WrapRow
 import edu.uniquindio.co.tribooo.core.component.avatarColors
 import edu.uniquindio.co.tribooo.core.component.iconVector
@@ -303,10 +305,15 @@ fun EventDetailContent(
                 item(key = "meeting-point") {
                     Column(modifier = Modifier.padding(horizontal = ContentPadding)) {
                         SectionTitle(stringResource(R.string.detail_meeting_point))
-                        MapPlaceholder(
+                        MapBox(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(128.dp)
+                                .height(160.dp),
+                            // Point.fromLngLat lleva primero la longitud
+                            center = Point.fromLngLat(detail.event.location.longitude, detail.event.location.latitude),
+                            zoom = 15.5,
+                            pins = listOf(MapPin(detail.event.id, detail.event.category, detail.event.location)),
+                            interactive = false
                         )
                     }
                 }

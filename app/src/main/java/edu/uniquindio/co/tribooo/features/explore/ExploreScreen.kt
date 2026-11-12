@@ -7,6 +7,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -59,6 +62,7 @@ import edu.uniquindio.co.tribooo.core.component.EventFiltersSheet
 import edu.uniquindio.co.tribooo.core.component.EventThumbnail
 import edu.uniquindio.co.tribooo.core.component.FeedEventItem
 import edu.uniquindio.co.tribooo.core.component.MainBottomBar
+import edu.uniquindio.co.tribooo.core.component.MapBox
 import edu.uniquindio.co.tribooo.core.component.MainTab
 import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
 import edu.uniquindio.co.tribooo.core.util.kmLabel
@@ -106,11 +110,17 @@ fun ExploreScreen(
         Box(modifier = Modifier.fillMaxSize().padding(bottom = innerPadding.calculateBottomPadding())) {
             when (state.view) {
                 ExploreView.MAP -> {
-                    EventMapPlaceholder(
+                    MapBox(
+                        modifier = Modifier.fillMaxSize(),
                         pins = state.pins,
-                        selectedId = state.selected?.event?.id,
-                        onPinClick = viewModel::onPinClick,
-                        modifier = Modifier.fillMaxSize()
+                        // Debajo de la barra superior (búsqueda, filtros y alternador Mapa / Lista)
+                        myLocationButtonPadding = PaddingValues(
+                            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + 136.dp,
+                            end = 12.dp
+                        ),
+                        onMarkerClick = viewModel::onPinClick,
+                        onMapClick = { viewModel.onRecenter() },
+                        onUserLocation = viewModel::onUserLocation
                     )
                     TopBar(state, viewModel, modifier = Modifier.align(Alignment.TopCenter))
                     val selected = state.selected
