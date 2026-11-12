@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.domain.usecase.auth.GetCurrentUserUseCase
 import jakarta.inject.Inject
+import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
@@ -39,7 +40,14 @@ class AppViewModel @Inject constructor(
             // La sesión se lee en paralelo a la animación de entrada del splash
             val minSplash = async { delay(MIN_SPLASH_MILLIS) }
             // Fuera del hilo principal: la sesión y los repositorios en memoria no deben retrasar el primer cuadro
-            val user = withContext(Dispatchers.Default) { getCurrentUser() }
+            // Si la sesión no se puede leer (p. ej. sin conexión) se arranca como si no hubiera sesión
+            val user = try {
+                withContext(Dispatchers.Default) { getCurrentUser() }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                null
+            }
             minSplash.await()
 
             // Solo se decide una vez: después la navegación la manejan login, registro y logout

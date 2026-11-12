@@ -785,4 +785,11 @@
     <string name="reject_quick_duplicate">Duplicates an already published event</string>
     <string name="reject_quick_conduct">Breaks the community guidelines</string>
     <string name="reject_quick_false_data">False or misleading data</string>
+
+    <!-- Generic errors for online requests -->
+    <string name="error_network">No connection. Check your internet and try again.</string>
+    <string name="error_permission">You don\'t have permission to do this.</string>
+    <string name="error_not_found">That content is no longer available.</string>
+    <string name="error_generic">Something went wrong. Try again.</string>
+    <string name="common_loading">Loading…</string>
 </resources>

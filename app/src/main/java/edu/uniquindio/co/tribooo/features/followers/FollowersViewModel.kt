@@ -4,10 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.R
+import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.followerSubtitle
 import edu.uniquindio.co.tribooo.core.util.followersSummary
 import edu.uniquindio.co.tribooo.core.util.initials
+import edu.uniquindio.co.tribooo.core.util.messageOrNull
+import edu.uniquindio.co.tribooo.core.util.runRequest
 import edu.uniquindio.co.tribooo.domain.model.User
 import edu.uniquindio.co.tribooo.domain.usecase.user.MyFollower
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveMyFollowersUseCase
@@ -32,6 +35,8 @@ data class FollowerItem(
 data class FollowersUiState(
     val summary: String = "",
     val followers: List<FollowerItem> = emptyList(),
+    /** Persona a la que se está siguiendo o dejando de seguir; su botón espera la respuesta. */
+    val busyUserId: String? = null,
     val message: String? = null
 )
 
@@ -51,10 +56,14 @@ class FollowersViewModel @Inject constructor(
 
     private val message = MutableStateFlow<String?>(null)
 
-    val uiState: StateFlow<FollowersUiState> = combine(observeMyFollowers(), message) { followers, message ->
+    /** Resultado de la última petición y la persona a la que corresponde. */
+    private val action = MutableStateFlow<Pair<String, RequestResult>?>(null)
+
+    val uiState: StateFlow<FollowersUiState> = combine(observeMyFollowers(), message, action) { followers, message, action ->
         FollowersUiState(
             summary = followersSummary(resources, followers.size),
             followers = followers.map { it.toItem(resources) },
+            busyUserId = action?.takeIf { it.second is RequestResult.Loading }?.first,
             message = message
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000),
@@ -63,11 +72,19 @@ class FollowersViewModel @Inject constructor(
 
     /** Sigue o deja de seguir a la persona; sigue en la lista porque continúa siendo seguidor. */
     fun onToggleFollow(item: FollowerItem) {
-        viewModelScope.launch { toggleFollowUseCase(item.user) }
-        message.value = if (item.isFollowing) {
+        if (action.value?.second is RequestResult.Loading) return
+        val done = if (item.isFollowing) {
             resources.getString(R.string.detail_message_unfollowed, item.user.name)
         } else {
             resources.getString(R.string.detail_message_followed, item.user.name)
+        }
+        viewModelScope.launch {
+            action.value = item.user.id to RequestResult.Loading
+            val result = runRequest(resources, onSuccess = { _: Unit -> RequestResult.Success(done) }) {
+                toggleFollowUseCase(item.user)
+            }
+            action.value = item.user.id to result
+            message.value = result.messageOrNull()
         }
     }
 

@@ -32,7 +32,9 @@ import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -145,6 +147,7 @@ fun ModerationScreen(
                             CaseCard(
                                 case = case,
                                 tab = state.tab,
+                                isBusy = state.busyEventId == case.event.id,
                                 onAuthorClick = { onNavigateToUser(case.event.organizer.id) },
                                 onVerify = { viewModel.onVerify(case) },
                                 onReject = { viewModel.onRejectClick(case) },
@@ -255,6 +258,7 @@ private fun TabRow(selected: ModerationTab, counts: ModerationCounts, onSelect: 
 private fun CaseCard(
     case: ModerationCase,
     tab: ModerationTab,
+    isBusy: Boolean,
     onAuthorClick: () -> Unit,
     onVerify: () -> Unit,
     onReject: () -> Unit,
@@ -334,23 +338,24 @@ private fun CaseCard(
                     actions.forEach { action ->
                         when (action) {
                             ModerationCardAction.VERIFY ->
-                                Button(onClick = onVerify, modifier = Modifier.weight(1f)) {
-                                    ButtonContent(Icons.Rounded.Verified, stringResource(R.string.moderation_action_verify))
+                                Button(onClick = onVerify, enabled = !isBusy, modifier = Modifier.weight(1f)) {
+                                    ButtonContent(Icons.Rounded.Verified, stringResource(R.string.moderation_action_verify), isBusy)
                                 }
                             ModerationCardAction.REJECT ->
                                 OutlinedButton(
                                     onClick = onReject,
+                                    enabled = !isBusy,
                                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.error),
                                     border = BorderStroke(1.dp, colors.error),
                                     modifier = Modifier.weight(1f)
                                 ) { ButtonContent(Icons.Rounded.Block, stringResource(R.string.moderation_action_reject)) }
                             ModerationCardAction.RESOLVE ->
-                                Button(onClick = onResolve, modifier = Modifier.weight(1f)) {
-                                    ButtonContent(Icons.Rounded.TaskAlt, stringResource(R.string.moderation_action_resolve))
+                                Button(onClick = onResolve, enabled = !isBusy, modifier = Modifier.weight(1f)) {
+                                    ButtonContent(Icons.Rounded.TaskAlt, stringResource(R.string.moderation_action_resolve), isBusy)
                                 }
                             ModerationCardAction.RESTORE ->
-                                Button(onClick = onRestore, modifier = Modifier.weight(1f)) {
-                                    ButtonContent(Icons.Rounded.RestorePage, stringResource(R.string.moderation_action_restore))
+                                Button(onClick = onRestore, enabled = !isBusy, modifier = Modifier.weight(1f)) {
+                                    ButtonContent(Icons.Rounded.RestorePage, stringResource(R.string.moderation_action_restore), isBusy)
                                 }
                         }
                     }
@@ -361,8 +366,12 @@ private fun CaseCard(
 }
 
 @Composable
-private fun ButtonContent(icon: ImageVector, label: String) {
-    Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+private fun ButtonContent(icon: ImageVector, label: String, isLoading: Boolean = false) {
+    if (isLoading) {
+        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
+    } else {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
+    }
     Text(label, modifier = Modifier.padding(start = 6.dp), maxLines = 1)
 }
 

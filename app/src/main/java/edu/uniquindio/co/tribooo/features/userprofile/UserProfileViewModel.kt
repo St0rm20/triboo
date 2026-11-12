@@ -7,10 +7,13 @@ import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.util.CommunityRole
+import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.communityRole
 import edu.uniquindio.co.tribooo.core.util.countOrDash
+import edu.uniquindio.co.tribooo.core.util.messageOrNull
 import edu.uniquindio.co.tribooo.core.util.ratingOrDash
+import edu.uniquindio.co.tribooo.core.util.runRequest
 import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.model.Event
@@ -52,8 +55,12 @@ data class UserProfileUiState(
     val rating: Double? = null,
     /** Eventos activos que organiza, del que ocurre primero al que ocurre después. */
     val events: List<Event> = emptyList(),
+    /** Seguir o dejar de seguir; Loading mientras se procesa. */
+    val followResult: RequestResult? = null,
     val message: String? = null
 ) {
+    val isTogglingFollow: Boolean get() = followResult is RequestResult.Loading
+
     val createdEventsLabel: String get() = countOrDash(createdEvents)
     val ratingLabel: String get() = ratingOrDash(rating)
 
@@ -121,6 +128,8 @@ class UserProfileViewModel @Inject constructor(
 
     private val message = MutableStateFlow<String?>(null)
 
+    private val followResult = MutableStateFlow<RequestResult?>(null)
+
     private val sources = combine(
         observeEvents(),
         observeAttendances(),
@@ -133,22 +142,28 @@ class UserProfileViewModel @Inject constructor(
         observeUser(userId),
         observeCurrentUser(),
         sources,
-        message
-    ) { user, currentUser, sources, message ->
-        buildUserProfileState(user, currentUser, sources).copy(message = message)
+        message,
+        followResult
+    ) { user, currentUser, sources, message, followResult ->
+        buildUserProfileState(user, currentUser, sources).copy(message = message, followResult = followResult)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), UserProfileUiState())
 
     /** Sigue o deja de seguir a la persona; el número de seguidores cambia solo. */
     fun onToggleFollow() {
         val state = uiState.value
         val user = state.user ?: return
-        if (!state.canInteract) return
+        if (!state.canInteract || state.isTogglingFollow) return
 
-        viewModelScope.launch { toggleFollowUseCase(user) }
-        message.value = if (state.isFollowing) {
+        val done = if (state.isFollowing) {
             resources.getString(R.string.detail_message_unfollowed, user.name)
         } else {
             resources.getString(R.string.detail_message_followed, user.name)
+        }
+        viewModelScope.launch {
+            followResult.value = RequestResult.Loading
+            val result = runRequest(resources, onSuccess = { _: Unit -> RequestResult.Success(done) }) { toggleFollowUseCase(user) }
+            followResult.value = result
+            message.value = result.messageOrNull()
         }
     }
 

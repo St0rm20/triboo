@@ -12,6 +12,7 @@ import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.rejectedMessage
 import edu.uniquindio.co.tribooo.core.util.resolvedMessage
 import edu.uniquindio.co.tribooo.core.util.restoredMessage
+import edu.uniquindio.co.tribooo.core.util.runRequest
 import edu.uniquindio.co.tribooo.core.util.verifiedMessage
 import edu.uniquindio.co.tribooo.domain.model.ModerationCase
 import edu.uniquindio.co.tribooo.domain.model.ModerationTab
@@ -46,12 +47,15 @@ data class RejectSheetState(
     val reason: String = "",
     val touched: Boolean = false,
     val submitAttempted: Boolean = false,
-    val isSubmitting: Boolean = false,
+    /** Envío del rechazo; Loading mientras se procesa. */
+    val submitResult: RequestResult? = null,
     /** El campo debe recibir el foco tras un envío inválido. */
     val focusRequested: Boolean = false,
     /** Motivo por el que moderación no pudo rechazar la publicación. */
     val failure: String? = null
 ) {
+    val isSubmitting: Boolean get() = submitResult is RequestResult.Loading
+
     fun error(resources: ResourceProvider): String? =
         Validators.rejectReason(resources, reason).takeIf { touched || submitAttempted } ?: failure
 }
@@ -62,6 +66,10 @@ data class ModerationUiState(
     val counts: ModerationCounts = ModerationCounts(),
     val cases: List<ModerationCase> = emptyList(),
     val rejectSheet: RejectSheetState? = null,
+    /** Resultado de la última acción sobre un caso (verificar, restaurar, resolver). */
+    val actionResult: RequestResult? = null,
+    /** Evento cuya acción sigue en curso; sus botones esperan la respuesta. */
+    val busyEventId: String? = null,
     val message: String? = null
 )
 
@@ -69,6 +77,8 @@ data class ModerationUiState(
 private data class ModerationLocal(
     val tab: ModerationTab,
     val rejectSheet: RejectSheetState? = null,
+    val actionResult: RequestResult? = null,
+    val busyEventId: String? = null,
     val message: String? = null
 )
 
@@ -105,26 +115,35 @@ class ModerationViewModel @Inject constructor(
             counts = counts,
             cases = if (isAdmin) cases else emptyList(),
             rejectSheet = local.rejectSheet,
+            actionResult = local.actionResult,
+            busyEventId = local.busyEventId,
             message = local.message
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ModerationUiState(tab = local.value.tab))
 
     fun onTabSelected(tab: ModerationTab) = local.update { it.copy(tab = tab) }
 
-    fun onVerify(case: ModerationCase) = act(verifiedMessage(resources, case.event.title)) { verifyEvent(case.event.id) }
+    fun onVerify(case: ModerationCase) = act(case, verifiedMessage(resources, case.event.title)) { verifyEvent(case.event.id) }
 
-    fun onRestore(case: ModerationCase) = act(restoredMessage(resources, case.event.title)) { restoreEvent(case.event.id) }
+    fun onRestore(case: ModerationCase) = act(case, restoredMessage(resources, case.event.title)) { restoreEvent(case.event.id) }
 
-    fun onResolve(case: ModerationCase) = act(resolvedMessage(resources, case.event.title)) { resolveReports(case.event.id) }
+    fun onResolve(case: ModerationCase) = act(case, resolvedMessage(resources, case.event.title)) { resolveReports(case.event.id) }
 
-    /** Ejecuta la acción y muestra [successMessage] o, si falló, el motivo. */
-    private fun act(successMessage: String, action: suspend () -> RequestResult) {
+    /** Marca Loading, ejecuta la acción y muestra [successMessage] o, si falló, el motivo. Una acción a la vez. */
+    private fun act(case: ModerationCase, successMessage: String, action: suspend () -> RequestResult) {
+        if (local.value.actionResult is RequestResult.Loading) return
         viewModelScope.launch {
-            val message = when (val result = action()) {
-                is RequestResult.Failure -> result.errorMessage
-                else -> successMessage
+            local.update { it.copy(actionResult = RequestResult.Loading, busyEventId = case.event.id) }
+            val result = runRequest(resources, onSuccess = { result: RequestResult ->
+                if (result is RequestResult.Failure) result else RequestResult.Success(successMessage)
+            }, block = action)
+            local.update {
+                when (result) {
+                    is RequestResult.Success -> it.copy(actionResult = result, busyEventId = null, message = result.message)
+                    is RequestResult.Failure -> it.copy(actionResult = result, busyEventId = null, message = result.errorMessage)
+                    RequestResult.Loading -> it
+                }
             }
-            local.update { it.copy(message = message) }
         }
     }
 
@@ -155,16 +174,20 @@ class ModerationViewModel @Inject constructor(
             local.update { it.copy(rejectSheet = it.rejectSheet?.copy(submitAttempted = true, focusRequested = true)) }
             return
         }
-        local.update { it.copy(rejectSheet = it.rejectSheet?.copy(isSubmitting = true)) }
         viewModelScope.launch {
-            when (val result = rejectEvent(sheet.eventId, sheet.reason)) {
+            local.update { it.copy(rejectSheet = it.rejectSheet?.copy(submitResult = RequestResult.Loading)) }
+            val result = runRequest(resources, onSuccess = { result: RequestResult ->
+                if (result is RequestResult.Failure) result else RequestResult.Success(rejectedMessage(resources, sheet.title))
+            }) { rejectEvent(sheet.eventId, sheet.reason) }
+            when (result) {
                 // La hoja sigue abierta con el motivo del fallo
                 is RequestResult.Failure -> local.update {
-                    it.copy(rejectSheet = it.rejectSheet?.copy(isSubmitting = false, failure = result.errorMessage))
+                    it.copy(rejectSheet = it.rejectSheet?.copy(submitResult = result, failure = result.errorMessage))
                 }
-                else -> local.update {
-                    it.copy(rejectSheet = null, tab = ModerationTab.RECHAZADAS, message = rejectedMessage(resources, sheet.title))
+                is RequestResult.Success -> local.update {
+                    it.copy(rejectSheet = null, tab = ModerationTab.RECHAZADAS, message = result.message)
                 }
+                RequestResult.Loading -> Unit
             }
         }
     }

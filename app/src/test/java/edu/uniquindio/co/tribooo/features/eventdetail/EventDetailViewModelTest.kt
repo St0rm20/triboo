@@ -15,6 +15,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
 import edu.uniquindio.co.tribooo.domain.usecase.comment.AddCommentUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.ObserveCommentsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.FinalizeEventUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.event.GetEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventImagesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.TestWorld
@@ -84,6 +85,7 @@ class EventDetailViewModelTest {
             joinWaitlist = world.joinWaitlist,
             leaveWaitlist = world.leaveWaitlist,
             finalizeEventUseCase = FinalizeEventUseCase(world.events, world.getCurrentUser, testResources),
+            getEventUseCase = GetEventUseCase(world.events),
             resources = testResources
         )
     }

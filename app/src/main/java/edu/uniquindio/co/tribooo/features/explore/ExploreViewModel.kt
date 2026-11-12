@@ -6,7 +6,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.component.FeedEventItem
 import edu.uniquindio.co.tribooo.core.component.MapPin
 import edu.uniquindio.co.tribooo.core.component.toCardItems
+import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.ResourceProvider
+import edu.uniquindio.co.tribooo.core.util.messageOrNull
+import edu.uniquindio.co.tribooo.core.util.runRequest
 import edu.uniquindio.co.tribooo.core.util.waitlistLeftMessage
 import edu.uniquindio.co.tribooo.core.util.waitlistJoinedMessage
 import edu.uniquindio.co.tribooo.domain.model.Category
@@ -53,7 +56,11 @@ data class ExploreUiState(
     val showFilters: Boolean = false,
     /** Diálogo que el usuario debe aceptar antes de confirmar su asistencia. */
     val attendanceStep: AttendanceStep? = null,
-    val message: String? = null
+    val message: String? = null,
+    /** Resultado de la última petición hecha desde una tarjeta (asistencia o lista de espera). */
+    val actionResult: RequestResult? = null,
+    /** Evento cuya petición sigue en curso; su botón muestra el indicador de carga. */
+    val loadingEventId: String? = null
 )
 
 /** Parte del estado que vive solo en esta pantalla. */
@@ -62,7 +69,9 @@ internal data class ExploreLocal(
     val selectedId: String? = null,
     val showFilters: Boolean = false,
     val attendanceStep: AttendanceStep? = null,
-    val message: String? = null
+    val message: String? = null,
+    val actionResult: RequestResult? = null,
+    val loadingEventId: String? = null
 )
 
 /** Eventos filtrados con sus pines, tal como salen de los repositorios. */
@@ -128,7 +137,9 @@ class ExploreViewModel @Inject constructor(
             filters = content.filters,
             showFilters = local.showFilters,
             attendanceStep = local.attendanceStep,
-            message = local.message
+            message = local.message,
+            actionResult = local.actionResult,
+            loadingEventId = local.loadingEventId.takeIf { local.actionResult is RequestResult.Loading }
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ExploreUiState())
 
@@ -141,6 +152,7 @@ class ExploreViewModel @Inject constructor(
 
     /** El mapa reportó la posición real del usuario. */
     fun onUserLocation(location: Location) {
+        // Solo actualiza la ubicación del dispositivo: no es una petición en línea
         viewModelScope.launch { updateCurrentLocation(location) }
     }
 
@@ -159,20 +171,19 @@ class ExploreViewModel @Inject constructor(
     }
 
     fun toggleAttendance(item: FeedEventItem) {
+        val event = item.event
         when {
-            item.isAttending -> confirmAttendance(item.event)
-            item.isWaitlisted -> viewModelScope.launch {
-                leaveWaitlist(item.event)
-                local.update { it.copy(message = waitlistLeftMessage(resources)) }
+            item.isAttending -> confirmAttendance(event)
+            item.isWaitlisted -> request(event, { leaveWaitlist(event) }) {
+                RequestResult.Success(waitlistLeftMessage(resources))
             }
-            item.isFull -> viewModelScope.launch {
-                joinWaitlist(item.event)?.let { position ->
-                    local.update { it.copy(message = waitlistJoinedMessage(resources, position)) }
-                }
+            item.isFull -> request(event, { joinWaitlist(event) }) { position ->
+                RequestResult.Success(position?.let { waitlistJoinedMessage(resources, it) }.orEmpty())
             }
-            else -> viewModelScope.launch {
-                val step = startAttendanceFlow(item.event, findScheduleConflict(item.event))
-                local.update { it.copy(attendanceStep = step) }
+            // Antes de confirmar se revisa si choca con otro evento confirmado
+            else -> request(event, { findScheduleConflict(event) }) { conflict ->
+                local.update { it.copy(attendanceStep = startAttendanceFlow(event, conflict)) }
+                RequestResult.Success("")
             }
         }
     }
@@ -191,6 +202,27 @@ class ExploreViewModel @Inject constructor(
     fun onAttendanceCancel() = local.update { it.copy(attendanceStep = null) }
 
     private fun confirmAttendance(event: Event) {
-        viewModelScope.launch { toggleAttendanceUseCase(event) }
+        request(event, { toggleAttendanceUseCase(event) }) { RequestResult.Success("") }
+    }
+
+    /**
+     * Petición en línea sobre [event]: marca Loading antes de empezar y, al terminar, guarda el éxito o el
+     * fallo (sin conexión, sin permiso…) y muestra su mensaje. Mientras una sigue en curso se ignoran las demás.
+     */
+    private fun <T> request(event: Event, block: suspend () -> T, onSuccess: (T) -> RequestResult) {
+        if (local.value.actionResult is RequestResult.Loading) return
+        viewModelScope.launch {
+            local.update { it.copy(actionResult = RequestResult.Loading, loadingEventId = event.id) }
+
+            val result = runRequest(resources, onSuccess = onSuccess, block = block)
+
+            local.update {
+                when (result) {
+                    is RequestResult.Success, is RequestResult.Failure ->
+                        it.copy(actionResult = result, message = result.messageOrNull() ?: it.message)
+                    RequestResult.Loading -> it
+                }
+            }
+        }
     }
 }

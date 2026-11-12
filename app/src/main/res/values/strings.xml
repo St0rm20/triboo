@@ -785,4 +785,11 @@
     <string name="reject_quick_duplicate">Duplica un evento ya publicado</string>
     <string name="reject_quick_conduct">Incumple las normas de convivencia</string>
     <string name="reject_quick_false_data">Datos falsos o engañosos</string>
+
+    <!-- Errores genéricos de las peticiones en línea -->
+    <string name="error_network">Sin conexión. Revisa tu internet e inténtalo de nuevo.</string>
+    <string name="error_permission">No tienes permiso para hacer esto.</string>
+    <string name="error_not_found">Ese contenido ya no está disponible.</string>
+    <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
+    <string name="common_loading">Cargando…</string>
 </resources>

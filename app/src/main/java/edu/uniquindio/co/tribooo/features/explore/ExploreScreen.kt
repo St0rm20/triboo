@@ -28,7 +28,9 @@ import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Badge
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -132,7 +134,8 @@ fun ExploreScreen(
                             SelectedEventSheet(
                                 item = selected,
                                 onOpenDetail = { onNavigateToEventDetail(selected.event.id) },
-                                onToggleAttendance = { viewModel.toggleAttendance(selected) }
+                                onToggleAttendance = { viewModel.toggleAttendance(selected) },
+                                isLoading = state.loadingEventId == selected.event.id
                             )
                         }
                     }
@@ -143,7 +146,8 @@ fun ExploreScreen(
                         events = state.events,
                         onEventClick = onNavigateToEventDetail,
                         onToggleAttendance = viewModel::toggleAttendance,
-                        onClearFilters = viewModel::clearFilters
+                        onClearFilters = viewModel::clearFilters,
+                        loadingEventId = state.loadingEventId
                     )
                 }
             }
@@ -260,7 +264,7 @@ private fun RecenterButton(onClick: () -> Unit) {
 
 /** Tarjeta anclada abajo con el evento seleccionado en el mapa. */
 @Composable
-private fun SelectedEventSheet(item: FeedEventItem, onOpenDetail: () -> Unit, onToggleAttendance: () -> Unit) {
+private fun SelectedEventSheet(item: FeedEventItem, onOpenDetail: () -> Unit, onToggleAttendance: () -> Unit, isLoading: Boolean) {
     val colors = MaterialTheme.colorScheme
     val rp = rememberResourceProvider()
     val event = item.event
@@ -298,7 +302,7 @@ private fun SelectedEventSheet(item: FeedEventItem, onOpenDetail: () -> Unit, on
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 OutlinedButton(onClick = onOpenDetail, modifier = Modifier.weight(1f).height(44.dp)) { Text(stringResource(R.string.explore_view_detail)) }
-                AttendanceButton(item = item, onClick = onToggleAttendance, modifier = Modifier.weight(1f))
+                AttendanceButton(item = item, onClick = onToggleAttendance, isLoading = isLoading, modifier = Modifier.weight(1f))
             }
         }
     }
@@ -306,7 +310,7 @@ private fun SelectedEventSheet(item: FeedEventItem, onOpenDetail: () -> Unit, on
 
 /** "Voy", "Ya voy" (tonal), "Lista de espera" o "En lista · puesto N" (tonal) cuando el cupo está lleno. */
 @Composable
-private fun AttendanceButton(item: FeedEventItem, onClick: () -> Unit, modifier: Modifier) {
+private fun AttendanceButton(item: FeedEventItem, onClick: () -> Unit, isLoading: Boolean, modifier: Modifier) {
     val rp = rememberResourceProvider()
     val colors = MaterialTheme.colorScheme
     val full = item.isFull && !item.isAttending
@@ -314,7 +318,7 @@ private fun AttendanceButton(item: FeedEventItem, onClick: () -> Unit, modifier:
 
     Surface(
         onClick = onClick,
-        enabled = !full || item.canJoinWaitlist || position != null,
+        enabled = (!full || item.canJoinWaitlist || position != null) && !isLoading,
         shape = RoundedCornerShape(14.dp),
         color = when {
             item.isAttending || position != null -> colors.secondaryContainer
@@ -333,7 +337,9 @@ private fun AttendanceButton(item: FeedEventItem, onClick: () -> Unit, modifier:
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            if (!full && !item.isAttending) {
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
+            } else if (!full && !item.isAttending) {
                 Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             }
             Text(
@@ -356,7 +362,8 @@ private fun EventList(
     events: List<FeedEventItem>,
     onEventClick: (String) -> Unit,
     onToggleAttendance: (FeedEventItem) -> Unit,
-    onClearFilters: () -> Unit
+    onClearFilters: () -> Unit,
+    loadingEventId: String?
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -375,7 +382,8 @@ private fun EventList(
             EventCard(
                 item = item,
                 onClick = { onEventClick(item.event.id) },
-                onToggleAttendance = { onToggleAttendance(item) }
+                onToggleAttendance = { onToggleAttendance(item) },
+                isLoading = loadingEventId == item.event.id
             )
         }
         if (events.isEmpty()) {

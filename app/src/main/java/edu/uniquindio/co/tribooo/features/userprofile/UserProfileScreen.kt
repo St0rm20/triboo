@@ -222,6 +222,7 @@ private fun UserCard(user: User, state: UserProfileUiState, onToggleFollow: () -
                 val following = state.isFollowing
                 Button(
                     onClick = onToggleFollow,
+                    enabled = !state.isTogglingFollow,
                     shape = RoundedCornerShape(16.dp),
                     colors = if (following) {
                         ButtonDefaults.buttonColors(

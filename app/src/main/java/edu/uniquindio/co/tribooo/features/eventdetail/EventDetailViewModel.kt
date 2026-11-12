@@ -11,6 +11,8 @@ import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.distanceKmTo
 import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.core.util.isFull
+import edu.uniquindio.co.tribooo.core.util.messageOrNull
+import edu.uniquindio.co.tribooo.core.util.runRequest
 import edu.uniquindio.co.tribooo.core.util.waitlistLeftMessage
 import edu.uniquindio.co.tribooo.core.util.shortName
 import edu.uniquindio.co.tribooo.core.util.waitlistJoinedMessage
@@ -35,6 +37,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.AddCommentUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.ObserveCommentsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.FinalizeEventUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.event.GetEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventImagesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.interest.ObserveInterestsUseCase
@@ -140,10 +143,13 @@ data class CommentDraft(
     val text: String = "",
     val rating: Int = 0,
     val submitAttempted: Boolean = false,
-    val isSending: Boolean = false,
+    /** Resultado del envío; Loading mientras se publica. */
+    val sendResult: RequestResult? = null,
     /** El campo debe recibir el foco tras un envío inválido. */
     val focusRequested: Boolean = false
 ) {
+    val isSending: Boolean get() = sendResult is RequestResult.Loading
+
     fun error(resources: ResourceProvider): String? = Validators.comment(resources, text).takeIf { submitAttempted }
 }
 
@@ -152,15 +158,20 @@ data class ReportDraft(
     val reason: String? = null,
     val detail: String = "",
     val error: String? = null,
-    val isSending: Boolean = false,
+    /** Resultado del envío; Loading mientras se envía. */
+    val sendResult: RequestResult? = null,
     /** La lista de motivos debe traerse a la vista tras un envío inválido. */
     val focusRequested: Boolean = false
-)
+) {
+    val isSending: Boolean get() = sendResult is RequestResult.Loading
+}
 
 data class EventDetailUiState(
     val detail: EventDetail? = null,
-    /** Aún no llega la primera emisión de los repositorios; nunca se confunde con [notFound]. */
+    /** Aún no se sabe si el evento existe; nunca se confunde con [notFound]. */
     val isLoading: Boolean = true,
+    /** Lectura del evento al abrir la pantalla; Failure si no existe o no se pudo leer. */
+    val loadResult: RequestResult = RequestResult.Loading,
     /** Ya llegaron los datos y el evento no existe (se eliminó o dejó de estar disponible). */
     val notFound: Boolean = false,
     val draft: CommentDraft = CommentDraft(),
@@ -172,8 +183,15 @@ data class EventDetailUiState(
     val attendanceStep: AttendanceStep? = null,
     /** Diálogo que pide confirmar que el organizador finaliza su evento. */
     val showFinalizeDialog: Boolean = false,
-    val isFinalizing: Boolean = false
-)
+    val finalizeResult: RequestResult? = null,
+    /** Resultado de la última acción rápida (asistencia, interés, guardar, seguir). */
+    val actionResult: RequestResult? = null
+) {
+    val isFinalizing: Boolean get() = finalizeResult is RequestResult.Loading
+
+    /** Hay una acción rápida en curso: sus botones esperan la respuesta. */
+    val isBusy: Boolean get() = actionResult is RequestResult.Loading
+}
 
 /** Acciones que el usuario puede hacer desde el detalle. */
 sealed interface EventDetailAction {
@@ -233,6 +251,7 @@ class EventDetailViewModel @Inject constructor(
     private val joinWaitlist: JoinWaitlistUseCase,
     private val leaveWaitlist: LeaveWaitlistUseCase,
     private val finalizeEventUseCase: FinalizeEventUseCase,
+    private val getEventUseCase: GetEventUseCase,
     private val resources: ResourceProvider
 ) : ViewModel() {
 
@@ -310,9 +329,28 @@ class EventDetailViewModel @Inject constructor(
         )
     }
 
+    // Mientras la lista de eventos llega, la lectura directa del evento decide si existe
     val uiState: StateFlow<EventDetailUiState> = combine(detail, localState) { detail, local ->
-        local.copy(detail = detail, isLoading = false, notFound = detail == null)
+        local.copy(
+            detail = detail,
+            isLoading = detail == null && local.loadResult !is RequestResult.Failure,
+            notFound = detail == null && local.loadResult is RequestResult.Failure
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), EventDetailUiState())
+
+    init {
+        loadEvent()
+    }
+
+    private fun loadEvent() {
+        viewModelScope.launch {
+            localState.update { it.copy(loadResult = RequestResult.Loading) }
+            val result = runRequest(resources, onSuccess = { event: Event? ->
+                if (event != null) RequestResult.Success("") else RequestResult.Failure(resources.getString(R.string.error_not_found))
+            }) { getEventUseCase(eventId) }
+            localState.update { it.copy(loadResult = result) }
+        }
+    }
 
     fun onAction(action: EventDetailAction) {
         val detail = uiState.value.detail ?: return
@@ -323,34 +361,31 @@ class EventDetailViewModel @Inject constructor(
                 when {
                     !detail.canToggleAttendance -> Unit
                     detail.isAttending -> confirmAttendance(event, attending = true)
-                    detail.isWaitlisted -> viewModelScope.launch {
-                        leaveWaitlist(event)
-                        showMessage(waitlistLeftMessage(resources))
+                    detail.isWaitlisted -> request({ leaveWaitlist(event) }) {
+                        RequestResult.Success(waitlistLeftMessage(resources))
                     }
-                    detail.isFull -> viewModelScope.launch {
-                        joinWaitlist(event)?.let { showMessage(waitlistJoinedMessage(resources, it)) }
+                    detail.isFull -> request({ joinWaitlist(event) }) { position ->
+                        RequestResult.Success(position?.let { waitlistJoinedMessage(resources, it) }.orEmpty())
                     }
                     else -> requestAttendance(event)
                 }
             }
 
-            EventDetailAction.ToggleInterest -> viewModelScope.launch { toggleInterestUseCase(event) }
+            EventDetailAction.ToggleInterest -> request({ toggleInterestUseCase(event) }) { RequestResult.Success("") }
 
             EventDetailAction.ToggleSaved -> {
-                viewModelScope.launch { toggleSavedEventUseCase(event) }
-                showMessage(resources.getString(if (detail.isSaved) R.string.detail_message_unsaved else R.string.detail_message_saved))
+                val message = resources.getString(if (detail.isSaved) R.string.detail_message_unsaved else R.string.detail_message_saved)
+                request({ toggleSavedEventUseCase(event) }) { RequestResult.Success(message) }
             }
 
             EventDetailAction.ToggleFollow -> {
                 if (detail.isMine) return
-                viewModelScope.launch { toggleFollowUseCase(event.organizer) }
-                showMessage(
-                    if (detail.isFollowingOrganizer) {
-                        resources.getString(R.string.detail_message_unfollowed, event.organizer.name)
-                    } else {
-                        resources.getString(R.string.detail_message_followed, event.organizer.name)
-                    }
-                )
+                val message = if (detail.isFollowingOrganizer) {
+                    resources.getString(R.string.detail_message_unfollowed, event.organizer.name)
+                } else {
+                    resources.getString(R.string.detail_message_followed, event.organizer.name)
+                }
+                request({ toggleFollowUseCase(event.organizer) }) { RequestResult.Success(message) }
             }
 
             is EventDetailAction.CommentChange -> localState.update {
@@ -413,29 +448,54 @@ class EventDetailViewModel @Inject constructor(
 
     /** Confirmar asistencia: antes pide aceptar el aviso de choque, si lo hay, y el del aporte o la entrada libre. */
     private fun requestAttendance(event: Event) {
-        viewModelScope.launch {
-            val step = startAttendanceFlow(event, findScheduleConflict(event))
-            localState.update { it.copy(attendanceStep = step) }
+        request({ findScheduleConflict(event) }) { conflict ->
+            localState.update { it.copy(attendanceStep = startAttendanceFlow(event, conflict)) }
+            RequestResult.Success("")
         }
     }
 
     private fun finalizeEvent(event: Event) {
         val state = localState.value
         if (!state.showFinalizeDialog || state.isFinalizing) return
-        localState.update { it.copy(showFinalizeDialog = false, isFinalizing = true) }
+        localState.update { it.copy(showFinalizeDialog = false) }
         viewModelScope.launch {
-            val message = when (val result = finalizeEventUseCase(event.id)) {
-                is RequestResult.Success -> result.message
-                is RequestResult.Failure -> result.errorMessage
-                RequestResult.Loading -> null
+            localState.update { it.copy(finalizeResult = RequestResult.Loading) }
+            // El caso de uso ya responde con un RequestResult; solo falta cubrir los fallos de red
+            val result = runRequest(resources, onSuccess = { it }) { finalizeEventUseCase(event.id) }
+            localState.update {
+                when (result) {
+                    is RequestResult.Success, is RequestResult.Failure ->
+                        it.copy(finalizeResult = result, message = result.messageOrNull() ?: it.message)
+                    RequestResult.Loading -> it
+                }
             }
-            localState.update { it.copy(isFinalizing = false, message = message ?: it.message) }
         }
     }
 
     private fun confirmAttendance(event: Event, attending: Boolean) {
-        viewModelScope.launch { toggleAttendanceUseCase(event) }
-        showMessage(resources.getString(if (attending) R.string.detail_message_attendance_cancelled else R.string.detail_message_attendance_confirmed))
+        val message = resources.getString(
+            if (attending) R.string.detail_message_attendance_cancelled else R.string.detail_message_attendance_confirmed
+        )
+        request({ toggleAttendanceUseCase(event) }) { RequestResult.Success(message) }
+    }
+
+    /**
+     * Acción rápida en línea: marca Loading antes de empezar y, al terminar, guarda el éxito o el fallo
+     * (sin conexión, sin permiso…) y muestra su mensaje. Mientras una sigue en curso se ignoran las demás.
+     */
+    private fun <T> request(block: suspend () -> T, onSuccess: (T) -> RequestResult) {
+        if (localState.value.isBusy) return
+        viewModelScope.launch {
+            localState.update { it.copy(actionResult = RequestResult.Loading) }
+            val result = runRequest(resources, onSuccess = onSuccess, block = block)
+            localState.update {
+                when (result) {
+                    is RequestResult.Success, is RequestResult.Failure ->
+                        it.copy(actionResult = result, message = result.messageOrNull() ?: it.message)
+                    RequestResult.Loading -> it
+                }
+            }
+        }
     }
 
     private fun updateReport(transform: (ReportDraft) -> ReportDraft) {
@@ -450,16 +510,29 @@ class EventDetailViewModel @Inject constructor(
             updateReport { it.copy(error = Validators.reportReason(resources, null), focusRequested = true) }
             return
         }
-        updateReport { it.copy(isSending = true) }
         viewModelScope.launch {
-            val message = when (submitReportUseCase(event, reason, draft.detail)) {
-                SubmitReportResult.SENT -> resources.getString(R.string.detail_message_report_sent, event.title)
-                SubmitReportResult.ALREADY_REPORTED -> resources.getString(R.string.detail_message_already_reported)
-                SubmitReportResult.OWN_EVENT -> resources.getString(R.string.detail_message_report_own_event)
-                SubmitReportResult.NOT_SIGNED_IN -> resources.getString(R.string.detail_message_report_sign_in)
-                SubmitReportResult.INVALID_REASON -> resources.getString(R.string.form_report_reason_required)
+            updateReport { it.copy(sendResult = RequestResult.Loading) }
+            // Toda respuesta del caso de uso cierra la hoja; solo un fallo de la petición la deja abierta para reintentar
+            val result = runRequest(resources, onSuccess = { sent: SubmitReportResult ->
+                RequestResult.Success(
+                    when (sent) {
+                        SubmitReportResult.SENT -> resources.getString(R.string.detail_message_report_sent, event.title)
+                        SubmitReportResult.ALREADY_REPORTED -> resources.getString(R.string.detail_message_already_reported)
+                        SubmitReportResult.OWN_EVENT -> resources.getString(R.string.detail_message_report_own_event)
+                        SubmitReportResult.NOT_SIGNED_IN -> resources.getString(R.string.detail_message_report_sign_in)
+                        SubmitReportResult.INVALID_REASON -> resources.getString(R.string.form_report_reason_required)
+                    }
+                )
+            }) { submitReportUseCase(event, reason, draft.detail) }
+
+            localState.update {
+                when (result) {
+                    is RequestResult.Success -> it.copy(report = null, message = result.message)
+                    is RequestResult.Failure ->
+                        it.copy(report = it.report?.copy(sendResult = result), message = result.errorMessage)
+                    RequestResult.Loading -> it
+                }
             }
-            localState.update { it.copy(report = null, message = message) }
         }
     }
 
@@ -478,17 +551,22 @@ class EventDetailViewModel @Inject constructor(
         }
 
         val rating = draft.rating.takeIf { it > 0 }
-        localState.update { it.copy(draft = it.draft.copy(isSending = true)) }
         viewModelScope.launch {
-            val published = addCommentUseCase(event = event, text = text, rating = rating)
-            localState.update {
+            localState.update { it.copy(draft = it.draft.copy(sendResult = RequestResult.Loading)) }
+            val result = runRequest(resources, onSuccess = { published: Boolean ->
                 when {
-                    !published -> it.copy(
-                        draft = it.draft.copy(isSending = false),
-                        message = resources.getString(R.string.detail_message_comment_failed)
-                    )
-                    rating != null -> it.copy(draft = CommentDraft(), message = resources.getString(R.string.detail_message_comment_posted_rated, rating))
-                    else -> it.copy(draft = CommentDraft(), message = resources.getString(R.string.detail_message_comment_posted))
+                    !published -> RequestResult.Failure(resources.getString(R.string.detail_message_comment_failed))
+                    rating != null -> RequestResult.Success(resources.getString(R.string.detail_message_comment_posted_rated, rating))
+                    else -> RequestResult.Success(resources.getString(R.string.detail_message_comment_posted))
+                }
+            }) { addCommentUseCase(event = event, text = text, rating = rating) }
+
+            // Si falla, el borrador se conserva para reintentar
+            localState.update {
+                when (result) {
+                    is RequestResult.Success -> it.copy(draft = CommentDraft(), message = result.message)
+                    is RequestResult.Failure -> it.copy(draft = it.draft.copy(sendResult = result), message = result.errorMessage)
+                    RequestResult.Loading -> it
                 }
             }
         }

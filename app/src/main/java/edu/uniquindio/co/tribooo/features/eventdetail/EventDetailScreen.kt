@@ -78,6 +78,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
@@ -191,6 +192,7 @@ fun EventDetailScreen(
         report = state.report,
         attendanceStep = state.attendanceStep,
         showFinalizeDialog = state.showFinalizeDialog,
+        isBusy = state.isBusy || state.isFinalizing,
         snackbarHostState = snackbarHostState,
         onBack = onNavigateBack,
         onShare = { context.shareEvent(detail.event) },
@@ -240,11 +242,13 @@ fun EventDetailContent(
     onBack: () -> Unit,
     onShare: () -> Unit,
     onNavigateToUser: (userId: String) -> Unit,
-    onAction: (EventDetailAction) -> Unit
+    onAction: (EventDetailAction) -> Unit,
+    /** Hay una petición en curso: los botones de la barra inferior esperan su respuesta. */
+    isBusy: Boolean = false
 ) {
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = { DetailBottomBar(detail = detail, onAction = onAction) }
+        bottomBar = { DetailBottomBar(detail = detail, isBusy = isBusy, onAction = onAction) }
     ) { innerPadding ->
         val bottomPadding = PaddingValues(bottom = innerPadding.calculateBottomPadding())
         val listState = rememberLazyListState()
@@ -1151,7 +1155,7 @@ private fun CommentForm(draft: CommentDraft, onAction: (EventDetailAction) -> Un
 }
 
 @Composable
-private fun DetailBottomBar(detail: EventDetail, onAction: (EventDetailAction) -> Unit) {
+private fun DetailBottomBar(detail: EventDetail, isBusy: Boolean, onAction: (EventDetailAction) -> Unit) {
     val colors = MaterialTheme.colorScheme
     val rp = rememberResourceProvider()
 
@@ -1166,6 +1170,7 @@ private fun DetailBottomBar(detail: EventDetail, onAction: (EventDetailAction) -
             val interested = detail.isInterested
             Surface(
                 onClick = { onAction(EventDetailAction.ToggleInterest) },
+                enabled = !isBusy,
                 shape = RoundedCornerShape(18.dp),
                 color = if (interested) colors.tertiaryContainer else Color.Transparent,
                 contentColor = if (interested) colors.onTertiaryContainer else colors.onSurface,
@@ -1194,7 +1199,8 @@ private fun DetailBottomBar(detail: EventDetail, onAction: (EventDetailAction) -
                     label = stringResource(R.string.detail_finalize_confirm),
                     container = colors.secondaryContainer,
                     content = colors.onSecondaryContainer,
-                    enabled = true,
+                    enabled = !isBusy,
+                    isLoading = isBusy,
                     onClick = { onAction(EventDetailAction.FinalizeEvent) },
                     modifier = Modifier.weight(1f)
                 )
@@ -1216,7 +1222,7 @@ private fun DetailBottomBar(detail: EventDetail, onAction: (EventDetailAction) -
             val position = detail.waitlistPosition.takeIf { waitlist }
             Surface(
                 onClick = { onAction(EventDetailAction.ToggleAttendance) },
-                enabled = detail.canToggleAttendance,
+                enabled = detail.canToggleAttendance && !isBusy,
                 shape = RoundedCornerShape(18.dp),
                 color = when {
                     detail.isAttending -> colors.errorContainer
@@ -1238,11 +1244,15 @@ private fun DetailBottomBar(detail: EventDetail, onAction: (EventDetailAction) -
                     horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        imageVector = if (detail.isAttending) Icons.Rounded.EventBusy else Icons.Rounded.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    if (isBusy) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
+                    } else {
+                        Icon(
+                            imageVector = if (detail.isAttending) Icons.Rounded.EventBusy else Icons.Rounded.Add,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                     Text(
                         text = when {
                             detail.isAttending -> stringResource(R.string.detail_cancel_attendance)
@@ -1267,7 +1277,8 @@ private fun MainActionButton(
     content: Color,
     enabled: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false
 ) {
     Surface(
         onClick = onClick,
@@ -1281,7 +1292,11 @@ private fun MainActionButton(
             horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(imageVector = Icons.Rounded.TaskAlt, contentDescription = null, modifier = Modifier.size(20.dp))
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
+            } else {
+                Icon(imageVector = Icons.Rounded.TaskAlt, contentDescription = null, modifier = Modifier.size(20.dp))
+            }
             Text(text = label, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         }
     }

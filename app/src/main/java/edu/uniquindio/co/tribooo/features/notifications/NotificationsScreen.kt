@@ -83,6 +83,7 @@ fun NotificationsScreen(
             NotificationsTopBar(
                 summary = state.summary(resources),
                 hasUnread = state.unreadCount > 0,
+                isMarking = state.isMarkingAll,
                 onBack = onNavigateBack,
                 onMarkAllRead = viewModel::onMarkAllRead
             )
@@ -115,6 +116,13 @@ fun NotificationsScreen(
         }
     }
 
+    LaunchedEffect(state.message) {
+        state.message?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.onMessageShown()
+        }
+    }
+
     // Mensaje que llega de otra pantalla (p. ej. el aviso provisional del perfil de usuario)
     LaunchedEffect(snackbarMessage) {
         if (snackbarMessage != null) {
@@ -128,6 +136,7 @@ fun NotificationsScreen(
 private fun NotificationsTopBar(
     summary: String,
     hasUnread: Boolean,
+    isMarking: Boolean,
     onBack: () -> Unit,
     onMarkAllRead: () -> Unit
 ) {
@@ -146,7 +155,7 @@ private fun NotificationsTopBar(
             }
             Text(stringResource(R.string.feed_notifications), fontSize = 20.sp, color = colors.onSurface, modifier = Modifier.weight(1f))
             if (hasUnread) {
-                TextButton(onClick = onMarkAllRead) {
+                TextButton(onClick = onMarkAllRead, enabled = !isMarking) {
                     Text(stringResource(R.string.notifications_mark_read), fontSize = 13.sp, fontWeight = FontWeight.Medium)
                 }
             }

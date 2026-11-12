@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.R
+import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.Validators
+import edu.uniquindio.co.tribooo.core.util.runRequest
 import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.model.Event
@@ -108,12 +110,19 @@ data class ProfileUiState(
     val editSubmitAttempted: Boolean = false,
     /** Campo que debe recibir el foco tras intentar guardar con errores. */
     val editFocusField: EditProfileField? = null,
-    val isSaving: Boolean = false,
+    /** Guardado del formulario; Loading mientras se envía. */
+    val saveResult: RequestResult? = null,
     val showLogoutDialog: Boolean = false,
     val showDeleteDialog: Boolean = false,
+    /** Cierre de sesión o eliminación de la cuenta; Loading mientras se procesa. */
+    val accountResult: RequestResult? = null,
     val snackbarMessage: String? = null,
     val loggedOut: Boolean = false
 ) {
+    val isSaving: Boolean get() = saveResult is RequestResult.Loading
+
+    val isProcessingAccount: Boolean get() = accountResult is RequestResult.Loading
+
     private fun rawError(field: EditProfileField, resources: ResourceProvider): String? = when (field) {
         EditProfileField.NAME -> Validators.name(resources, editName)
         EditProfileField.NEIGHBORHOOD -> Validators.neighborhood(resources, editNeighborhood)
@@ -151,14 +160,15 @@ class ProfileViewModel @Inject constructor(
     observeComments: ObserveCommentsUseCase,
     observeUnreadNotifications: ObserveUnreadNotificationsCountUseCase,
     observeModerationCounts: ObserveModerationCountsUseCase,
-    getCities: GetCitiesUseCase,
+    private val getCities: GetCitiesUseCase,
     private val updateProfileUseCase: UpdateProfileUseCase,
     private val logoutUseCase: LogoutUseCase,
     private val deleteAccountUseCase: DeleteAccountUseCase,
     private val resources: ResourceProvider
 ) : ViewModel() {
 
-    val cities: List<String> = getCities()
+    // Se lee en cada uso: el catálogo puede llegar de Firestore después de abrir la pantalla
+    val cities: List<String> get() = getCities()
 
     // Estado propio de la pantalla (diálogos, formulario y mensajes); lo demás viene de los repositorios
     private val local = MutableStateFlow(ProfileUiState())
@@ -214,7 +224,7 @@ class ProfileViewModel @Inject constructor(
                 editTouched = emptySet(),
                 editSubmitAttempted = false,
                 editFocusField = null,
-                isSaving = false
+                saveResult = null
             )
         }
     }
@@ -235,7 +245,10 @@ class ProfileViewModel @Inject constructor(
 
     fun onPhotoRemoved() = local.update { it.copy(editPhoto = null) }
 
-    fun onDismissEditDialog() = local.update { it.copy(showEditDialog = false) }
+    fun onDismissEditDialog() {
+        if (local.value.isSaving) return
+        local.update { it.copy(showEditDialog = false) }
+    }
 
     fun onSaveEdit() {
         val user = uiState.value.user ?: return
@@ -248,10 +261,19 @@ class ProfileViewModel @Inject constructor(
             return
         }
 
-        local.update { it.copy(isSaving = true) }
         viewModelScope.launch {
-            updateProfileUseCase(user, form.editName, form.editCity, form.editNeighborhood, form.editBio, form.editPhoto)
-            local.update { it.copy(showEditDialog = false, isSaving = false, snackbarMessage = resources.getString(R.string.profile_updated)) }
+            local.update { it.copy(saveResult = RequestResult.Loading) }
+            val result = runRequest(resources, onSuccess = { _: Unit ->
+                RequestResult.Success(resources.getString(R.string.profile_updated))
+            }) { updateProfileUseCase(user, form.editName, form.editCity, form.editNeighborhood, form.editBio, form.editPhoto) }
+            // Si falla, el formulario sigue abierto con lo escrito para reintentar
+            local.update {
+                when (result) {
+                    is RequestResult.Success -> it.copy(showEditDialog = false, saveResult = result, snackbarMessage = result.message)
+                    is RequestResult.Failure -> it.copy(saveResult = result, snackbarMessage = result.errorMessage)
+                    RequestResult.Loading -> it
+                }
+            }
         }
     }
 
@@ -259,29 +281,44 @@ class ProfileViewModel @Inject constructor(
 
     fun onLogoutClick() = local.update { it.copy(showLogoutDialog = true) }
 
-    fun onDismissLogoutDialog() = local.update { it.copy(showLogoutDialog = false) }
-
-    fun onConfirmLogout() {
+    fun onDismissLogoutDialog() {
+        if (local.value.isProcessingAccount) return
         local.update { it.copy(showLogoutDialog = false) }
-        viewModelScope.launch {
-            logoutUseCase()
-            local.update { it.copy(loggedOut = true) }
-        }
+    }
+
+    fun onConfirmLogout() = accountRequest(onDone = { it.copy(showLogoutDialog = false) }) {
+        logoutUseCase()
+        true
     }
 
     // Eliminar cuenta
 
     fun onDeleteAccountClick() = local.update { it.copy(showDeleteDialog = true) }
 
-    fun onDismissDeleteDialog() = local.update { it.copy(showDeleteDialog = false) }
-
-    fun onConfirmDeleteAccount() {
+    fun onDismissDeleteDialog() {
+        if (local.value.isProcessingAccount) return
         local.update { it.copy(showDeleteDialog = false) }
+    }
+
+    fun onConfirmDeleteAccount() = accountRequest(onDone = { it.copy(showDeleteDialog = false) }) { deleteAccountUseCase() }
+
+    /**
+     * Cierre de sesión o eliminación: el diálogo queda abierto en Loading hasta la respuesta. Al terminar se cierra
+     * con [onDone]; si [block] lo logró se vuelve al inicio de sesión y, si no, se muestra el motivo.
+     */
+    private fun accountRequest(onDone: (ProfileUiState) -> ProfileUiState, block: suspend () -> Boolean) {
+        if (local.value.isProcessingAccount) return
         viewModelScope.launch {
-            if (deleteAccountUseCase()) {
-                local.update { it.copy(loggedOut = true) }
-            } else {
-                local.update { it.copy(snackbarMessage = resources.getString(R.string.profile_delete_failed)) }
+            local.update { it.copy(accountResult = RequestResult.Loading) }
+            val result = runRequest(resources, onSuccess = { done: Boolean ->
+                if (done) RequestResult.Success("") else RequestResult.Failure(resources.getString(R.string.profile_delete_failed))
+            }, block = block)
+            local.update {
+                when (result) {
+                    is RequestResult.Success -> onDone(it).copy(accountResult = result, loggedOut = true)
+                    is RequestResult.Failure -> onDone(it).copy(accountResult = result, snackbarMessage = result.errorMessage)
+                    RequestResult.Loading -> it
+                }
             }
         }
     }
