@@ -20,7 +20,8 @@ coreSplashscreen = "1.2.0"
 ksp = "2.3.6" # Desde KSP 2.3.0 la versión ya no va atada a la versión de Kotlin
 mapbox = "11.22.0"
 googleGmsGoogleServices = "4.6.0"
-firebaseFirestore = "27.2.0" # Desde KSP 2.3.0 la versión ya no va atada a la versión de Kotlin
+firebaseFirestore = "27.2.0"
+firebaseAuth = "25.0.0" # Desde KSP 2.3.0 la versión ya no va atada a la versión de Kotlin
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -52,6 +53,7 @@ mapbox-compose = { module = "com.mapbox.extension:maps-compose-ndk27", version.r
 androidx-compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-compose-material-icons-extended = { group = "androidx.compose.material", name = "material-icons-extended" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore", version.ref = "firebaseFirestore" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth", version.ref = "firebaseAuth" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
