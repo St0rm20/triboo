@@ -18,8 +18,10 @@ class PromoteFromWaitlistUseCase @Inject constructor(
             val attendees = attendanceRepository.attendances.value.count { it.event.id == event.id }
             if (event.isFull(attendees)) return
             val next = waitlistRepository.entries.value.queueOf(event.id).firstOrNull() ?: return
-            waitlistRepository.delete(userId = next.user.id, eventId = event.id)
+            // Primero la asistencia: las reglas de Firestore solo permiten crearla para otro usuario
+            // mientras siga en la lista de espera, y solo permiten borrar su entrada cuando ya asiste
             attendanceRepository.save(Attendance(user = next.user, event = event))
+            waitlistRepository.delete(userId = next.user.id, eventId = event.id)
         }
     }
 }

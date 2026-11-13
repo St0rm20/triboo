@@ -1,0 +1,7 @@
+[
+  { "id": "deportes", "key": "deportes", "icon": "directions_bike", "color": "#074A24" },
+  { "id": "cultura", "key": "cultura", "icon": "theater_comedy", "color": "#562A55" },
+  { "id": "academico", "key": "academico", "icon": "school", "color": "#29396C" },
+  { "id": "voluntariado", "key": "voluntariado", "icon": "volunteer_activism", "color": "#5D3000" },
+  { "id": "social", "key": "social", "icon": "storefront", "color": "#642721" }
+]

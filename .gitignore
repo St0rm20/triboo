@@ -10,3 +10,10 @@
 local.properties
 google-services.json
 firebase-adminsdk.json
+
+# Herramientas de Firestore (firestore/)
+node_modules/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+service-account*.json
