@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "report-summary.schema.json",
+  "title": "ReportSummary",
+  "description": "Resumen del asistente de moderación (OpenRouter) de los reportes abiertos de un evento. Uno por evento: uno nuevo reemplaza al anterior.",
+  "x-firestore-collection": "reportSummaries",
+  "x-document-id": "Id del evento (eventId)",
+  "x-dto": "edu.uniquindio.co.tribooo.data.remote.reportsummary.ReportSummaryDto",
+  "type": "object",
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "events",
+      "description": "Evento reportado; coincide con el id del documento."
+    },
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Reglas que el evento podría incumplir según los reportes (máximo 25 palabras)."
+    },
+    "reportIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "x-firestore-ref": "reports"
+      },
+      "uniqueItems": true,
+      "description": "Reportes abiertos que cubre el resumen; si los abiertos cambian, el resumen está desactualizado."
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "x-firestore-type": "timestamp",
+      "description": "Fecha en que se generó."
+    }
+  },
+  "required": [
+    "eventId",
+    "text",
+    "reportIds",
+    "date"
+  ],
+  "additionalProperties": false
+}

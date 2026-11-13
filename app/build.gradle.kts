@@ -35,6 +35,8 @@ android {
         resValue("string", "mapbox_access_token", localProperties.getProperty("MAPBOX_ACCESS_TOKEN", ""))
         // Client ID web (OAuth tipo 3) de Firebase para "Continuar con Google"; también se lee de local.properties
         resValue("string", "google_web_client_id", localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", ""))
+        // API key de OpenRouter (asistente de moderación); también se lee de local.properties
+        buildConfigField("String", "OPENROUTER_API_KEY", "\"${localProperties.getProperty("OPENROUTER_API_KEY", "")}\"")
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
@@ -54,6 +56,7 @@ android {
     buildFeatures {
         compose = true
         resValues = true
+        buildConfig = true
     }
 }
 
@@ -99,6 +102,11 @@ dependencies {
 
     // --- Splash screen (API 12+ con compatibilidad hacia atrás) ---
     implementation(libs.androidx.core.splashscreen)
+
+    // --- Red (OpenRouter con Retrofit + kotlinx.serialization) ---
+    implementation(libs.retrofit)
+    implementation(libs.retrofit.converter.kotlinx.serialization)
+    implementation(libs.okhttp.logging.interceptor)
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)

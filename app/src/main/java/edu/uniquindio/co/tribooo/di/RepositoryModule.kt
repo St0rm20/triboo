@@ -8,28 +8,34 @@ import edu.uniquindio.co.tribooo.data.repository.firebase.AttendanceRepositoryIm
 import edu.uniquindio.co.tribooo.data.repository.firebase.AuthRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.CommentRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.EventRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.firebase.EventVerdictRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.FollowRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.InterestRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.LocationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.ModerationReviewRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.NotificationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.ReportRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.firebase.ReportSummaryRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.SavedEventRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.WaitlistRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.local.SessionRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.EventFilterRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.openrouter.ModerationAssistantRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.repository.AttendanceRepository
 import edu.uniquindio.co.tribooo.domain.repository.AuthRepository
 import edu.uniquindio.co.tribooo.domain.repository.CommentRepository
 import edu.uniquindio.co.tribooo.domain.repository.EventFilterRepository
 import edu.uniquindio.co.tribooo.domain.repository.EventRepository
+import edu.uniquindio.co.tribooo.domain.repository.EventVerdictRepository
 import edu.uniquindio.co.tribooo.domain.repository.FollowRepository
 import edu.uniquindio.co.tribooo.domain.repository.InterestRepository
 import edu.uniquindio.co.tribooo.domain.repository.LocationRepository
+import edu.uniquindio.co.tribooo.domain.repository.ModerationAssistantRepository
 import edu.uniquindio.co.tribooo.domain.repository.ModerationReviewRepository
 import edu.uniquindio.co.tribooo.domain.repository.NotificationRepository
 import edu.uniquindio.co.tribooo.domain.repository.ReportRepository
+import edu.uniquindio.co.tribooo.domain.repository.ReportSummaryRepository
 import edu.uniquindio.co.tribooo.domain.repository.SavedEventRepository
 import edu.uniquindio.co.tribooo.domain.repository.SessionRepository
 import edu.uniquindio.co.tribooo.domain.repository.UserRepository
@@ -103,4 +109,16 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindWaitlistRepository(impl: WaitlistRepositoryImpl): WaitlistRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindModerationAssistantRepository(impl: ModerationAssistantRepositoryImpl): ModerationAssistantRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindEventVerdictRepository(impl: EventVerdictRepositoryImpl): EventVerdictRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindReportSummaryRepository(impl: ReportSummaryRepositoryImpl): ReportSummaryRepository
 }
