@@ -19,6 +19,12 @@ interface AuthRepository {
     /** Envía al correo el enlace para restablecer la contraseña. */
     suspend fun sendPasswordResetEmail(email: String)
 
+    /**
+     * Falla con [edu.uniquindio.co.tribooo.domain.model.AuthErrorReason.RECENT_LOGIN_REQUIRED] si la sesión no es
+     * lo bastante reciente para eliminar la cuenta. Permite comprobarlo antes de borrar los datos del usuario.
+     */
+    suspend fun ensureRecentLogin()
+
     /** Elimina la cuenta con sesión abierta; puede exigir haber iniciado sesión hace poco. */
     suspend fun deleteCurrentAccount()
 

@@ -3,7 +3,8 @@ package edu.uniquindio.co.tribooo.data.repository.firebase
 import com.google.firebase.firestore.FirebaseFirestore
 import edu.uniquindio.co.tribooo.data.remote.STOP_TIMEOUT_MILLIS
 import edu.uniquindio.co.tribooo.data.remote.firestoreCall
-import edu.uniquindio.co.tribooo.data.remote.listenInto
+import edu.uniquindio.co.tribooo.data.remote.AuthState
+import edu.uniquindio.co.tribooo.data.remote.listenWhileSignedIn
 import edu.uniquindio.co.tribooo.data.remote.eventverdict.EventVerdictDto
 import edu.uniquindio.co.tribooo.di.ApplicationScope
 import edu.uniquindio.co.tribooo.domain.model.EventVerdict
@@ -22,6 +23,7 @@ import kotlinx.coroutines.tasks.await
 @Singleton
 class EventVerdictRepositoryImpl @Inject constructor(
     firestore: FirebaseFirestore,
+    authState: AuthState,
     @ApplicationScope scope: CoroutineScope
 ) : EventVerdictRepository {
 
@@ -34,7 +36,7 @@ class EventVerdictRepositoryImpl @Inject constructor(
         .stateIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     init {
-        collection.listenInto(dtos, EventVerdictDto::class.java) { dto, id -> dto.copy(eventId = id) }
+        scope.listenWhileSignedIn(authState.uid, dtos, EventVerdictDto::class.java, withId = { dto, id -> dto.copy(eventId = id) }) { collection }
     }
 
     override suspend fun save(verdict: EventVerdict) = firestoreCall {

@@ -4,7 +4,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import edu.uniquindio.co.tribooo.data.remote.waitlist.WaitlistEntryDto
 import edu.uniquindio.co.tribooo.data.remote.STOP_TIMEOUT_MILLIS
 import edu.uniquindio.co.tribooo.data.remote.firestoreCall
-import edu.uniquindio.co.tribooo.data.remote.listenInto
+import edu.uniquindio.co.tribooo.data.remote.AuthState
+import edu.uniquindio.co.tribooo.data.remote.listenWhileSignedIn
 import edu.uniquindio.co.tribooo.di.ApplicationScope
 import edu.uniquindio.co.tribooo.domain.model.WaitlistEntry
 import edu.uniquindio.co.tribooo.domain.repository.EventRepository
@@ -26,6 +27,7 @@ class WaitlistRepositoryImpl @Inject constructor(
     firestore: FirebaseFirestore,
     userRepository: UserRepository,
     eventRepository: EventRepository,
+    authState: AuthState,
     @ApplicationScope scope: CoroutineScope
 ) : WaitlistRepository {
 
@@ -47,7 +49,7 @@ class WaitlistRepositoryImpl @Inject constructor(
 
     init {
         // Escucha los cambios de la colección en tiempo real
-        collection.listenInto(dtos, WaitlistEntryDto::class.java)
+        scope.listenWhileSignedIn(authState.uid, dtos, WaitlistEntryDto::class.java) { collection }
     }
 
     // El id del documento es "{userId}_{eventId}": guardar dos veces no duplica

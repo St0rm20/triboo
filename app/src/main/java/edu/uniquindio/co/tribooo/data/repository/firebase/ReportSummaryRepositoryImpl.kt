@@ -3,7 +3,8 @@ package edu.uniquindio.co.tribooo.data.repository.firebase
 import com.google.firebase.firestore.FirebaseFirestore
 import edu.uniquindio.co.tribooo.data.remote.STOP_TIMEOUT_MILLIS
 import edu.uniquindio.co.tribooo.data.remote.firestoreCall
-import edu.uniquindio.co.tribooo.data.remote.listenInto
+import edu.uniquindio.co.tribooo.data.remote.AuthState
+import edu.uniquindio.co.tribooo.data.remote.listenWhileSignedIn
 import edu.uniquindio.co.tribooo.data.remote.reportsummary.ReportSummaryDto
 import edu.uniquindio.co.tribooo.di.ApplicationScope
 import edu.uniquindio.co.tribooo.domain.model.ReportSummary
@@ -22,6 +23,7 @@ import kotlinx.coroutines.tasks.await
 @Singleton
 class ReportSummaryRepositoryImpl @Inject constructor(
     firestore: FirebaseFirestore,
+    authState: AuthState,
     @ApplicationScope scope: CoroutineScope
 ) : ReportSummaryRepository {
 
@@ -34,7 +36,7 @@ class ReportSummaryRepositoryImpl @Inject constructor(
         .stateIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     init {
-        collection.listenInto(dtos, ReportSummaryDto::class.java) { dto, id -> dto.copy(eventId = id) }
+        scope.listenWhileSignedIn(authState.uid, dtos, ReportSummaryDto::class.java, withId = { dto, id -> dto.copy(eventId = id) }) { collection }
     }
 
     override suspend fun save(summary: ReportSummary) = firestoreCall {

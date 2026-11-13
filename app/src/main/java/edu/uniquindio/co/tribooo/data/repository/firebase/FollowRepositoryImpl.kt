@@ -4,7 +4,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import edu.uniquindio.co.tribooo.data.remote.STOP_TIMEOUT_MILLIS
 import edu.uniquindio.co.tribooo.data.remote.firestoreCall
 import edu.uniquindio.co.tribooo.data.remote.follow.FollowDto
-import edu.uniquindio.co.tribooo.data.remote.listenInto
+import edu.uniquindio.co.tribooo.data.remote.AuthState
+import edu.uniquindio.co.tribooo.data.remote.listenWhileSignedIn
 import edu.uniquindio.co.tribooo.di.ApplicationScope
 import edu.uniquindio.co.tribooo.domain.model.Follow
 import edu.uniquindio.co.tribooo.domain.repository.FollowRepository
@@ -24,6 +25,7 @@ import kotlinx.coroutines.tasks.await
 class FollowRepositoryImpl @Inject constructor(
     firestore: FirebaseFirestore,
     userRepository: UserRepository,
+    authState: AuthState,
     @ApplicationScope scope: CoroutineScope
 ) : FollowRepository {
 
@@ -43,7 +45,7 @@ class FollowRepositoryImpl @Inject constructor(
     }.stateIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     init {
-        collection.listenInto(dtos, FollowDto::class.java)
+        scope.listenWhileSignedIn(authState.uid, dtos, FollowDto::class.java) { collection }
     }
 
     // El id del documento es "{followerId}_{followedId}": seguir dos veces no duplica

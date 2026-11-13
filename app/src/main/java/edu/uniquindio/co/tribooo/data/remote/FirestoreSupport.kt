@@ -11,10 +11,17 @@ import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.WriteBatch
 import edu.uniquindio.co.tribooo.domain.model.DataErrorReason
 import edu.uniquindio.co.tribooo.domain.model.DataException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlin.coroutines.cancellation.CancellationException
 
@@ -71,7 +78,33 @@ internal fun <T : Any> Query.documentsFlow(type: Class<T>, withId: (T, String) -
         awaitClose { registration.remove() }
     }
 
-/** Mantiene [target] al día con los documentos de la colección mientras viva la app. */
+/**
+ * Documentos de la consulta que arma [query] para la sesión actual ([key] es el uid o algo derivado de él).
+ * Cada vez que cambia [key] se elimina el listener anterior y se registra uno nuevo; sin sesión emite una lista
+ * vacía, porque las reglas rechazan las lecturas anónimas. Si el listener falla (ya quedó en el log),
+ * se conserva la última lista hasta el siguiente cambio de sesión.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+internal fun <K : Any, T : Any> Flow<K?>.documentsWhileSignedIn(
+    type: Class<T>,
+    withId: (T, String) -> T = { dto, _ -> dto },
+    query: (K) -> Query
+): Flow<List<T>> = flatMapLatest { key ->
+    if (key == null) flowOf(emptyList()) else query(key).documentsFlow(type, withId).catch { }
+}
+
+/** Mantiene [target] al día con [documentsWhileSignedIn] mientras viva la app. */
+internal fun <K : Any, T : Any> CoroutineScope.listenWhileSignedIn(
+    key: Flow<K?>,
+    target: MutableStateFlow<List<T>>,
+    type: Class<T>,
+    withId: (T, String) -> T = { dto, _ -> dto },
+    query: (K) -> Query
+): Job = launch {
+    key.documentsWhileSignedIn(type, withId, query).collect { target.value = it }
+}
+
+/** Mantiene [target] al día con los documentos de la colección mientras viva la app (solo catálogos públicos). */
 internal fun <T : Any> CollectionReference.listenInto(
     target: MutableStateFlow<List<T>>,
     type: Class<T>,

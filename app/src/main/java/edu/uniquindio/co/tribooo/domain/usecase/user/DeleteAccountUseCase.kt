@@ -28,16 +28,18 @@ class DeleteAccountUseCase @Inject constructor(
 ) {
     /**
      * Elimina la cuenta del usuario actual con todo lo que le pertenece (incluidos sus eventos, sin importar su estado)
-     * y cierra la sesión. Retorna false, sin borrar nada, si no hay sesión, si es administrador o si Firebase
-     * Authentication no elimina la cuenta (por ejemplo, porque exige haber iniciado sesión hace poco).
+     * y cierra la sesión. Retorna false, sin borrar nada, si no hay sesión, si es administrador o si la sesión no es
+     * reciente (Firebase Authentication lo exige para eliminar la cuenta).
+     *
+     * Los datos se borran antes que la cuenta: las reglas de Firestore exigen sesión, y eliminar la cuenta la cierra.
      */
     suspend operator fun invoke(): Boolean {
         val user = getCurrentUser() ?: return false
         if (user.role == UserRole.ADMIN) return false
 
-        // Primero la cuenta de Firebase: si falla no se borra nada y el usuario puede reintentar
+        // Antes de borrar nada: si Firebase no va a dejar eliminar la cuenta, el usuario puede reintentar tras iniciar sesión
         try {
-            authRepository.deleteCurrentAccount()
+            authRepository.ensureRecentLogin()
         } catch (e: AuthException) {
             return false
         }
@@ -65,6 +67,13 @@ class DeleteAccountUseCase @Inject constructor(
         ownEventIds.forEach { eventRepository.delete(it) }
 
         userRepository.delete(user.id)
+
+        // Al final la cuenta, porque cierra la sesión que necesitan los borrados anteriores
+        try {
+            authRepository.deleteCurrentAccount()
+        } catch (e: AuthException) {
+            return false
+        }
         sessionRepository.clearSession()
         return true
     }

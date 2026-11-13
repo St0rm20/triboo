@@ -4,7 +4,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import edu.uniquindio.co.tribooo.data.remote.STOP_TIMEOUT_MILLIS
 import edu.uniquindio.co.tribooo.data.remote.commitInBatches
 import edu.uniquindio.co.tribooo.data.remote.firestoreCall
-import edu.uniquindio.co.tribooo.data.remote.listenInto
+import edu.uniquindio.co.tribooo.data.remote.AuthState
+import edu.uniquindio.co.tribooo.data.remote.listenWhileSignedIn
+import edu.uniquindio.co.tribooo.domain.model.UserRole
 import edu.uniquindio.co.tribooo.data.remote.report.ReportDto
 import edu.uniquindio.co.tribooo.di.ApplicationScope
 import edu.uniquindio.co.tribooo.domain.model.Report
@@ -18,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.tasks.await
 
@@ -27,6 +30,7 @@ class ReportRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore,
     userRepository: UserRepository,
     eventRepository: EventRepository,
+    authState: AuthState,
     @ApplicationScope scope: CoroutineScope
 ) : ReportRepository {
 
@@ -47,7 +51,13 @@ class ReportRepositoryImpl @Inject constructor(
     }.stateIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     init {
-        collection.listenInto(dtos, ReportDto::class.java) { dto, id -> dto.copy(id = id) }
+        // El administrador ve todos los reportes; los demás solo los suyos (las reglas no dejan leer los ajenos)
+        val viewer = combine(authState.uid, userRepository.users) { uid, users ->
+            uid?.let { ReportViewer(it, isAdmin = users.any { user -> user.id == it && user.role == UserRole.ADMIN }) }
+        }.distinctUntilChanged()
+        scope.listenWhileSignedIn(viewer, dtos, ReportDto::class.java, withId = { dto, id -> dto.copy(id = id) }) { viewer ->
+            if (viewer.isAdmin) collection else collection.whereEqualTo("reporterId", viewer.uid)
+        }
     }
 
     override suspend fun save(report: Report) = firestoreCall {
@@ -61,3 +71,6 @@ class ReportRepositoryImpl @Inject constructor(
         firestore.commitInBatches(open) { update(collection.document(it.id), "resolved", true) }
     }
 }
+
+/** Quién observa los reportes: define qué consulta permiten las reglas. */
+private data class ReportViewer(val uid: String, val isAdmin: Boolean)

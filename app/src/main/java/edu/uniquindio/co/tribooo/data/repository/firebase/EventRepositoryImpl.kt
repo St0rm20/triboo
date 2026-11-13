@@ -3,7 +3,8 @@ package edu.uniquindio.co.tribooo.data.repository.firebase
 import com.google.firebase.firestore.FirebaseFirestore
 import edu.uniquindio.co.tribooo.data.remote.STOP_TIMEOUT_MILLIS
 import edu.uniquindio.co.tribooo.data.remote.commitInBatches
-import edu.uniquindio.co.tribooo.data.remote.documentsFlow
+import edu.uniquindio.co.tribooo.data.remote.AuthState
+import edu.uniquindio.co.tribooo.data.remote.documentsWhileSignedIn
 import edu.uniquindio.co.tribooo.data.remote.event.EventDto
 import edu.uniquindio.co.tribooo.data.remote.eventimage.EventImageDto
 import edu.uniquindio.co.tribooo.data.remote.firestoreCall
@@ -19,7 +20,6 @@ import jakarta.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.tasks.await
@@ -28,11 +28,13 @@ import kotlinx.coroutines.tasks.await
  * Eventos (colección "events") y su galería (colección "eventImages").
  * Los listeners se registran con callbackFlow solo mientras alguna pantalla observa los eventos
  * y se eliminan [STOP_TIMEOUT_MILLIS] después de que la última deja de hacerlo.
+ * Además dependen de la sesión: se vuelven a registrar al cambiar de usuario y sin sesión las listas quedan vacías.
  */
 @Singleton
 class EventRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore,
     private val userRepository: UserRepository,
+    authState: AuthState,
     @ApplicationScope scope: CoroutineScope
 ) : EventRepository {
 
@@ -41,24 +43,21 @@ class EventRepositoryImpl @Inject constructor(
 
     // El organizador se resuelve con la lista de usuarios que ya mantiene su repositorio
     override val events: StateFlow<List<Event>> = combine(
-        collection.documentsFlow(EventDto::class.java) { dto, id -> dto.copy(id = id) },
+        authState.uid.documentsWhileSignedIn(EventDto::class.java, withId = { dto, id -> dto.copy(id = id) }) { collection },
         userRepository.users
     ) { dtos, users ->
         val usersById = users.associateBy { it.id }
         dtos.mapNotNull { dto -> usersById[dto.organizerId]?.let { dto.resolve(it) } }
     }
-        // Si el listener falla se conserva la última lista; se vuelve a intentar cuando alguien observe de nuevo
-        .catch { }
         .stateIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     override val images: StateFlow<List<ImageEvent>> = combine(
-        imagesCollection.documentsFlow(EventImageDto::class.java) { dto, id -> dto.copy(id = id) },
+        authState.uid.documentsWhileSignedIn(EventImageDto::class.java, withId = { dto, id -> dto.copy(id = id) }) { imagesCollection },
         events
     ) { dtos, events ->
         val eventsById = events.associateBy { it.id }
         dtos.mapNotNull { dto -> eventsById[dto.eventId]?.let { dto.toDomain(it) } }
     }
-        .catch { }
         .stateIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     override suspend fun save(event: Event, imageUrls: List<String>) = firestoreCall {

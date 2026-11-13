@@ -4,7 +4,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import edu.uniquindio.co.tribooo.data.remote.STOP_TIMEOUT_MILLIS
 import edu.uniquindio.co.tribooo.data.remote.commitInBatches
 import edu.uniquindio.co.tribooo.data.remote.firestoreCall
-import edu.uniquindio.co.tribooo.data.remote.listenInto
+import edu.uniquindio.co.tribooo.data.remote.AuthState
+import edu.uniquindio.co.tribooo.data.remote.listenWhileSignedIn
 import edu.uniquindio.co.tribooo.data.remote.notification.NotificationDto
 import edu.uniquindio.co.tribooo.di.ApplicationScope
 import edu.uniquindio.co.tribooo.domain.model.Notification
@@ -25,6 +26,7 @@ import kotlinx.coroutines.tasks.await
 class NotificationRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore,
     userRepository: UserRepository,
+    authState: AuthState,
     @ApplicationScope scope: CoroutineScope
 ) : NotificationRepository {
 
@@ -39,7 +41,10 @@ class NotificationRepositoryImpl @Inject constructor(
     }.stateIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     init {
-        collection.listenInto(dtos, NotificationDto::class.java) { dto, id -> dto.copy(id = id) }
+        // Solo las del usuario con sesión: las reglas no dejan leer las de otros
+        scope.listenWhileSignedIn(authState.uid, dtos, NotificationDto::class.java, withId = { dto, id -> dto.copy(id = id) }) { uid ->
+            collection.whereEqualTo("destinationUserId", uid)
+        }
     }
 
     override suspend fun save(notification: Notification) = firestoreCall {

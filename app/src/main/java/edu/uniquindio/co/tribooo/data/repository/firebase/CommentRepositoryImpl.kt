@@ -4,7 +4,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import edu.uniquindio.co.tribooo.data.remote.STOP_TIMEOUT_MILLIS
 import edu.uniquindio.co.tribooo.data.remote.comment.CommentDto
 import edu.uniquindio.co.tribooo.data.remote.firestoreCall
-import edu.uniquindio.co.tribooo.data.remote.listenInto
+import edu.uniquindio.co.tribooo.data.remote.AuthState
+import edu.uniquindio.co.tribooo.data.remote.listenWhileSignedIn
 import edu.uniquindio.co.tribooo.di.ApplicationScope
 import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.repository.CommentRepository
@@ -26,6 +27,7 @@ class CommentRepositoryImpl @Inject constructor(
     firestore: FirebaseFirestore,
     userRepository: UserRepository,
     eventRepository: EventRepository,
+    authState: AuthState,
     @ApplicationScope scope: CoroutineScope
 ) : CommentRepository {
 
@@ -51,7 +53,7 @@ class CommentRepositoryImpl @Inject constructor(
     }.stateIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     init {
-        collection.listenInto(dtos, CommentDto::class.java) { dto, id -> dto.copy(id = id) }
+        scope.listenWhileSignedIn(authState.uid, dtos, CommentDto::class.java, withId = { dto, id -> dto.copy(id = id) }) { collection }
     }
 
     // set() reemplaza el documento si ya existe un comentario con el mismo id

@@ -43,6 +43,15 @@ class AuthRepositoryImpl @Inject constructor(
         Unit
     }
 
+    // Firebase exige un inicio de sesión de hace menos de 5 minutos; se deja margen para borrar los datos antes
+    override suspend fun ensureRecentLogin() {
+        val user = auth.currentUser ?: throw AuthException(AuthErrorReason.UNKNOWN)
+        val lastSignIn = user.metadata?.lastSignInTimestamp ?: 0L
+        if (System.currentTimeMillis() - lastSignIn > RECENT_LOGIN_MILLIS) {
+            throw AuthException(AuthErrorReason.RECENT_LOGIN_REQUIRED)
+        }
+    }
+
     override suspend fun deleteCurrentAccount() = firebaseCall {
         val user = auth.currentUser ?: throw AuthException(AuthErrorReason.UNKNOWN)
         user.delete().await()
@@ -82,3 +91,5 @@ class AuthRepositoryImpl @Inject constructor(
         else -> AuthErrorReason.UNKNOWN
     }
 }
+
+private const val RECENT_LOGIN_MILLIS = 4 * 60 * 1000L

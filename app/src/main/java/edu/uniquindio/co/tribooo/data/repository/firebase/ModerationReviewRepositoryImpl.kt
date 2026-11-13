@@ -3,7 +3,8 @@ package edu.uniquindio.co.tribooo.data.repository.firebase
 import com.google.firebase.firestore.FirebaseFirestore
 import edu.uniquindio.co.tribooo.data.remote.STOP_TIMEOUT_MILLIS
 import edu.uniquindio.co.tribooo.data.remote.firestoreCall
-import edu.uniquindio.co.tribooo.data.remote.listenInto
+import edu.uniquindio.co.tribooo.data.remote.AuthState
+import edu.uniquindio.co.tribooo.data.remote.listenWhileSignedIn
 import edu.uniquindio.co.tribooo.data.remote.moderationreview.ModerationReviewDto
 import edu.uniquindio.co.tribooo.di.ApplicationScope
 import edu.uniquindio.co.tribooo.domain.model.ModerationReview
@@ -26,6 +27,7 @@ class ModerationReviewRepositoryImpl @Inject constructor(
     firestore: FirebaseFirestore,
     userRepository: UserRepository,
     eventRepository: EventRepository,
+    authState: AuthState,
     @ApplicationScope scope: CoroutineScope
 ) : ModerationReviewRepository {
 
@@ -45,7 +47,7 @@ class ModerationReviewRepositoryImpl @Inject constructor(
     }.stateIn(scope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MILLIS), emptyList())
 
     init {
-        collection.listenInto(dtos, ModerationReviewDto::class.java) { dto, id -> dto.copy(id = id) }
+        scope.listenWhileSignedIn(authState.uid, dtos, ModerationReviewDto::class.java, withId = { dto, id -> dto.copy(id = id) }) { collection }
     }
 
     override suspend fun save(review: ModerationReview) = firestoreCall {

@@ -7,14 +7,14 @@ import edu.uniquindio.co.tribooo.domain.model.User
 import edu.uniquindio.co.tribooo.domain.model.UserRole
 
 // Representación de un User tal como se guarda en Firestore (colección "users", documento = uid de Firebase Auth).
-// No incluye contraseña: las credenciales las guarda Firebase Authentication.
+// No incluye contraseña ni correo: los guarda Firebase Authentication. Así ningún usuario puede leer
+// el correo de otro al escuchar la colección.
 // Todos los campos tienen valor por defecto para garantizar el constructor vacío
 // que Firestore necesita al convertir un documento con toObject()
 @Keep
 data class UserDto(
     val id: String = "",
     val name: String = "",
-    val email: String = "",
     val city: String = "",
     val neighborhood: String = "",
     val bio: String? = null,
@@ -22,8 +22,8 @@ data class UserDto(
     val role: String = UserRole.USER.name,
     val dateRegistered: Timestamp = Timestamp.now()
 ) {
-    // Convierte el DTO (datos de Firestore) al modelo de dominio
-    fun toDomain(): User = User(
+    // Convierte el DTO (datos de Firestore) al modelo de dominio; [email] llega de Firebase Authentication
+    fun toDomain(email: String): User = User(
         id = id,
         name = name,
         email = email,
@@ -43,7 +43,6 @@ data class UserDto(
         fun fromDomain(user: User): UserDto = UserDto(
             id = user.id,
             name = user.name,
-            email = user.email,
             city = user.city,
             neighborhood = user.neighborhood,
             bio = user.bio,

@@ -77,6 +77,11 @@ class FakeAuthRepository : AuthRepository {
         failIfRequested()
     }
 
+    override suspend fun ensureRecentLogin() {
+        failIfRequested()
+        if (currentAccount == null) throw AuthException(AuthErrorReason.UNKNOWN)
+    }
+
     override suspend fun deleteCurrentAccount() {
         failIfRequested()
         val account = currentAccount ?: throw AuthException(AuthErrorReason.UNKNOWN)

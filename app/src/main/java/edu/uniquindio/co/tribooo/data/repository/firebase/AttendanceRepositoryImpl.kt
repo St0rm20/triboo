@@ -4,7 +4,8 @@ import com.google.firebase.firestore.FirebaseFirestore
 import edu.uniquindio.co.tribooo.data.remote.attendance.AttendanceDto
 import edu.uniquindio.co.tribooo.data.remote.STOP_TIMEOUT_MILLIS
 import edu.uniquindio.co.tribooo.data.remote.firestoreCall
-import edu.uniquindio.co.tribooo.data.remote.listenInto
+import edu.uniquindio.co.tribooo.data.remote.AuthState
+import edu.uniquindio.co.tribooo.data.remote.listenWhileSignedIn
 import edu.uniquindio.co.tribooo.di.ApplicationScope
 import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.repository.EventRepository
@@ -26,6 +27,7 @@ class AttendanceRepositoryImpl @Inject constructor(
     firestore: FirebaseFirestore,
     userRepository: UserRepository,
     eventRepository: EventRepository,
+    authState: AuthState,
     @ApplicationScope scope: CoroutineScope
 ) : AttendanceRepository {
 
@@ -47,7 +49,7 @@ class AttendanceRepositoryImpl @Inject constructor(
 
     init {
         // Escucha los cambios de la colección en tiempo real
-        collection.listenInto(dtos, AttendanceDto::class.java)
+        scope.listenWhileSignedIn(authState.uid, dtos, AttendanceDto::class.java) { collection }
     }
 
     // El id del documento es "{userId}_{eventId}": guardar dos veces no duplica
