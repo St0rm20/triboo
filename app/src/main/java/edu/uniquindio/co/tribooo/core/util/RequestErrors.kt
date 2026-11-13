@@ -19,6 +19,7 @@ fun requestErrorMessage(rp: ResourceProvider, error: Throwable, @StringRes fallb
                 DataErrorReason.NETWORK -> R.string.error_network
                 DataErrorReason.PERMISSION_DENIED -> R.string.error_permission
                 DataErrorReason.NOT_FOUND -> R.string.error_not_found
+                DataErrorReason.RATE_LIMITED -> R.string.error_rate_limited
                 DataErrorReason.UNKNOWN -> fallback
             }
             error is AuthException && error.reason == AuthErrorReason.NETWORK -> R.string.error_network

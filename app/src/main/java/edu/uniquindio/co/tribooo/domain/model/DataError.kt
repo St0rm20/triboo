@@ -5,6 +5,8 @@ enum class DataErrorReason {
     NETWORK,
     PERMISSION_DENIED,
     NOT_FOUND,
+    /** Se superó el límite de peticiones del servicio (p. ej. los modelos gratuitos de OpenRouter). */
+    RATE_LIMITED,
     UNKNOWN
 }
 

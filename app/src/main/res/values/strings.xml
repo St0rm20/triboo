@@ -198,6 +198,7 @@
     <string name="usecase_moderation_not_admin">No tienes acceso a esta sección</string>
     <string name="usecase_moderation_event_unavailable">La publicación ya no está disponible.</string>
     <string name="usecase_verify_not_pending">Solo se pueden verificar publicaciones en revisión.</string>
+    <string name="usecase_assistant_not_pending">El asistente solo revisa publicaciones en revisión.</string>
     <string name="usecase_verify_success">Publicación verificada.</string>
     <string name="usecase_restore_not_rejected">Solo se pueden restaurar publicaciones rechazadas.</string>
     <string name="usecase_restore_success">Publicación restaurada.</string>
@@ -790,6 +791,7 @@
     <string name="error_network">Sin conexión. Revisa tu internet e inténtalo de nuevo.</string>
     <string name="error_permission">No tienes permiso para hacer esto.</string>
     <string name="error_not_found">Ese contenido ya no está disponible.</string>
+    <string name="error_rate_limited">El asistente alcanzó su límite de uso. Espera un momento e inténtalo de nuevo.</string>
     <string name="error_generic">Algo salió mal. Inténtalo de nuevo.</string>
     <string name="common_loading">Cargando…</string>
 </resources>

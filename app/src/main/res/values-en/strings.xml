@@ -198,6 +198,7 @@
     <string name="usecase_moderation_not_admin">You don\'t have access to this section</string>
     <string name="usecase_moderation_event_unavailable">The post is no longer available.</string>
     <string name="usecase_verify_not_pending">Only posts under review can be verified.</string>
+    <string name="usecase_assistant_not_pending">The assistant only reviews posts under review.</string>
     <string name="usecase_verify_success">Post verified.</string>
     <string name="usecase_restore_not_rejected">Only rejected posts can be restored.</string>
     <string name="usecase_restore_success">Post restored.</string>
@@ -790,6 +791,7 @@
     <string name="error_network">No connection. Check your internet and try again.</string>
     <string name="error_permission">You don\'t have permission to do this.</string>
     <string name="error_not_found">That content is no longer available.</string>
+    <string name="error_rate_limited">The assistant reached its usage limit. Wait a moment and try again.</string>
     <string name="error_generic">Something went wrong. Try again.</string>
     <string name="common_loading">Loading…</string>
 </resources>
