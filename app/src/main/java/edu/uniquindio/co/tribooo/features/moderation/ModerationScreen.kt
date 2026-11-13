@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Gavel
@@ -42,6 +43,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -84,6 +86,7 @@ import edu.uniquindio.co.tribooo.core.util.resolutionFooter
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
 import edu.uniquindio.co.tribooo.domain.model.ModerationCase
 import edu.uniquindio.co.tribooo.domain.model.ModerationTab
+import edu.uniquindio.co.tribooo.domain.model.VerdictRecommendation
 import edu.uniquindio.co.tribooo.domain.usecase.moderation.ModerationCounts
 
 @Composable
@@ -148,6 +151,8 @@ fun ModerationScreen(
                                 case = case,
                                 tab = state.tab,
                                 isBusy = state.busyEventId == case.event.id,
+                                assistant = state.assistant[case.event.id],
+                                onRetryAssistant = { viewModel.onRetryAssistant(case) },
                                 onAuthorClick = { onNavigateToUser(case.event.organizer.id) },
                                 onVerify = { viewModel.onVerify(case) },
                                 onReject = { viewModel.onRejectClick(case) },
@@ -170,6 +175,11 @@ fun ModerationScreen(
             onConfirm = viewModel::onConfirmReject,
             onDismiss = viewModel::onDismissRejectSheet
         )
+    }
+
+    // Pide la ayuda del asistente para las tarjetas visibles que aún no la tienen (las guardadas no llaman al modelo)
+    LaunchedEffect(state.isAdmin, state.tab, state.cases) {
+        viewModel.onCasesShown()
     }
 
     LaunchedEffect(state.message) {
@@ -259,6 +269,8 @@ private fun CaseCard(
     case: ModerationCase,
     tab: ModerationTab,
     isBusy: Boolean,
+    assistant: AssistantCardState?,
+    onRetryAssistant: () -> Unit,
     onAuthorClick: () -> Unit,
     onVerify: () -> Unit,
     onReject: () -> Unit,
@@ -304,6 +316,9 @@ private fun CaseCard(
 
             Text(event.description, fontSize = 14.sp, lineHeight = 20.sp, color = colors.onSurfaceVariant)
 
+            // Veredicto (Pendientes): antes de los botones de verificar y rechazar
+            if (tab == ModerationTab.PENDIENTES && assistant != null) AssistantBlock(assistant, onRetryAssistant)
+
             if (case.openReports.isNotEmpty() && event.status != EventStatus.RECHAZADO) {
                 NoteBlock(
                     icon = Icons.Rounded.Flag,
@@ -313,6 +328,8 @@ private fun CaseCard(
                     content = colors.onTertiaryContainer
                 )
             }
+            // Resumen de los reportes (Reportes): justo debajo de ellos
+            if (tab == ModerationTab.REPORTES && assistant != null) AssistantBlock(assistant, onRetryAssistant)
             if (event.status == EventStatus.RECHAZADO) {
                 NoteBlock(
                     icon = Icons.Rounded.Block,
@@ -431,6 +448,66 @@ private fun NoteBlock(icon: ImageVector, title: String, lines: List<String>, con
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(title, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = content)
             lines.forEach { Text(it, fontSize = 13.sp, lineHeight = 18.sp, color = content) }
+        }
+    }
+}
+
+/** Ayuda del asistente: veredicto, resumen, "analizando" o el motivo por el que no está, con opción de reintentar. */
+@Composable
+private fun AssistantBlock(state: AssistantCardState, onRetry: () -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    val container = colors.secondaryContainer
+    val content = colors.onSecondaryContainer
+
+    when (state) {
+        is AssistantCardState.Verdict -> NoteBlock(
+            icon = Icons.Rounded.AutoAwesome,
+            title = stringResource(
+                when (state.recommendation) {
+                    VerdictRecommendation.APROBAR -> R.string.moderation_assistant_suggests_approve
+                    VerdictRecommendation.RECHAZAR -> R.string.moderation_assistant_suggests_reject
+                    null -> R.string.moderation_assistant_verdict_title
+                }
+            ),
+            lines = listOf(state.explanation),
+            container = container,
+            content = content
+        )
+        is AssistantCardState.Summary -> NoteBlock(
+            icon = Icons.Rounded.AutoAwesome,
+            title = stringResource(R.string.moderation_assistant_summary_title),
+            lines = listOf(state.text),
+            container = container,
+            content = content
+        )
+        AssistantCardState.Loading -> Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(container, RoundedCornerShape(16.dp))
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = content)
+            Text(stringResource(R.string.moderation_assistant_loading), fontSize = 13.sp, color = content)
+        }
+        is AssistantCardState.Unavailable -> Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(container, RoundedCornerShape(16.dp))
+                .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = content, modifier = Modifier.size(20.dp))
+            Text(
+                text = state.message ?: stringResource(R.string.moderation_assistant_unavailable),
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                color = content,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onRetry) { Text(stringResource(R.string.moderation_assistant_retry)) }
         }
     }
 }

@@ -776,6 +776,13 @@
     <string name="moderation_action_reject">Rechazar</string>
     <string name="moderation_action_resolve">Marcar resuelta</string>
     <string name="moderation_action_restore">Restaurar</string>
+    <string name="moderation_assistant_verdict_title">Sugerencia de la IA</string>
+    <string name="moderation_assistant_suggests_approve">Sugerencia de la IA · aprobar</string>
+    <string name="moderation_assistant_suggests_reject">Sugerencia de la IA · rechazar</string>
+    <string name="moderation_assistant_summary_title">Resumen de la IA</string>
+    <string name="moderation_assistant_loading">Analizando con IA…</string>
+    <string name="moderation_assistant_unavailable">La sugerencia de la IA está en pausa.</string>
+    <string name="moderation_assistant_retry">Reintentar</string>
     <string name="reject_title">Motivo del rechazo</string>
     <string name="reject_intro">El autor recibe este texto y la publicación deja de aparecer en el feed público.</string>
     <string name="reject_quick_title">Motivos frecuentes</string>

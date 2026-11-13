@@ -776,6 +776,13 @@
     <string name="moderation_action_reject">Reject</string>
     <string name="moderation_action_resolve">Mark as resolved</string>
     <string name="moderation_action_restore">Restore</string>
+    <string name="moderation_assistant_verdict_title">AI suggestion</string>
+    <string name="moderation_assistant_suggests_approve">AI suggestion · approve</string>
+    <string name="moderation_assistant_suggests_reject">AI suggestion · reject</string>
+    <string name="moderation_assistant_summary_title">AI summary</string>
+    <string name="moderation_assistant_loading">Analyzing with AI…</string>
+    <string name="moderation_assistant_unavailable">The AI suggestion is paused.</string>
+    <string name="moderation_assistant_retry">Retry</string>
     <string name="reject_title">Reason for rejection</string>
     <string name="reject_intro">The author receives this text and the post stops appearing in the public feed.</string>
     <string name="reject_quick_title">Common reasons</string>
