@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "event-image.schema.json",
+  "title": "EventImage",
+  "description": "Imagen extra de la galería de un evento.",
+  "x-firestore-collection": "eventImages",
+  "x-document-id": "UUID generado por la app",
+  "x-dto": "edu.uniquindio.co.tribooo.data.remote.eventimage.EventImageDto",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "eventId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "events",
+      "description": "Evento al que pertenece."
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1
+    },
+    "order": {
+      "type": "integer",
+      "description": "Posición en la galería, desde 0.",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "id",
+    "eventId",
+    "url",
+    "order"
+  ],
+  "additionalProperties": false
+}

@@ -22,7 +22,7 @@ import java.time.LocalTime
 class EventFormStateTest {
 
     private val now = LocalDateTime.of(2026, 10, 24, 15, 0).atZone(APP_ZONE).toInstant()
-    private val me = User("me", "Yo", "me@mail.co", "123456", "Armenia", "Centro")
+    private val me = User("me", "Yo", "me@mail.co", "Armenia", "Centro")
     private val suggestions = MockData.placeSuggestions
 
     private fun at(year: Int, month: Int, day: Int, hour: Int, minute: Int = 0): Instant =

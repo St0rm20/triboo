@@ -9,6 +9,7 @@ import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
 import edu.uniquindio.co.tribooo.core.util.Validators
+import edu.uniquindio.co.tribooo.core.util.authErrorMessage
 import edu.uniquindio.co.tribooo.domain.usecase.auth.RegisterUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetCitiesUseCase
 import jakarta.inject.Inject
@@ -74,13 +75,14 @@ data class RegisterUiState(
 
 @HiltViewModel
 class RegisterViewModel @Inject constructor(
-    getCities: GetCitiesUseCase,
+    private val getCities: GetCitiesUseCase,
     private val registerUseCase: RegisterUseCase,
     private val messenger: SnackbarMessenger,
     private val resources: ResourceProvider
 ) : ViewModel() {
 
-    val cities: List<String> = getCities()
+    // Se lee en cada uso: el catálogo puede llegar de Firestore después de abrir la pantalla
+    val cities: List<String> get() = getCities()
 
     // La primera ciudad queda seleccionada por defecto
     private val _uiState = MutableStateFlow(RegisterUiState(city = cities.firstOrNull().orEmpty()))
@@ -131,19 +133,19 @@ class RegisterViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.update { it.copy(registerResult = RequestResult.Loading) }
-            val user = registerUseCase(
+            val result = registerUseCase(
                 name = state.name,
                 city = state.city,
                 address = state.address,
                 email = state.email,
                 password = state.password
+            ).fold(
+                onSuccess = {
+                    messenger.post(MessageTarget.LOGIN, resources.getString(R.string.form_account_created))
+                    RequestResult.Success(resources.getString(R.string.register_success))
+                },
+                onFailure = { RequestResult.Failure(authErrorMessage(resources, it)) }
             )
-            val result = if (user != null) {
-                messenger.post(MessageTarget.LOGIN, resources.getString(R.string.form_account_created))
-                RequestResult.Success(resources.getString(R.string.register_success))
-            } else {
-                RequestResult.Failure(resources.getString(R.string.register_error_email_exists))
-            }
             _uiState.update { it.copy(registerResult = result) }
         }
     }

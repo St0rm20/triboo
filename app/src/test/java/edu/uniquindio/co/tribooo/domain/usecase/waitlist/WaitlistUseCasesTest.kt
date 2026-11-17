@@ -17,7 +17,7 @@ class WaitlistUseCasesTest {
     private fun fullEvent(organizer: User = world.other): Event =
         world.publish("e", 10, 12, organizer = organizer, cupo = 2).also { world.fill(it, 2) }
 
-    private fun person(id: String) = User(id, id, "$id@mail.co", "123456", "Armenia", "Centro")
+    private fun person(id: String) = User(id, id, "$id@mail.co", "Armenia", "Centro")
 
     private fun queue(event: Event, vararg users: User) = runBlocking {
         users.forEachIndexed { n, user ->

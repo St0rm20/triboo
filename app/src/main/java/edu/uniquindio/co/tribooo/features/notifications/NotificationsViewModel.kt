@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.R
+import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.core.util.relativeLabel
+import edu.uniquindio.co.tribooo.core.util.runRequest
 import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.Follow
@@ -19,10 +21,12 @@ import edu.uniquindio.co.tribooo.domain.usecase.notification.MarkNotificationRea
 import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveNotificationsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
 import jakarta.inject.Inject
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Notificación lista para pintarse en una tarjeta. */
@@ -46,8 +50,14 @@ data class NotificationItem(
 
 data class NotificationsUiState(
     val items: List<NotificationItem> = emptyList(),
-    val unreadCount: Int = 0
+    val unreadCount: Int = 0,
+    /** Marcar todas como leídas; Loading mientras se procesa. */
+    val markAllResult: RequestResult? = null,
+    /** Motivo por el que no se pudo marcar como leído. */
+    val message: String? = null
 ) {
+    val isMarkingAll: Boolean get() = markAllResult is RequestResult.Loading
+
     fun summary(resources: ResourceProvider): String =
         if (unreadCount == 0) {
             resources.getString(R.string.notifications_all_read)
@@ -78,20 +88,41 @@ class NotificationsViewModel @Inject constructor(
         NotificationSources(comments, follows, events)
     }
 
-    val uiState: StateFlow<NotificationsUiState> = combine(observeNotifications(), sources) { notifications, sources ->
+    private val markAllResult = MutableStateFlow<RequestResult?>(null)
+
+    private val message = MutableStateFlow<String?>(null)
+
+    val uiState: StateFlow<NotificationsUiState> = combine(
+        observeNotifications(), sources, markAllResult, message
+    ) { notifications, sources, markAllResult, message ->
         NotificationsUiState(
             items = notifications.mapNotNull { it.toItem(sources, resources) },
-            unreadCount = notifications.count { !it.read }
+            unreadCount = notifications.count { !it.read },
+            markAllResult = markAllResult,
+            message = message
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), NotificationsUiState())
 
+    /** Se navega de inmediato; marcarla como leída sigue en segundo plano y solo un fallo se avisa. */
     fun onNotificationClick(item: NotificationItem) {
-        if (item.unread) viewModelScope.launch { markNotificationRead(item.id) }
+        if (!item.unread) return
+        viewModelScope.launch {
+            val result = runRequest(resources, onSuccess = { _: Unit -> RequestResult.Success("") }) { markNotificationRead(item.id) }
+            if (result is RequestResult.Failure) message.value = result.errorMessage
+        }
     }
 
     fun onMarkAllRead() {
-        viewModelScope.launch { markAllNotificationsRead() }
+        if (markAllResult.value is RequestResult.Loading) return
+        viewModelScope.launch {
+            markAllResult.value = RequestResult.Loading
+            val result = runRequest(resources, onSuccess = { _: Unit -> RequestResult.Success("") }) { markAllNotificationsRead() }
+            markAllResult.value = result
+            if (result is RequestResult.Failure) message.value = result.errorMessage
+        }
     }
+
+    fun onMessageShown() = message.update { null }
 }
 
 /** Arma la tarjeta; devuelve null si el dato al que apunta ya no existe. */

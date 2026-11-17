@@ -1,7 +1,9 @@
 package edu.uniquindio.co.tribooo.domain.usecase.user
 
+import edu.uniquindio.co.tribooo.domain.model.AuthException
 import edu.uniquindio.co.tribooo.domain.model.UserRole
 import edu.uniquindio.co.tribooo.domain.repository.AttendanceRepository
+import edu.uniquindio.co.tribooo.domain.repository.AuthRepository
 import edu.uniquindio.co.tribooo.domain.repository.CommentRepository
 import edu.uniquindio.co.tribooo.domain.repository.EventRepository
 import edu.uniquindio.co.tribooo.domain.repository.FollowRepository
@@ -21,15 +23,26 @@ class DeleteAccountUseCase @Inject constructor(
     private val followRepository: FollowRepository,
     private val commentRepository: CommentRepository,
     private val sessionRepository: SessionRepository,
-    private val getCurrentUser: GetCurrentUserUseCase
+    private val getCurrentUser: GetCurrentUserUseCase,
+    private val authRepository: AuthRepository
 ) {
     /**
      * Elimina la cuenta del usuario actual con todo lo que le pertenece (incluidos sus eventos, sin importar su estado)
-     * y cierra la sesión. Retorna false, sin borrar nada, si no hay sesión o si es administrador.
+     * y cierra la sesión. Retorna false, sin borrar nada, si no hay sesión, si es administrador o si la sesión no es
+     * reciente (Firebase Authentication lo exige para eliminar la cuenta).
+     *
+     * Los datos se borran antes que la cuenta: las reglas de Firestore exigen sesión, y eliminar la cuenta la cierra.
      */
     suspend operator fun invoke(): Boolean {
         val user = getCurrentUser() ?: return false
         if (user.role == UserRole.ADMIN) return false
+
+        // Antes de borrar nada: si Firebase no va a dejar eliminar la cuenta, el usuario puede reintentar tras iniciar sesión
+        try {
+            authRepository.ensureRecentLogin()
+        } catch (e: AuthException) {
+            return false
+        }
 
         val ownEventIds = eventRepository.events.value.filter { it.organizer.id == user.id }.map { it.id }.toSet()
 
@@ -54,6 +67,13 @@ class DeleteAccountUseCase @Inject constructor(
         ownEventIds.forEach { eventRepository.delete(it) }
 
         userRepository.delete(user.id)
+
+        // Al final la cuenta, porque cierra la sesión que necesitan los borrados anteriores
+        try {
+            authRepository.deleteCurrentAccount()
+        } catch (e: AuthException) {
+            return false
+        }
         sessionRepository.clearSession()
         return true
     }

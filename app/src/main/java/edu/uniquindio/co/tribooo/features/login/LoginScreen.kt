@@ -41,11 +41,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -60,6 +62,7 @@ import edu.uniquindio.co.tribooo.core.component.RequiredLegend
 import edu.uniquindio.co.tribooo.core.component.formTarget
 import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
@@ -73,6 +76,8 @@ fun LoginScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val isLoading = state.loginResult is RequestResult.Loading
     var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -233,7 +238,15 @@ fun LoginScreen(
             }
 
             OutlinedButton(
-                onClick = { viewModel.loginWithGoogle() },
+                onClick = {
+                    scope.launch {
+                        when (val result = requestGoogleIdToken(context)) {
+                            is GoogleIdTokenResult.Success -> viewModel.loginWithGoogle(result.idToken)
+                            GoogleIdTokenResult.Failure -> viewModel.onGoogleSignInFailed()
+                            GoogleIdTokenResult.Cancelled -> Unit
+                        }
+                    }
+                },
                 enabled = !isLoading,
                 modifier = Modifier
                     .fillMaxWidth()

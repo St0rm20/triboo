@@ -2,11 +2,13 @@ package edu.uniquindio.co.tribooo.domain.usecase.moderation
 
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
+import edu.uniquindio.co.tribooo.domain.model.EventVerdict
 import edu.uniquindio.co.tribooo.domain.model.ModerationAction
 import edu.uniquindio.co.tribooo.domain.model.ModerationCase
 import edu.uniquindio.co.tribooo.domain.model.ModerationReview
 import edu.uniquindio.co.tribooo.domain.model.ModerationTab
 import edu.uniquindio.co.tribooo.domain.model.Report
+import edu.uniquindio.co.tribooo.domain.model.ReportSummary
 
 /** Cifras de moderación; cada una cuenta publicaciones, que son las que aparecen en las pestañas. */
 data class ModerationCounts(
@@ -16,24 +18,36 @@ data class ModerationCounts(
     val resolved: Int = 0
 )
 
-/** Publicaciones de la pestaña [tab], ordenadas como en el mockup. */
+/**
+ * Publicaciones de la pestaña [tab], ordenadas como en el mockup. De [verdicts] y [summaries] solo
+ * se adjuntan los vigentes: el veredicto de un evento en revisión sin cambios y el resumen de sus reportes abiertos actuales.
+ */
 fun moderationCases(
     tab: ModerationTab,
     events: List<Event>,
     reports: List<Report>,
-    reviews: List<ModerationReview>
+    reviews: List<ModerationReview>,
+    verdicts: List<EventVerdict> = emptyList(),
+    summaries: List<ReportSummary> = emptyList()
 ): List<ModerationCase> {
     val openByEvent = reports.filter { !it.resolved }.groupBy { it.event.id }
     val reviewsByEvent = reviews.groupBy { it.event.id }
+    val verdictByEvent = verdicts.associateBy { it.eventId }
+    val summaryByEvent = summaries.associateBy { it.eventId }
     fun latest(eventId: String, action: ModerationAction) =
         reviewsByEvent[eventId].orEmpty().filter { it.action == action }.maxByOrNull { it.date }
 
-    fun caseOf(event: Event) = ModerationCase(
-        event = event,
-        openReports = openByEvent[event.id].orEmpty().sortedByDescending { it.date },
-        rejection = if (event.status == EventStatus.RECHAZADO) latest(event.id, ModerationAction.RECHAZAR) else null,
-        resolution = latest(event.id, ModerationAction.RESOLVER)
-    )
+    fun caseOf(event: Event): ModerationCase {
+        val openReports = openByEvent[event.id].orEmpty().sortedByDescending { it.date }
+        return ModerationCase(
+            event = event,
+            openReports = openReports,
+            rejection = if (event.status == EventStatus.RECHAZADO) latest(event.id, ModerationAction.RECHAZAR) else null,
+            resolution = latest(event.id, ModerationAction.RESOLVER),
+            verdict = verdictByEvent[event.id]?.takeIf { event.status == EventStatus.PENDIENTE && it.isCurrentFor(event) },
+            reportSummary = summaryByEvent[event.id]?.takeIf { openReports.isNotEmpty() && it.isCurrentFor(openReports) }
+        )
+    }
 
     return when (tab) {
         // Cola por orden de llegada

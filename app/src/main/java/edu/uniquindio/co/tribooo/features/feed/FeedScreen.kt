@@ -149,7 +149,8 @@ fun FeedScreen(
                     EventCard(
                         item = item,
                         onClick = { onNavigateToEventDetail(item.event.id) },
-                        onToggleAttendance = { viewModel.toggleAttendance(item) }
+                        onToggleAttendance = { viewModel.toggleAttendance(item) },
+                        isLoading = state.loadingEventId == item.event.id
                     )
                 }
 

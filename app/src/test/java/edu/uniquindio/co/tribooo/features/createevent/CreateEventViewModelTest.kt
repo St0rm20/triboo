@@ -45,7 +45,7 @@ import org.junit.Test
 class CreateEventViewModelTest {
 
     private val me: User = runBlocking { UserRepositoryImpl().findById("u-daniela")!! }
-    private val other = User("x", "Otra Persona", "x@mail.co", "123456", "Armenia", "Centro")
+    private val other = User("x", "Otra Persona", "x@mail.co", "Armenia", "Centro")
     private lateinit var repository: EventRepository
 
     @Before

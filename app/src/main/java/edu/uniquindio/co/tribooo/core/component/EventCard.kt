@@ -19,7 +19,9 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.EventBusy
 import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Schedule
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -100,9 +102,9 @@ fun toCardItems(
     }
 }
 
-/** Tarjeta de evento del feed y de la lista de Explorar. */
+/** Tarjeta de evento del feed y de la lista de Explorar; con [isLoading] su botón espera la respuesta de la petición. */
 @Composable
-fun EventCard(item: FeedEventItem, onClick: () -> Unit, onToggleAttendance: () -> Unit) {
+fun EventCard(item: FeedEventItem, onClick: () -> Unit, onToggleAttendance: () -> Unit, isLoading: Boolean = false) {
     val colors = MaterialTheme.colorScheme
     val rp = rememberResourceProvider()
     val event = item.event
@@ -243,7 +245,7 @@ fun EventCard(item: FeedEventItem, onClick: () -> Unit, onToggleAttendance: () -
                             modifier = Modifier.padding(start = 8.dp)
                         )
                     }
-                    AttendButton(item = item, onClick = onToggleAttendance)
+                    AttendButton(item = item, onClick = onToggleAttendance, isLoading = isLoading)
                 }
             }
         }
@@ -296,7 +298,7 @@ private fun CupoBar(item: FeedEventItem) {
 }
 
 @Composable
-private fun AttendButton(item: FeedEventItem, onClick: () -> Unit) {
+private fun AttendButton(item: FeedEventItem, onClick: () -> Unit, isLoading: Boolean) {
     val colors = MaterialTheme.colorScheme
     val rp = rememberResourceProvider()
     val waitlist = item.isFull && !item.isAttending
@@ -304,7 +306,7 @@ private fun AttendButton(item: FeedEventItem, onClick: () -> Unit) {
     val queued = position != null
     Surface(
         onClick = onClick,
-        enabled = !waitlist || item.canJoinWaitlist || queued,
+        enabled = (!waitlist || item.canJoinWaitlist || queued) && !isLoading,
         shape = RoundedCornerShape(14.dp),
         color = when {
             item.isAttending -> colors.errorContainer
@@ -325,11 +327,15 @@ private fun AttendButton(item: FeedEventItem, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(
-                imageVector = if (item.isAttending) Icons.Rounded.EventBusy else Icons.Rounded.Add,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
+            if (isLoading) {
+                CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
+            } else {
+                Icon(
+                    imageVector = if (item.isAttending) Icons.Rounded.EventBusy else Icons.Rounded.Add,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
             Text(
                 text = when {
                     item.isAttending -> stringResource(R.string.common_cancel)

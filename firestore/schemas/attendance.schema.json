@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "attendance.schema.json",
+  "title": "Attendance",
+  "description": "Asistencia confirmada de un usuario a un evento.",
+  "x-firestore-collection": "attendances",
+  "x-document-id": "\"{userId}_{eventId}\"",
+  "x-dto": "edu.uniquindio.co.tribooo.data.remote.attendance.AttendanceDto",
+  "type": "object",
+  "properties": {
+    "userId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "users",
+      "description": "Asistente."
+    },
+    "eventId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "events",
+      "description": "Evento."
+    },
+    "confirmationDate": {
+      "type": "string",
+      "format": "date-time",
+      "x-firestore-type": "timestamp",
+      "description": "Fecha de confirmación."
+    }
+  },
+  "required": [
+    "userId",
+    "eventId",
+    "confirmationDate"
+  ],
+  "additionalProperties": false
+}

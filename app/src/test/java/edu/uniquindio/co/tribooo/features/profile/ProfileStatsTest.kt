@@ -15,7 +15,7 @@ import java.time.Instant
 
 class ProfileStatsTest {
 
-    private fun user(id: String) = User(id, "Usuario $id", "$id@mail.co", "123456", "Armenia", "Centro")
+    private fun user(id: String) = User(id, "Usuario $id", "$id@mail.co", "Armenia", "Centro")
 
     private fun event(id: String, organizer: User, status: EventStatus = EventStatus.ACTIVO) = Event(
         id = id, title = id, description = "", startDate = Instant.now(), endDate = Instant.now(),

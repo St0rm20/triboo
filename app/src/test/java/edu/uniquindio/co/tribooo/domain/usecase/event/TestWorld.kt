@@ -6,6 +6,7 @@ import edu.uniquindio.co.tribooo.data.repository.memory.ReportRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.WaitlistRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Attendance
+import edu.uniquindio.co.tribooo.domain.model.AuthAccount
 import edu.uniquindio.co.tribooo.domain.model.Contribution
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
@@ -13,6 +14,7 @@ import edu.uniquindio.co.tribooo.domain.model.User
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.FindScheduleConflictUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ToggleAttendanceUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.auth.FakeAuthRepository
 import edu.uniquindio.co.tribooo.domain.usecase.auth.GetCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.waitlist.JoinWaitlistUseCase
@@ -26,6 +28,7 @@ import java.time.Instant
 class TestWorld(userId: String = "u-daniela") {
     val users = UserRepositoryImpl()
     val session = FakeSessionRepository(userId)
+    val auth = FakeAuthRepository().apply { signInAs(AuthAccount(uid = userId, email = "$userId@triboo.co")) }
     val events = EventRepositoryImpl()
     val attendances = AttendanceRepositoryImpl()
     val waitlist = WaitlistRepositoryImpl()
@@ -42,7 +45,7 @@ class TestWorld(userId: String = "u-daniela") {
     val observeAttendances = ObserveAttendancesUseCase(attendances)
 
     val me: User = runBlocking { users.findById(userId)!! }
-    val other = User("x", "Otra Persona", "x@mail.co", "123456", "Armenia", "Centro")
+    val other = User("x", "Otra Persona", "x@mail.co", "Armenia", "Centro")
 
     init {
         runBlocking {
@@ -67,7 +70,7 @@ class TestWorld(userId: String = "u-daniela") {
 
     /** Llena el cupo de [event] con asistentes de relleno hasta que haya [count]. */
     fun fill(event: Event, count: Int) = runBlocking {
-        repeat(count) { n -> attendances.save(Attendance(User("fill-${event.id}-$n", "Relleno $n", "r$n@mail.co", "123456", "Armenia", "Centro"), event)) }
+        repeat(count) { n -> attendances.save(Attendance(User("fill-${event.id}-$n", "Relleno $n", "r$n@mail.co", "Armenia", "Centro"), event)) }
     }
 
     fun confirm(event: Event) = runBlocking { attendances.save(Attendance(me, event)) }

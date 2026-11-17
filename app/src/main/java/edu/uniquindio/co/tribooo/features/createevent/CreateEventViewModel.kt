@@ -11,6 +11,7 @@ import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.formatMoney
+import edu.uniquindio.co.tribooo.core.util.runRequest
 import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Contribution
 import edu.uniquindio.co.tribooo.domain.model.Event
@@ -123,7 +124,7 @@ data class CreateEventUiState(
 
 @HiltViewModel
 class CreateEventViewModel @Inject constructor(
-    getPlaceSuggestions: GetPlaceSuggestionsUseCase,
+    private val getPlaceSuggestions: GetPlaceSuggestionsUseCase,
     private val getCurrentUserUseCase: GetCurrentUserUseCase,
     private val createEventUseCase: CreateEventUseCase,
     private val getEventUseCase: GetEventUseCase,
@@ -147,7 +148,8 @@ class CreateEventViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(CreateEventUiState(mode = mode, isLoading = mode != null))
     val uiState: StateFlow<CreateEventUiState> = _uiState.asStateFlow()
 
-    val placeSuggestions: List<PlaceSuggestion> = getPlaceSuggestions()
+    // Se lee en cada uso: el catálogo puede llegar de Firestore después de abrir la pantalla
+    val placeSuggestions: List<PlaceSuggestion> get() = getPlaceSuggestions()
     val categories: List<Category> = Category.defaultCategories
     val contributionPresets: List<Long> = listOf(2000, 5000, 10000)
 
@@ -156,7 +158,15 @@ class CreateEventViewModel @Inject constructor(
             observeCurrentLocation().collect { location -> _uiState.update { it.copy(userLocation = location) } }
         }
         if (mode != null && eventId != null) {
-            viewModelScope.launch { preload(eventId, mode, observeEventImages()) }
+            viewModelScope.launch {
+                // isLoading ya arranca en true; un fallo de red se muestra como error de carga
+                val loaded = runRequest(resources, onSuccess = { _: Unit -> RequestResult.Success("") }) {
+                    preload(eventId, mode, observeEventImages())
+                }
+                if (loaded is RequestResult.Failure) {
+                    _uiState.update { it.copy(isLoading = false, loadError = loaded.errorMessage) }
+                }
+            }
         } else if (mode != null) {
             _uiState.update { it.copy(isLoading = false, loadError = resources.getString(R.string.create_event_not_found)) }
         }
@@ -314,39 +324,40 @@ class CreateEventViewModel @Inject constructor(
         // Se marca antes de lanzar la corrutina para evitar publicar dos veces con toques seguidos
         _uiState.update { it.copy(publishResult = RequestResult.Loading) }
         viewModelScope.launch {
-            val organizer = getCurrentUserUseCase()
-            if (organizer == null) {
-                _uiState.update { it.copy(publishResult = RequestResult.Failure(resources.getString(R.string.create_event_sign_in))) }
-                return@launch
-            }
-
-            val event = Event(
-                // Editar y reenviar actualizan el mismo evento; crear y duplicar generan uno nuevo
-                id = if (mode == EventFormMode.EDIT || mode == EventFormMode.RESUBMIT) eventId.orEmpty() else UUID.randomUUID().toString(),
-                title = state.title.trim(),
-                description = state.description.trim(),
-                startDate = state.start.atZone(APP_ZONE).toInstant(),
-                endDate = state.end.atZone(APP_ZONE).toInstant(),
-                multidia = state.multiDay,
-                place = place.name,
-                neighborhood = place.neighborhood,
-                location = state.pickedLocation ?: place.location,
-                cupo = if (state.cupoEnabled) state.cupo else null,
-                contribution = if (state.contributionEnabled) Contribution(amount = state.contributionAmount.toDouble(), cause = state.contributionCause.trim()) else null,
-                organizer = organizer,
-                category = category
-            )
-
-            val result = when (mode) {
-                EventFormMode.EDIT -> updateEventUseCase(event, state.imageUris)
-                EventFormMode.RESUBMIT -> resubmitEventUseCase(event, state.imageUris)
-                // El caso de uso lo envía a moderación antes de que aparezca en el feed
-                else -> {
-                    createEventUseCase(event, state.imageUris)
-                    RequestResult.Success(createdMessage(state))
-                }
-            }
+            val result = runRequest(resources, onSuccess = { it }) { publishEvent(state, category, place) }
             _uiState.update { it.copy(publishResult = result) }
+        }
+    }
+
+    private suspend fun publishEvent(state: CreateEventUiState, category: Category, place: PlaceSuggestion): RequestResult {
+        val organizer = getCurrentUserUseCase()
+            ?: return RequestResult.Failure(resources.getString(R.string.create_event_sign_in))
+
+        val event = Event(
+            // Editar y reenviar actualizan el mismo evento; crear y duplicar generan uno nuevo
+            id = if (mode == EventFormMode.EDIT || mode == EventFormMode.RESUBMIT) eventId.orEmpty() else UUID.randomUUID().toString(),
+            title = state.title.trim(),
+            description = state.description.trim(),
+            startDate = state.start.atZone(APP_ZONE).toInstant(),
+            endDate = state.end.atZone(APP_ZONE).toInstant(),
+            multidia = state.multiDay,
+            place = place.name,
+            neighborhood = place.neighborhood,
+            location = state.pickedLocation ?: place.location,
+            cupo = if (state.cupoEnabled) state.cupo else null,
+            contribution = if (state.contributionEnabled) Contribution(amount = state.contributionAmount.toDouble(), cause = state.contributionCause.trim()) else null,
+            organizer = organizer,
+            category = category
+        )
+
+        return when (mode) {
+            EventFormMode.EDIT -> updateEventUseCase(event, state.imageUris)
+            EventFormMode.RESUBMIT -> resubmitEventUseCase(event, state.imageUris)
+            // El caso de uso lo envía a moderación antes de que aparezca en el feed
+            else -> {
+                createEventUseCase(event, state.imageUris)
+                RequestResult.Success(createdMessage(state))
+            }
         }
     }
 

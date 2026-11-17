@@ -1,0 +1,14 @@
+[
+  { "id": "parque-de-la-vida", "name": "Parque de la Vida", "neighborhood": "Norte", "detail": "Av. Bolívar · portería norte", "location": { "latitude": 4.5446, "longitude": -75.6658 } },
+  { "id": "biblioteca-del-quindio", "name": "Biblioteca del Quindío", "neighborhood": "Centro", "detail": "Cra 14 #23-15 · sala comunal", "location": { "latitude": 4.5352, "longitude": -75.6760 } },
+  { "id": "cancha-la-fachada", "name": "Cancha La Fachada", "neighborhood": "La Fachada", "detail": "Barrio La Fachada · entrada principal", "location": { "latitude": 4.5180, "longitude": -75.6890 } },
+  { "id": "plaza-de-bolivar", "name": "Plaza de Bolívar", "neighborhood": "Centro", "detail": "Carrera 14 con calle 20", "location": { "latitude": 4.5339, "longitude": -75.6811 } },
+  { "id": "parque-sucre", "name": "Parque Sucre", "neighborhood": "Centro", "detail": "Calle 21 con carrera 16", "location": { "latitude": 4.5367, "longitude": -75.6735 } },
+  { "id": "parque-de-los-fundadores", "name": "Parque de los Fundadores", "neighborhood": "Centro", "detail": "Carrera 14 con calle 15", "location": { "latitude": 4.5316, "longitude": -75.6787 } },
+  { "id": "parque-la-libertad", "name": "Parque La Libertad", "neighborhood": "La Libertad", "detail": "Calle 2 Norte con carrera 19", "location": { "latitude": 4.5290, "longitude": -75.6897 } },
+  { "id": "parque-los-arrieros", "name": "Parque Los Arrieros", "neighborhood": "Los Arrieros", "detail": "Avenida Centenario", "location": { "latitude": 4.5252, "longitude": -75.6826 } },
+  { "id": "centro-cultural-metropolitano", "name": "Centro Cultural Metropolitano de Convenciones", "neighborhood": "Norte", "detail": "Avenida Bolívar", "location": { "latitude": 4.5421, "longitude": -75.6736 } },
+  { "id": "estadio-centenario", "name": "Estadio Centenario", "neighborhood": "Centenario", "detail": "Avenida Centenario · entrada principal", "location": { "latitude": 4.5478, "longitude": -75.6705 } },
+  { "id": "universidad-del-quindio", "name": "Universidad del Quindío", "neighborhood": "La Ciudadela", "detail": "Carrera 15 con calle 12 Norte", "location": { "latitude": 4.5528, "longitude": -75.6578 } },
+  { "id": "museo-del-oro-quimbaya", "name": "Museo del Oro Quimbaya", "neighborhood": "Av. Bolívar", "detail": "Avenida Bolívar con calle 40 Norte", "location": { "latitude": 4.5504, "longitude": -75.6672 } }
+]

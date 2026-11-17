@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "event-verdict.schema.json",
+  "title": "EventVerdict",
+  "description": "Veredicto del asistente de moderación (OpenRouter) para un evento en revisión. Uno por evento: uno nuevo reemplaza al anterior.",
+  "x-firestore-collection": "eventVerdicts",
+  "x-document-id": "Id del evento (eventId)",
+  "x-dto": "edu.uniquindio.co.tribooo.data.remote.eventverdict.EventVerdictDto",
+  "type": "object",
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "minLength": 1,
+      "x-firestore-ref": "events",
+      "description": "Evento evaluado; coincide con el id del documento."
+    },
+    "recommendation": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "APROBAR",
+        "RECHAZAR",
+        null
+      ],
+      "description": "Sugerencia del modelo; null si no siguió el formato pedido."
+    },
+    "explanation": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Explicación del veredicto (máximo 50 palabras)."
+    },
+    "eventFingerprint": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "SHA-256 del contenido evaluado del evento; si no coincide con el actual, el veredicto está desactualizado."
+    },
+    "date": {
+      "type": "string",
+      "format": "date-time",
+      "x-firestore-type": "timestamp",
+      "description": "Fecha en que se generó."
+    }
+  },
+  "required": [
+    "eventId",
+    "explanation",
+    "eventFingerprint",
+    "date"
+  ],
+  "additionalProperties": false
+}

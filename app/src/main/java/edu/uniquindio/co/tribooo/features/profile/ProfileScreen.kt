@@ -198,7 +198,8 @@ fun ProfileScreen(
             confirmLabel = stringResource(R.string.profile_logout),
             dismissLabel = stringResource(R.string.profile_logout_stay),
             onConfirm = viewModel::onConfirmLogout,
-            onDismiss = viewModel::onDismissLogoutDialog
+            onDismiss = viewModel::onDismissLogoutDialog,
+            isLoading = state.isProcessingAccount
         )
     }
 
@@ -209,7 +210,8 @@ fun ProfileScreen(
             confirmLabel = stringResource(R.string.event_status_action_delete),
             dismissLabel = stringResource(R.string.profile_delete_keep),
             onConfirm = viewModel::onConfirmDeleteAccount,
-            onDismiss = viewModel::onDismissDeleteDialog
+            onDismiss = viewModel::onDismissDeleteDialog,
+            isLoading = state.isProcessingAccount
         )
     }
 

@@ -4,8 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.core.util.MessageTarget
+import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
+import edu.uniquindio.co.tribooo.core.util.messageOrNull
+import edu.uniquindio.co.tribooo.core.util.runRequest
 import edu.uniquindio.co.tribooo.core.component.FeedEventItem
 import edu.uniquindio.co.tribooo.core.component.toCardItems
 import edu.uniquindio.co.tribooo.core.util.waitlistLeftMessage
@@ -56,7 +59,11 @@ data class FeedUiState(
     val showFilters: Boolean = false,
     /** Diálogo que el usuario debe aceptar antes de confirmar su asistencia. */
     val attendanceStep: AttendanceStep? = null,
-    val message: String? = null
+    val message: String? = null,
+    /** Resultado de la última petición hecha desde una tarjeta (asistencia o lista de espera). */
+    val actionResult: RequestResult? = null,
+    /** Evento cuya petición sigue en curso; su botón muestra el indicador de carga. */
+    val loadingEventId: String? = null
 )
 
 @HiltViewModel
@@ -86,6 +93,8 @@ class FeedViewModel @Inject constructor(
     private val showFilters = MutableStateFlow(false)
     private val attendanceStep = MutableStateFlow<AttendanceStep?>(null)
     private val message = MutableStateFlow<String?>(null)
+    private val actionResult = MutableStateFlow<RequestResult?>(null)
+    private val loadingEventId = MutableStateFlow<String?>(null)
 
     private val attendancesAndWaitlist = combine(observeAttendances(), observeWaitlist(), ::Pair)
 
@@ -119,8 +128,15 @@ class FeedViewModel @Inject constructor(
         )
     }
 
-    val uiState: StateFlow<FeedUiState> = combine(feedWithAccount, attendanceStep, message) { state, step, message ->
-        state.copy(attendanceStep = step, message = message)
+    private val request = combine(actionResult, loadingEventId, ::Pair)
+
+    val uiState: StateFlow<FeedUiState> = combine(feedWithAccount, attendanceStep, message, request) { state, step, message, (result, loadingId) ->
+        state.copy(
+            attendanceStep = step,
+            message = message,
+            actionResult = result,
+            loadingEventId = loadingId.takeIf { result is RequestResult.Loading }
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeedUiState())
 
     fun onQueryChange(value: String) = updateFilters { it.copy(query = value) }
@@ -142,17 +158,19 @@ class FeedViewModel @Inject constructor(
     }
 
     fun toggleAttendance(item: FeedEventItem) {
+        val event = item.event
         when {
-            item.isAttending -> confirmAttendance(item.event)
-            item.isWaitlisted -> viewModelScope.launch {
-                leaveWaitlist(item.event)
-                message.value = waitlistLeftMessage(resources)
+            item.isAttending -> confirmAttendance(event)
+            item.isWaitlisted -> request(event, { leaveWaitlist(event) }) {
+                RequestResult.Success(waitlistLeftMessage(resources))
             }
-            item.isFull -> viewModelScope.launch {
-                joinWaitlist(item.event)?.let { message.value = waitlistJoinedMessage(resources, it) }
+            item.isFull -> request(event, { joinWaitlist(event) }) { position ->
+                RequestResult.Success(position?.let { waitlistJoinedMessage(resources, it) }.orEmpty())
             }
-            else -> viewModelScope.launch {
-                attendanceStep.value = startAttendanceFlow(item.event, findScheduleConflict(item.event))
+            // Antes de confirmar se revisa si choca con otro evento confirmado
+            else -> request(event, { findScheduleConflict(event) }) { conflict ->
+                attendanceStep.value = startAttendanceFlow(event, conflict)
+                RequestResult.Success("")
             }
         }
     }
@@ -173,6 +191,26 @@ class FeedViewModel @Inject constructor(
     }
 
     private fun confirmAttendance(event: Event) {
-        viewModelScope.launch { toggleAttendanceUseCase(event) }
+        request(event, { toggleAttendanceUseCase(event) }) { RequestResult.Success("") }
+    }
+
+    /**
+     * Petición en línea sobre [event]: marca Loading antes de empezar y, al terminar, guarda el éxito o el
+     * fallo (sin conexión, sin permiso…) y muestra su mensaje. Mientras una sigue en curso se ignoran las demás.
+     */
+    private fun <T> request(event: Event, block: suspend () -> T, onSuccess: (T) -> RequestResult) {
+        if (actionResult.value is RequestResult.Loading) return
+        viewModelScope.launch {
+            loadingEventId.value = event.id
+            actionResult.value = RequestResult.Loading
+
+            val result = runRequest(resources, onSuccess = onSuccess, block = block)
+
+            actionResult.value = result
+            when (result) {
+                is RequestResult.Success, is RequestResult.Failure -> result.messageOrNull()?.let { message.value = it }
+                RequestResult.Loading -> Unit
+            }
+        }
     }
 }

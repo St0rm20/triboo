@@ -7,6 +7,7 @@ import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.SnackbarMessenger
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
+import edu.uniquindio.co.tribooo.domain.usecase.auth.FakeAuthRepository
 import edu.uniquindio.co.tribooo.domain.usecase.auth.RegisterUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetCitiesUseCase
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +44,7 @@ class RegisterViewModelTest {
     private val messenger = SnackbarMessenger()
 
     private fun viewModel() =
-        RegisterViewModel(GetCitiesUseCase(locations), RegisterUseCase(UserRepositoryImpl()), messenger, testResources)
+        RegisterViewModel(GetCitiesUseCase(locations), RegisterUseCase(FakeAuthRepository(), UserRepositoryImpl()), messenger, testResources)
 
     @Test
     fun successfulRegistrationLeavesTheFormBlankWithTheFirstCity() = runTest {

@@ -57,7 +57,7 @@ class ReviewRepliesAndDeleteEventTest {
 
     private val users = UserRepositoryImpl()
     private val me = runBlocking { users.findById("u-daniela")!! }
-    private val other = User("x", "Otra Persona", "x@mail.co", "123456", "Armenia", "Centro")
+    private val other = User("x", "Otra Persona", "x@mail.co", "Armenia", "Centro")
     private val getCurrentUser = GetCurrentUserUseCase(FakeSessionRepository(me.id), users)
 
     private fun event(id: String, status: EventStatus, organizer: User = me) = Event(

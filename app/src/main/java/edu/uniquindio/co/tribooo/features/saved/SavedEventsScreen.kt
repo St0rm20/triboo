@@ -95,6 +95,7 @@ fun SavedEventsScreen(
                         SavedEventCard(
                             event = event,
                             onClick = { onNavigateToEventDetail(event.id) },
+                            isBusy = state.busyEventId == event.id,
                             onRemove = { viewModel.onRemove(event) }
                         )
                     }
@@ -150,7 +151,7 @@ private fun SavedTopBar(summary: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun SavedEventCard(event: Event, onClick: () -> Unit, onRemove: () -> Unit) {
+private fun SavedEventCard(event: Event, onClick: () -> Unit, isBusy: Boolean, onRemove: () -> Unit) {
     val rp = rememberResourceProvider()
     val colors = MaterialTheme.colorScheme
 
@@ -192,6 +193,7 @@ private fun SavedEventCard(event: Event, onClick: () -> Unit, onRemove: () -> Un
             // Marcador relleno: quita el evento de guardados sin abrir el detalle
             Surface(
                 onClick = onRemove,
+                enabled = !isBusy,
                 shape = CircleShape,
                 color = colors.primaryContainer,
                 contentColor = colors.onPrimaryContainer,

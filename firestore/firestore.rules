@@ -1,0 +1,547 @@
+// ARCHIVO GENERADO: no lo edites a mano.
+// Permisos: firestore/rules/access.rules · Forma de los documentos: firestore/schemas/*.schema.json
+// Regenerar: npm run rules:gen (desde firestore/)
+rules_version = '2';
+
+// Permisos de Tribooo. La forma de cada documento la validan las funciones isValid<Title>,
+// generadas desde firestore/schemas; aquí solo se decide quién puede hacer qué.
+//
+// Nota: la app escucha colecciones completas (sin where), y las reglas no filtran resultados:
+// por eso la lectura se concede a cualquier usuario autenticado salvo en las colecciones
+// que solo usa la moderación. Para restringir más hay que filtrar también las consultas.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- Utilidades ----------
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function uid() {
+      return request.auth.uid;
+    }
+
+    function path(collection, id) {
+      return /databases/$(database)/documents/$(collection)/$(id);
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(path('users', uid()))
+        && get(path('users', uid())).data.role == 'ADMIN';
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function changedKeys() {
+      return incoming().diff(existing()).affectedKeys();
+    }
+
+    function pairId(firstId, secondId) {
+      return firstId + '_' + secondId;
+    }
+
+    function eventExists(eventId) {
+      return exists(path('events', eventId));
+    }
+
+    // Usa el estado posterior a la escritura: así sirve dentro del mismo lote que crea el evento
+    function isOrganizerOf(eventId) {
+      return signedIn()
+        && existsAfter(path('events', eventId))
+        && getAfter(path('events', eventId)).data.organizerId == uid();
+    }
+
+    // ---------- Catálogos (solo lectura; se siembran con el Admin SDK: npm run seed) ----------
+
+    match /categories/{categoryId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /cities/{cityId} {
+      // Público: el registro muestra las ciudades antes de iniciar sesión
+      allow read: if true;
+      allow write: if false;
+    }
+
+    match /placeSuggestions/{placeId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ---------- Usuarios ----------
+
+    match /users/{userId} {
+      allow read: if signedIn();
+
+      // El rol ADMIN solo se asigna con el Admin SDK (npm run make-admin)
+      allow create: if signedIn()
+        && userId == uid()
+        && isValidUser(incoming())
+        && incoming().id == userId
+        && incoming().role == 'USER';
+
+      allow update: if signedIn()
+        && userId == uid()
+        && isValidUser(incoming())
+        && !changedKeys().hasAny(['id', 'role', 'email', 'dateRegistered']);
+
+      allow delete: if signedIn() && userId == uid();
+    }
+
+    // ---------- Eventos ----------
+
+    match /events/{eventId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && isValidEvent(incoming())
+        && incoming().id == eventId
+        && incoming().organizerId == uid()
+        && incoming().status == 'PENDIENTE'
+        && incoming().verified == false
+        && incoming().endDate >= incoming().startDate;
+
+      // Organizador: editar mientras está pendiente, reenviar un rechazado o finalizar uno activo
+      function organizerUpdate() {
+        let before = existing().status;
+        let after = incoming().status;
+        return existing().organizerId == uid()
+          && !changedKeys().hasAny(['id', 'organizerId', 'verified'])
+          && (
+            (before == 'PENDIENTE' && after == 'PENDIENTE')
+            || (before == 'RECHAZADO' && after == 'PENDIENTE')
+            || (before == 'ACTIVO' && after == 'FINALIZADO'
+                && changedKeys().hasOnly(['status', 'startDate', 'endDate']))
+          );
+      }
+
+      // Administrador: verificar, rechazar o restaurar; solo toca status y verified
+      function adminUpdate() {
+        let before = existing().status;
+        let after = incoming().status;
+        return isAdmin()
+          && changedKeys().hasOnly(['status', 'verified'])
+          && (
+            (before == 'PENDIENTE' && after == 'ACTIVO' && incoming().verified == true)
+            || (before in ['PENDIENTE', 'ACTIVO'] && after == 'RECHAZADO' && incoming().verified == false)
+            || (before == 'RECHAZADO' && after == 'ACTIVO' && incoming().verified == true)
+          );
+      }
+
+      allow update: if signedIn()
+        && isValidEvent(incoming())
+        && incoming().endDate >= incoming().startDate
+        && (organizerUpdate() || adminUpdate());
+
+      allow delete: if signedIn() && (existing().organizerId == uid() || isAdmin());
+    }
+
+    match /eventImages/{imageId} {
+      allow read: if signedIn();
+
+      // Se crean en el mismo lote que el evento, por eso isOrganizerOf usa getAfter
+      allow create: if isValidEventImage(incoming())
+        && incoming().id == imageId
+        && isOrganizerOf(incoming().eventId);
+
+      allow update: if false;
+
+      allow delete: if isOrganizerOf(existing().eventId) || isAdmin();
+    }
+
+    // ---------- Relaciones usuario-evento (id = "{userId}_{eventId}") ----------
+
+    // Quien borra su cuenta también borra las relaciones de otros con sus eventos
+    function canDeleteRelation() {
+      return signedIn()
+        && (existing().userId == uid() || isOrganizerOf(existing().eventId) || isAdmin());
+    }
+
+    match /attendances/{relationId} {
+      allow read: if signedIn();
+
+      // Propia, o la de alguien que sale de la lista de espera porque se liberó un cupo
+      // (la app guarda la asistencia antes de borrar la entrada de la lista)
+      allow create, update: if signedIn()
+        && isValidAttendance(incoming())
+        && relationId == pairId(incoming().userId, incoming().eventId)
+        && eventExists(incoming().eventId)
+        && (incoming().userId == uid() || exists(path('waitlist', relationId)));
+
+      allow delete: if canDeleteRelation();
+    }
+
+    match /waitlist/{relationId} {
+      allow read: if signedIn();
+
+      allow create, update: if signedIn()
+        && isValidWaitlistEntry(incoming())
+        && relationId == pairId(incoming().userId, incoming().eventId)
+        && incoming().userId == uid()
+        && eventExists(incoming().eventId);
+
+      // También la borra quien la promueve, una vez creada la asistencia
+      allow delete: if canDeleteRelation()
+        || (signedIn() && exists(path('attendances', relationId)));
+    }
+
+    match /saved/{relationId} {
+      allow read: if signedIn();
+
+      allow create, update: if signedIn()
+        && isValidSaved(incoming())
+        && relationId == pairId(incoming().userId, incoming().eventId)
+        && incoming().userId == uid()
+        && eventExists(incoming().eventId);
+
+      allow delete: if canDeleteRelation();
+    }
+
+    match /interests/{relationId} {
+      allow read: if signedIn();
+
+      allow create, update: if signedIn()
+        && isValidInterest(incoming())
+        && relationId == pairId(incoming().userId, incoming().eventId)
+        && incoming().userId == uid()
+        && eventExists(incoming().eventId);
+
+      allow delete: if canDeleteRelation();
+    }
+
+    // ---------- Seguidores (id = "{followerId}_{followedId}") ----------
+
+    match /follows/{followId} {
+      allow read: if signedIn();
+
+      allow create, update: if signedIn()
+        && isValidFollow(incoming())
+        && followId == pairId(incoming().followerId, incoming().followedId)
+        && incoming().followerId == uid()
+        && incoming().followedId != uid();
+
+      allow delete: if signedIn()
+        && (existing().followerId == uid() || existing().followedId == uid() || isAdmin());
+    }
+
+    // ---------- Comentarios ----------
+
+    match /comments/{commentId} {
+      allow read: if signedIn();
+
+      // Respuesta: solo del organizador, a una reseña de primer nivel del mismo evento y sin calificación
+      function isValidReply() {
+        let parent = get(path('comments', incoming().parentCommentId)).data;
+        return isOrganizerOf(incoming().eventId)
+          && incoming().rating == null
+          && parent.eventId == incoming().eventId
+          && parent.parentCommentId == null;
+      }
+
+      allow create: if signedIn()
+        && isValidComment(incoming())
+        && incoming().id == commentId
+        && incoming().authorId == uid()
+        && eventExists(incoming().eventId)
+        && (incoming().parentCommentId == null
+            || (exists(path('comments', incoming().parentCommentId)) && isValidReply()));
+
+      // El organizador puede reemplazar el texto de su respuesta
+      allow update: if signedIn()
+        && isValidComment(incoming())
+        && existing().authorId == uid()
+        && changedKeys().hasOnly(['text']);
+
+      // Autor, organizador del evento, autor de la reseña respondida (o respuesta huérfana) y admin
+      allow delete: if signedIn()
+        && (
+          existing().authorId == uid()
+          || isOrganizerOf(existing().eventId)
+          || isAdmin()
+          || (existing().parentCommentId != null
+              && (!exists(path('comments', existing().parentCommentId))
+                  || get(path('comments', existing().parentCommentId)).data.authorId == uid()))
+        );
+    }
+
+    // ---------- Notificaciones ----------
+
+    match /notifications/{notificationId} {
+      allow read: if signedIn();
+
+      // Las crea quien genera el aviso; las de moderación solo un administrador
+      allow create: if signedIn()
+        && isValidNotification(incoming())
+        && incoming().id == notificationId
+        && incoming().read == false
+        && (
+          // La app guarda el comentario antes de avisar: la referencia debe ser un comentario propio
+          (incoming().type == 'COMMENT'
+            && incoming().reference is string
+            && exists(path('comments', incoming().reference))
+            && get(path('comments', incoming().reference)).data.authorId == uid())
+          ||(incoming().type == 'FOLLOWER' && incoming().reference == uid())
+          || (incoming().type in ['APPROVAL', 'REJECTION'] && isAdmin())
+        );
+
+      // El destinatario solo puede marcarla como leída
+      allow update: if signedIn()
+        && existing().destinationUserId == uid()
+        && changedKeys().hasOnly(['read'])
+        && incoming().read == true;
+
+      allow delete: if signedIn() && existing().destinationUserId == uid();
+    }
+
+    // ---------- Reportes y moderación ----------
+
+    match /reports/{reportId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && isValidReport(incoming())
+        && incoming().id == reportId
+        && incoming().reporterId == uid()
+        && incoming().resolved == false
+        && eventExists(incoming().eventId);
+
+      allow update: if isAdmin()
+        && changedKeys().hasOnly(['resolved'])
+        && incoming().resolved == true;
+
+      allow delete: if false;
+    }
+
+    match /moderationReviews/{reviewId} {
+      // El organizador ve aquí el motivo del rechazo de su evento
+      allow read: if signedIn();
+
+      // Historial: solo se crea
+      allow create: if isAdmin()
+        && isValidModerationReview(incoming())
+        && incoming().id == reviewId
+        && incoming().adminId == uid()
+        && (incoming().action != 'RECHAZAR'
+            || (incoming().reason is string && incoming().reason.size() > 0));
+
+      allow update, delete: if false;
+    }
+
+    // Salidas del asistente de moderación (id = eventId)
+    match /eventVerdicts/{eventId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidEventVerdict(incoming()) && incoming().eventId == eventId;
+      allow delete: if isAdmin();
+    }
+
+    match /reportSummaries/{eventId} {
+      allow read: if isAdmin();
+      allow create, update: if isAdmin() && isValidReportSummary(incoming()) && incoming().eventId == eventId;
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Todo lo demás queda cerrado ----------
+
+    // ---------- Validadores generados desde los JSON Schema ----------
+
+    // attendances (attendance.schema.json)
+    function isValidAttendance(data) {
+      return data.keys().hasAll(['userId', 'eventId', 'confirmationDate'])
+        && data.keys().hasOnly(['userId', 'eventId', 'confirmationDate'])
+        && (data.userId is string && data.userId.size() >= 1)
+        && (data.eventId is string && data.eventId.size() >= 1)
+        && (data.confirmationDate is timestamp);
+    }
+
+    // categories (category.schema.json)
+    function isValidCategory(data) {
+      return data.keys().hasAll(['id', 'key', 'icon', 'color'])
+        && data.keys().hasOnly(['id', 'key', 'icon', 'color'])
+        && (data.id is string && data.id.size() >= 1)
+        && (data.key is string)
+        && (data.icon is string)
+        && (data.color is string && data.color.matches('^#[0-9A-Fa-f]{6}$'));
+    }
+
+    // cities (city.schema.json)
+    function isValidCity(data) {
+      return data.keys().hasAll(['id', 'name'])
+        && data.keys().hasOnly(['id', 'name'])
+        && (data.id is string && data.id.size() >= 1)
+        && (data.name is string && data.name.size() >= 1);
+    }
+
+    // comments (comment.schema.json)
+    function isValidComment(data) {
+      return data.keys().hasAll(['id', 'eventId', 'authorId', 'text', 'date'])
+        && data.keys().hasOnly(['id', 'eventId', 'authorId', 'text', 'date', 'rating', 'parentCommentId'])
+        && (data.id is string && data.id.size() >= 1)
+        && (data.eventId is string && data.eventId.size() >= 1)
+        && (data.authorId is string && data.authorId.size() >= 1)
+        && (data.text is string && data.text.size() >= 1)
+        && (data.date is timestamp)
+        && (!('rating' in data) || (data.rating == null || (data.rating is int && data.rating >= 1 && data.rating <= 5)))
+        && (!('parentCommentId' in data) || (data.parentCommentId == null || (data.parentCommentId is string)));
+    }
+
+    // eventImages (event-image.schema.json)
+    function isValidEventImage(data) {
+      return data.keys().hasAll(['id', 'eventId', 'url', 'order'])
+        && data.keys().hasOnly(['id', 'eventId', 'url', 'order'])
+        && (data.id is string && data.id.size() >= 1)
+        && (data.eventId is string && data.eventId.size() >= 1)
+        && (data.url is string && data.url.size() >= 1)
+        && (data.order is int && data.order >= 0);
+    }
+
+    // eventVerdicts (event-verdict.schema.json)
+    function isValidEventVerdict(data) {
+      return data.keys().hasAll(['eventId', 'explanation', 'eventFingerprint', 'date'])
+        && data.keys().hasOnly(['eventId', 'recommendation', 'explanation', 'eventFingerprint', 'date'])
+        && (data.eventId is string && data.eventId.size() >= 1)
+        && (!('recommendation' in data) || (data.recommendation == null || (data.recommendation is string && data.recommendation in ['APROBAR', 'RECHAZAR'])))
+        && (data.explanation is string && data.explanation.size() >= 1)
+        && (data.eventFingerprint is string && data.eventFingerprint.matches('^[0-9a-f]{64}$'))
+        && (data.date is timestamp);
+    }
+
+    // events (event.schema.json)
+    function isValidEvent(data) {
+      return data.keys().hasAll(['id', 'title', 'description', 'startDate', 'endDate', 'multidia', 'place', 'neighborhood', 'location', 'status', 'verified', 'publicationDate', 'organizerId', 'categoryId'])
+        && data.keys().hasOnly(['id', 'title', 'description', 'startDate', 'endDate', 'multidia', 'place', 'neighborhood', 'location', 'cupo', 'contribution', 'status', 'verified', 'publicationDate', 'organizerId', 'categoryId', 'imageUrl'])
+        && (data.id is string && data.id.size() >= 1)
+        && (data.title is string && data.title.size() >= 1)
+        && (data.description is string)
+        && (data.startDate is timestamp)
+        && (data.endDate is timestamp)
+        && (data.multidia is bool)
+        && (data.place is string)
+        && (data.neighborhood is string)
+        && (data.location is latlng)
+        && (!('cupo' in data) || (data.cupo == null || (data.cupo is int && data.cupo >= 1)))
+        && (!('contribution' in data) || (data.contribution == null || (data.contribution is map && data.contribution.keys().hasAll(['amount']) && data.contribution.keys().hasOnly(['amount', 'cause']) && (data.contribution.amount is number && data.contribution.amount >= 0) && (!('cause' in data.contribution) || (data.contribution.cause == null || (data.contribution.cause is string))))))
+        && (data.status is string && data.status in ['PENDIENTE', 'ACTIVO', 'RECHAZADO', 'FINALIZADO'])
+        && (data.verified is bool)
+        && (data.publicationDate is timestamp)
+        && (data.organizerId is string && data.organizerId.size() >= 1)
+        && (data.categoryId is string && data.categoryId.size() >= 1)
+        && (!('imageUrl' in data) || (data.imageUrl == null || (data.imageUrl is string)));
+    }
+
+    // follows (follow.schema.json)
+    function isValidFollow(data) {
+      return data.keys().hasAll(['followerId', 'followedId'])
+        && data.keys().hasOnly(['followerId', 'followedId'])
+        && (data.followerId is string && data.followerId.size() >= 1)
+        && (data.followedId is string && data.followedId.size() >= 1);
+    }
+
+    // interests (interest.schema.json)
+    function isValidInterest(data) {
+      return data.keys().hasAll(['userId', 'eventId'])
+        && data.keys().hasOnly(['userId', 'eventId'])
+        && (data.userId is string && data.userId.size() >= 1)
+        && (data.eventId is string && data.eventId.size() >= 1);
+    }
+
+    // moderationReviews (moderation-review.schema.json)
+    function isValidModerationReview(data) {
+      return data.keys().hasAll(['id', 'eventId', 'adminId', 'action', 'date'])
+        && data.keys().hasOnly(['id', 'eventId', 'adminId', 'action', 'reason', 'date'])
+        && (data.id is string && data.id.size() >= 1)
+        && (data.eventId is string && data.eventId.size() >= 1)
+        && (data.adminId is string && data.adminId.size() >= 1)
+        && (data.action is string && data.action in ['VERIFICAR', 'RECHAZAR', 'RESTAURAR', 'RESOLVER'])
+        && (!('reason' in data) || (data.reason == null || (data.reason is string)))
+        && (data.date is timestamp);
+    }
+
+    // notifications (notification.schema.json)
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'destinationUserId', 'type', 'read', 'date'])
+        && data.keys().hasOnly(['id', 'destinationUserId', 'type', 'reference', 'read', 'date'])
+        && (data.id is string && data.id.size() >= 1)
+        && (data.destinationUserId is string && data.destinationUserId.size() >= 1)
+        && (data.type is string && data.type in ['COMMENT', 'FOLLOWER', 'APPROVAL', 'REJECTION'])
+        && (!('reference' in data) || (data.reference == null || (data.reference is string)))
+        && (data.read is bool)
+        && (data.date is timestamp);
+    }
+
+    // placeSuggestions (place-suggestion.schema.json)
+    function isValidPlaceSuggestion(data) {
+      return data.keys().hasAll(['id', 'name', 'neighborhood', 'detail', 'location'])
+        && data.keys().hasOnly(['id', 'name', 'neighborhood', 'detail', 'location'])
+        && (data.id is string && data.id.size() >= 1)
+        && (data.name is string && data.name.size() >= 1)
+        && (data.neighborhood is string)
+        && (data.detail is string)
+        && (data.location is latlng);
+    }
+
+    // reportSummaries (report-summary.schema.json)
+    function isValidReportSummary(data) {
+      return data.keys().hasAll(['eventId', 'text', 'reportIds', 'date'])
+        && data.keys().hasOnly(['eventId', 'text', 'reportIds', 'date'])
+        && (data.eventId is string && data.eventId.size() >= 1)
+        && (data.text is string && data.text.size() >= 1)
+        && (data.reportIds is list)
+        && (data.date is timestamp);
+    }
+
+    // reports (report.schema.json)
+    function isValidReport(data) {
+      return data.keys().hasAll(['id', 'eventId', 'reporterId', 'reason', 'date', 'resolved'])
+        && data.keys().hasOnly(['id', 'eventId', 'reporterId', 'reason', 'detail', 'date', 'resolved'])
+        && (data.id is string && data.id.size() >= 1)
+        && (data.eventId is string && data.eventId.size() >= 1)
+        && (data.reporterId is string && data.reporterId.size() >= 1)
+        && (data.reason is string && data.reason in ['false_info', 'no_longer_exists', 'charges_or_ads', 'wrong_place_or_contact', 'offensive_or_unsafe', 'spam_or_duplicate'])
+        && (!('detail' in data) || (data.detail == null || (data.detail is string)))
+        && (data.date is timestamp)
+        && (data.resolved is bool);
+    }
+
+    // saved (saved.schema.json)
+    function isValidSaved(data) {
+      return data.keys().hasAll(['userId', 'eventId'])
+        && data.keys().hasOnly(['userId', 'eventId'])
+        && (data.userId is string && data.userId.size() >= 1)
+        && (data.eventId is string && data.eventId.size() >= 1);
+    }
+
+    // users (user.schema.json)
+    function isValidUser(data) {
+      return data.keys().hasAll(['id', 'name', 'email', 'city', 'neighborhood', 'role', 'dateRegistered'])
+        && data.keys().hasOnly(['id', 'name', 'email', 'city', 'neighborhood', 'bio', 'photo', 'role', 'dateRegistered'])
+        && (data.id is string && data.id.size() >= 1)
+        && (data.name is string && data.name.size() >= 1)
+        && (data.email is string && data.email.matches('^[^@\\s]+@[^@\\s]+$'))
+        && (data.city is string)
+        && (data.neighborhood is string)
+        && (!('bio' in data) || (data.bio == null || (data.bio is string)))
+        && (!('photo' in data) || (data.photo == null || (data.photo is string)))
+        && (data.role is string && data.role in ['USER', 'ADMIN'])
+        && (data.dateRegistered is timestamp);
+    }
+
+    // waitlist (waitlist-entry.schema.json)
+    function isValidWaitlistEntry(data) {
+      return data.keys().hasAll(['userId', 'eventId', 'joinedAt'])
+        && data.keys().hasOnly(['userId', 'eventId', 'joinedAt'])
+        && (data.userId is string && data.userId.size() >= 1)
+        && (data.eventId is string && data.eventId.size() >= 1)
+        && (data.joinedAt is timestamp);
+    }
+  }
+}

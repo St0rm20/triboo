@@ -83,6 +83,7 @@ fun FollowersScreen(
                         FollowerCard(
                             item = item,
                             avatarSeed = index,
+                            isBusy = state.busyUserId == item.user.id,
                             onOpenProfile = { onNavigateToUser(item.user.id) },
                             onToggleFollow = { viewModel.onToggleFollow(item) }
                         )
@@ -137,6 +138,7 @@ private fun FollowersTopBar(summary: String, onBack: () -> Unit) {
 private fun FollowerCard(
     item: FollowerItem,
     avatarSeed: Int,
+    isBusy: Boolean,
     onOpenProfile: () -> Unit,
     onToggleFollow: () -> Unit
 ) {
@@ -189,6 +191,7 @@ private fun FollowerCard(
             if (item.isFollowing) {
                 Button(
                     onClick = onToggleFollow,
+                    enabled = !isBusy,
                     contentPadding = padding,
                     colors = ButtonDefaults.buttonColors(
                         containerColor = colors.secondaryContainer,
@@ -199,6 +202,7 @@ private fun FollowerCard(
             } else {
                 OutlinedButton(
                     onClick = onToggleFollow,
+                    enabled = !isBusy,
                     contentPadding = padding,
                     border = BorderStroke(1.dp, colors.primary),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.primary),

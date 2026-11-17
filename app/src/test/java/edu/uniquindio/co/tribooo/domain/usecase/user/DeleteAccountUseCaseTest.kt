@@ -4,6 +4,7 @@ import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.SavedEventRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Attendance
+import edu.uniquindio.co.tribooo.domain.model.AuthErrorReason
 import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
 import edu.uniquindio.co.tribooo.domain.model.Follow
@@ -41,7 +42,7 @@ class DeleteAccountUseCaseTest {
 
     private fun useCase(session: RecordingSession) = DeleteAccountUseCase(
         world.users, world.events, world.attendances, saved, world.waitlist, follows, comments, session,
-        GetCurrentUserUseCase(session, world.users)
+        GetCurrentUserUseCase(session, world.users), world.auth
     )
 
     @Test
@@ -67,7 +68,22 @@ class DeleteAccountUseCaseTest {
         assertTrue(world.events.events.value.none { it.organizer.id == world.me.id })
         assertNotNull(world.events.findById("others"))
         assertNull(world.users.findById(world.me.id))
+        assertEquals(listOf(world.me.id), world.auth.deletedAccounts)
         assertTrue(session.cleared)
+    }
+
+    @Test
+    fun whenFirebaseRefusesToDeleteTheAccountNothingIsDeleted() = runBlocking {
+        val others = world.publish("others", 10, 12)
+        world.attendances.save(Attendance(world.me, others))
+        world.auth.failNextWith = AuthErrorReason.RECENT_LOGIN_REQUIRED
+        val session = RecordingSession(world.me.id)
+
+        assertFalse(useCase(session)())
+
+        assertNotNull(world.users.findById(world.me.id))
+        assertEquals(1, world.attendances.attendances.value.size)
+        assertFalse(session.cleared)
     }
 
     @Test
@@ -79,7 +95,7 @@ class DeleteAccountUseCaseTest {
         val session = RecordingSession(admin.id, UserRole.ADMIN)
         val delete = DeleteAccountUseCase(
             adminWorld.users, adminWorld.events, adminWorld.attendances, saved, adminWorld.waitlist, follows, comments, session,
-            GetCurrentUserUseCase(session, adminWorld.users)
+            GetCurrentUserUseCase(session, adminWorld.users), adminWorld.auth
         )
 
         assertFalse(delete())
@@ -87,6 +103,7 @@ class DeleteAccountUseCaseTest {
         assertNotNull(adminWorld.users.findById(admin.id))
         assertEquals(1, adminWorld.attendances.attendances.value.size)
         assertFalse(session.cleared)
+        assertTrue(adminWorld.auth.deletedAccounts.isEmpty())
     }
 
     @Test
@@ -98,7 +115,7 @@ class DeleteAccountUseCaseTest {
         }
         val delete = DeleteAccountUseCase(
             world.users, world.events, world.attendances, saved, world.waitlist, follows, comments, session,
-            GetCurrentUserUseCase(session, world.users)
+            GetCurrentUserUseCase(session, world.users), world.auth
         )
 
         assertFalse(delete())

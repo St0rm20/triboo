@@ -81,8 +81,8 @@ class ModerationUseCasesTest {
     private val users = UserRepositoryImpl()
     private val admin = runBlocking { users.findById("u-moderacion")!! }
     private val author = runBlocking { users.findById("u-daniela")!! }
-    private val neighbor = User("v1", "Vecino Uno", "v1@mail.co", "123456", "Armenia", "Centro")
-    private val neighbor2 = User("v2", "Vecino Dos", "v2@mail.co", "123456", "Armenia", "Centro")
+    private val neighbor = User("v1", "Vecino Uno", "v1@mail.co", "Armenia", "Centro")
+    private val neighbor2 = User("v2", "Vecino Dos", "v2@mail.co", "Armenia", "Centro")
 
     private fun event(id: String, status: EventStatus, minutesAgo: Long = 0) = Event(
         id = id, title = "Evento $id", description = "", startDate = Instant.now(), endDate = Instant.now(),

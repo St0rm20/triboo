@@ -44,6 +44,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -146,6 +147,7 @@ fun EventStatusScreen(
             if (event != null) {
                 ActionBar(
                     status = event.status,
+                    isRemoving = state.isRemoving,
                     onRemove = viewModel::onRemoveClick,
                     onResubmit = { onResubmitEvent(event.id) },
                     onEdit = { onEditEvent(event.id) },
@@ -608,6 +610,7 @@ private fun StepsSection(status: EventStatus, reviewsCount: Int) {
 @Composable
 private fun ActionBar(
     status: EventStatus,
+    isRemoving: Boolean,
     onRemove: () -> Unit,
     onResubmit: () -> Unit,
     onEdit: () -> Unit,
@@ -639,11 +642,15 @@ private fun ActionBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            TextButton(onClick = onSecondary, colors = ButtonDefaults.textButtonColors(contentColor = secondary.third)) {
-                Icon(secondary.first, contentDescription = null, modifier = Modifier.size(20.dp))
+            TextButton(onClick = onSecondary, enabled = !isRemoving, colors = ButtonDefaults.textButtonColors(contentColor = secondary.third)) {
+                if (isRemoving) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp, color = LocalContentColor.current)
+                } else {
+                    Icon(secondary.first, contentDescription = null, modifier = Modifier.size(20.dp))
+                }
                 Text(secondary.second, modifier = Modifier.padding(start = 8.dp))
             }
-            Button(onClick = primary.third) {
+            Button(onClick = primary.third, enabled = !isRemoving) {
                 Icon(primary.first, contentDescription = null, modifier = Modifier.size(20.dp))
                 Text(primary.second, modifier = Modifier.padding(start = 8.dp))
             }

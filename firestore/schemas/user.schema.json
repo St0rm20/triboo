@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "user.schema.json",
+  "title": "User",
+  "description": "Perfil del usuario. Sin contraseña: las credenciales (email/contraseña y Google) las gestiona Firebase Authentication.",
+  "x-firestore-collection": "users",
+  "x-document-id": "uid de Firebase Authentication",
+  "x-dto": "edu.uniquindio.co.tribooo.data.remote.user.UserDto",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "uid de Firebase Authentication; igual al id del documento.",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "email": {
+      "type": "string",
+      "format": "email"
+    },
+    "city": {
+      "type": "string",
+      "description": "Ciudad del catálogo \"cities\"; vacío si entró con Google y aún no la completa."
+    },
+    "neighborhood": {
+      "type": "string",
+      "description": "Barrio; vacío si entró con Google y aún no lo completa."
+    },
+    "bio": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Biografía; null si está vacía."
+    },
+    "photo": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "URL de la foto de perfil."
+    },
+    "role": {
+      "type": "string",
+      "enum": [
+        "USER",
+        "ADMIN"
+      ],
+      "default": "USER"
+    },
+    "dateRegistered": {
+      "type": "string",
+      "format": "date-time",
+      "x-firestore-type": "timestamp",
+      "description": "Fecha de registro."
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "email",
+    "city",
+    "neighborhood",
+    "role",
+    "dateRegistered"
+  ],
+  "additionalProperties": false
+}

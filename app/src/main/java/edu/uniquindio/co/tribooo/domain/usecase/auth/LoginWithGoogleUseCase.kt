@@ -1,24 +1,24 @@
 package edu.uniquindio.co.tribooo.domain.usecase.auth
 
 import edu.uniquindio.co.tribooo.domain.model.User
+import edu.uniquindio.co.tribooo.domain.repository.AuthRepository
 import edu.uniquindio.co.tribooo.domain.repository.SessionRepository
 import edu.uniquindio.co.tribooo.domain.repository.UserRepository
 import jakarta.inject.Inject
 
-/** Cuenta de usuario normal sembrada (Daniela Restrepo) con la que entra el inicio de sesión simulado. */
-internal const val SIMULATED_GOOGLE_USER_ID = "u-daniela"
-
 /**
- * SIMULACIÓN para la entrega: no hay OAuth ni dependencias de Google. "Continuar con mi cuenta Google"
- * inicia sesión directamente con la cuenta sembrada, guardando la sesión igual que [LoginUseCase].
+ * "Continuar con mi cuenta Google": recibe el ID token que entrega Credential Manager, inicia sesión en
+ * Firebase Authentication y guarda la sesión igual que [LoginUseCase]. La primera vez crea el perfil.
  */
 class LoginWithGoogleUseCase @Inject constructor(
+    private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
     private val sessionRepository: SessionRepository
 ) {
-    suspend operator fun invoke(): User? {
-        val user = userRepository.findById(SIMULATED_GOOGLE_USER_ID) ?: return null
+    suspend operator fun invoke(idToken: String): Result<User> = authResult {
+        val account = authRepository.loginWithGoogle(idToken)
+        val user = userRepository.findOrCreateProfile(account)
         sessionRepository.saveSession(userId = user.id, role = user.role)
-        return user
+        user
     }
 }

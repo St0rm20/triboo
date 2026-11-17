@@ -22,8 +22,8 @@ import java.time.Instant
 class MyEventsTest {
 
     private val now = Instant.parse("2026-10-23T17:00:00Z")
-    private val me = User("me", "Yo", "me@mail.co", "123456", "Armenia", "Centro")
-    private val fan = User("fan", "Vecino", "fan@mail.co", "123456", "Armenia", "Centro")
+    private val me = User("me", "Yo", "me@mail.co", "Armenia", "Centro")
+    private val fan = User("fan", "Vecino", "fan@mail.co", "Armenia", "Centro")
 
     private fun event(
         id: String,

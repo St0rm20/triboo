@@ -15,7 +15,7 @@ import java.time.LocalTime
 class FilterEventsUseCaseTest {
 
     private val filter = FilterEventsUseCase()
-    private val organizer = User("o", "Org", "o@mail.co", "123456", "Armenia", "Centro")
+    private val organizer = User("o", "Org", "o@mail.co", "Armenia", "Centro")
     private val today = LocalDate.of(2026, 10, 21)
     private val here = Location(4.5339, -75.6811)
 

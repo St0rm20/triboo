@@ -1,0 +1,23 @@
+{
+  "name": "tribooo-firestore",
+  "private": true,
+  "type": "module",
+  "description": "Reglas, índices, catálogos y pruebas de Firestore para Tribooo",
+  "scripts": {
+    "rules:gen": "node scripts/generate-rules.mjs",
+    "rules:check": "node scripts/generate-rules.mjs --check",
+    "test": "npm run rules:check && firebase emulators:exec --only firestore --project demo-tribooo \"node --test tests/\"",
+    "emulators": "npm run rules:gen && firebase emulators:start --project demo-tribooo",
+    "seed:emulator": "FIRESTORE_EMULATOR_HOST=127.0.0.1:8080 GCLOUD_PROJECT=demo-tribooo node scripts/seed.mjs",
+    "seed": "node scripts/seed.mjs",
+    "make-admin": "node scripts/make-admin.mjs",
+    "deploy": "npm test && firebase deploy --only firestore:rules,firestore:indexes --project tribooo",
+    "setup": "npm run deploy && npm run seed"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "firebase": "^13.3.0",
+    "firebase-admin": "^14.5.1",
+    "firebase-tools": "^15.36.0"
+  }
+}

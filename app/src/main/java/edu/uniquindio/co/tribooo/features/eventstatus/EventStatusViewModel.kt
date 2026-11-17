@@ -7,6 +7,7 @@ import androidx.navigation.toRoute
 import dagger.hilt.android.lifecycle.HiltViewModel
 import edu.uniquindio.co.tribooo.R
 import edu.uniquindio.co.tribooo.core.util.FormLimits
+import edu.uniquindio.co.tribooo.core.util.RequestResult
 import edu.uniquindio.co.tribooo.core.util.ResourceProvider
 import edu.uniquindio.co.tribooo.core.util.Validators
 import edu.uniquindio.co.tribooo.core.util.averageRating
@@ -15,6 +16,7 @@ import edu.uniquindio.co.tribooo.core.util.ratingOrDash
 import edu.uniquindio.co.tribooo.core.util.relativeLabel
 import edu.uniquindio.co.tribooo.core.util.removeDialogTexts
 import edu.uniquindio.co.tribooo.core.util.reviewsOf
+import edu.uniquindio.co.tribooo.core.util.runRequest
 import edu.uniquindio.co.tribooo.domain.model.Attendance
 import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.model.Event
@@ -71,15 +73,22 @@ data class EventStatusUiState(
     val replyDraft: String = "",
     val replyTouched: Boolean = false,
     val replySubmitAttempted: Boolean = false,
-    val isPublishingReply: Boolean = false,
+    /** Publicación o borrado de la respuesta; Loading mientras se envía. */
+    val replyResult: RequestResult? = null,
     /** El editor de la respuesta debe recibir el foco tras un envío inválido. */
     val replyFocusRequested: Boolean = false,
     val showRemoveDialog: Boolean = false,
+    /** Eliminación o retiro del evento; Loading mientras se procesa. */
+    val removeResult: RequestResult? = null,
     val message: String? = null,
     /** Mensaje para Mis eventos cuando el evento se eliminó y la pantalla debe cerrarse. */
     val exitMessage: String? = null
 ) {
     val status: EventStatus? get() = event?.status
+
+    val isPublishingReply: Boolean get() = replyResult is RequestResult.Loading
+
+    val isRemoving: Boolean get() = removeResult is RequestResult.Loading
 
     fun replyError(resources: ResourceProvider): String? =
         Validators.reply(resources, replyDraft).takeIf { replyTouched || replySubmitAttempted }
@@ -174,9 +183,10 @@ class EventStatusViewModel @Inject constructor(
             replyDraft = local.replyDraft,
             replyTouched = local.replyTouched,
             replySubmitAttempted = local.replySubmitAttempted,
-            isPublishingReply = local.isPublishingReply,
+            replyResult = local.replyResult,
             replyFocusRequested = local.replyFocusRequested,
             showRemoveDialog = local.showRemoveDialog,
+            removeResult = local.removeResult,
             message = local.message,
             exitMessage = local.exitMessage
         )
@@ -215,21 +225,21 @@ class EventStatusViewModel @Inject constructor(
             }
             return
         }
-        local.update { it.copy(isPublishingReply = true) }
         viewModelScope.launch {
-            val published = replyToReviewUseCase(review.comment, state.replyDraft)
-            local.update {
+            local.update { it.copy(replyResult = RequestResult.Loading) }
+            val result = runRequest(resources, onSuccess = { published: Boolean ->
                 if (published) {
-                    it.copy(
-                        editingReviewId = null,
-                        replyDraft = "",
-                        replyTouched = false,
-                        replySubmitAttempted = false,
-                        isPublishingReply = false,
-                        message = resources.getString(R.string.event_status_reply_published)
-                    )
+                    RequestResult.Success(resources.getString(R.string.event_status_reply_published))
                 } else {
-                    it.copy(isPublishingReply = false, message = resources.getString(R.string.event_status_reply_failed))
+                    RequestResult.Failure(resources.getString(R.string.event_status_reply_failed))
+                }
+            }) { replyToReviewUseCase(review.comment, state.replyDraft) }
+            // Si falla, el editor sigue abierto con el borrador para reintentar
+            local.update {
+                when (result) {
+                    is RequestResult.Success -> it.closeReplyEditor().copy(replyResult = result, message = result.message)
+                    is RequestResult.Failure -> it.copy(replyResult = result, message = result.errorMessage)
+                    RequestResult.Loading -> it
                 }
             }
         }
@@ -237,19 +247,28 @@ class EventStatusViewModel @Inject constructor(
 
     fun onReplyDelete(review: ReviewItem) {
         val reply = review.reply ?: return
+        if (local.value.isPublishingReply) return
         viewModelScope.launch {
-            deleteReplyUseCase(reply.id)
+            local.update { it.copy(replyResult = RequestResult.Loading) }
+            val result = runRequest(resources, onSuccess = { deleted: Boolean ->
+                if (deleted) {
+                    RequestResult.Success(resources.getString(R.string.event_status_reply_deleted))
+                } else {
+                    RequestResult.Failure(resources.getString(R.string.error_generic))
+                }
+            }) { deleteReplyUseCase(reply.id) }
             local.update {
-                it.copy(
-                    editingReviewId = null,
-                    replyDraft = "",
-                    replyTouched = false,
-                    replySubmitAttempted = false,
-                    message = resources.getString(R.string.event_status_reply_deleted)
-                )
+                when (result) {
+                    is RequestResult.Success -> it.closeReplyEditor().copy(replyResult = result, message = result.message)
+                    is RequestResult.Failure -> it.copy(replyResult = result, message = result.errorMessage)
+                    RequestResult.Loading -> it
+                }
             }
         }
     }
+
+    private fun EventStatusUiState.closeReplyEditor() =
+        copy(editingReviewId = null, replyDraft = "", replyTouched = false, replySubmitAttempted = false)
 
     // Eliminar (rechazado) o retirar (pendiente) el evento
 
@@ -259,14 +278,22 @@ class EventStatusViewModel @Inject constructor(
 
     fun onConfirmRemove() {
         val status = uiState.value.status ?: return
+        if (local.value.isRemoving) return
         local.update { it.copy(showRemoveDialog = false) }
         viewModelScope.launch {
-            val removed = deleteEventUseCase(eventId)
-            local.update {
+            local.update { it.copy(removeResult = RequestResult.Loading) }
+            val result = runRequest(resources, onSuccess = { removed: Boolean ->
                 if (removed) {
-                    it.copy(exitMessage = removeDialogTexts(resources, status).doneMessage)
+                    RequestResult.Success(removeDialogTexts(resources, status).doneMessage)
                 } else {
-                    it.copy(message = resources.getString(R.string.event_status_remove_failed))
+                    RequestResult.Failure(resources.getString(R.string.event_status_remove_failed))
+                }
+            }) { deleteEventUseCase(eventId) }
+            local.update {
+                when (result) {
+                    is RequestResult.Success -> it.copy(removeResult = result, exitMessage = result.message)
+                    is RequestResult.Failure -> it.copy(removeResult = result, message = result.errorMessage)
+                    RequestResult.Loading -> it
                 }
             }
         }

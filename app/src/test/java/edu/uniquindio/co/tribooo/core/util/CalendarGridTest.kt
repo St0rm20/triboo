@@ -15,7 +15,7 @@ import java.time.YearMonth
 
 class CalendarGridTest {
 
-    private val user = User("u", "Ana", "a@mail.co", "123456", "Armenia", "Centro")
+    private val user = User("u", "Ana", "a@mail.co", "Armenia", "Centro")
 
     private fun event(start: LocalDate, end: LocalDate = start) = Event(
         id = "e", title = "Evento",

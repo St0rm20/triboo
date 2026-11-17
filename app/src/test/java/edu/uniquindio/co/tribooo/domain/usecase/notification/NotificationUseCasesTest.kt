@@ -45,7 +45,7 @@ class NotificationUseCasesTest {
 
     private val users = UserRepositoryImpl()
     private val me = runBlocking { users.findById("u-daniela")!! }
-    private val other = User("x", "Otra Persona", "x@mail.co", "123456", "Armenia", "Centro")
+    private val other = User("x", "Otra Persona", "x@mail.co", "Armenia", "Centro")
     private val session = FakeSessionRepository(me.id)
 
     private fun notification(id: String, to: User, read: Boolean, minutesAgo: Long) = Notification(

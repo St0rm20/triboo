@@ -11,7 +11,7 @@ import org.junit.Test
 
 class AttendanceStepTest {
 
-    private val organizer = User("x", "Otra Persona", "x@mail.co", "123456", "Armenia", "Centro")
+    private val organizer = User("x", "Otra Persona", "x@mail.co", "Armenia", "Centro")
     private val free = testEvent("free", organizer, EventStatus.ACTIVO)
     private val paid = testEvent("paid", organizer, EventStatus.ACTIVO).copy(contribution = Contribution(3000.0, "Fundación"))
     private val other = testEvent("other", organizer, EventStatus.ACTIVO)

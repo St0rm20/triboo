@@ -16,7 +16,7 @@ class EditEventUseCasesTest {
 
     private val users = UserRepositoryImpl()
     private val me: User = runBlocking { users.findById("u-daniela")!! }
-    private val other = User("x", "Otra Persona", "x@mail.co", "123456", "Armenia", "Centro")
+    private val other = User("x", "Otra Persona", "x@mail.co", "Armenia", "Centro")
 
     private fun edit(userId: String?, block: suspend (UpdateEventUseCase, ResubmitEventUseCase, EventRepository) -> Unit) =
         runBlocking {
