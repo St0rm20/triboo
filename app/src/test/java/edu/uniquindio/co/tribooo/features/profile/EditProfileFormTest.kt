@@ -1,5 +1,7 @@
 package edu.uniquindio.co.tribooo.features.profile
 
+import edu.uniquindio.co.tribooo.data.repository.memory.ImageRepositoryImpl
+import edu.uniquindio.co.tribooo.domain.usecase.image.DeleteImagesUseCase
 import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
@@ -69,7 +71,7 @@ class EditProfileFormTest {
             logoutUseCase = LogoutUseCase(world.auth, world.session),
             deleteAccountUseCase = DeleteAccountUseCase(
                 world.users, world.events, world.attendances, SavedEventRepositoryImpl(), world.waitlist,
-                FollowRepositoryImpl(), CommentRepositoryImpl(), world.session, world.getCurrentUser, world.auth
+                FollowRepositoryImpl(), CommentRepositoryImpl(), world.session, world.getCurrentUser, world.auth, DeleteImagesUseCase(ImageRepositoryImpl())
             ),
             resources = testResources
         )

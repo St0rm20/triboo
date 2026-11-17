@@ -12,6 +12,7 @@ import edu.uniquindio.co.tribooo.domain.repository.SessionRepository
 import edu.uniquindio.co.tribooo.domain.repository.UserRepository
 import edu.uniquindio.co.tribooo.domain.repository.WaitlistRepository
 import edu.uniquindio.co.tribooo.domain.usecase.auth.GetCurrentUserUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.image.DeleteImagesUseCase
 import jakarta.inject.Inject
 
 class DeleteAccountUseCase @Inject constructor(
@@ -24,7 +25,8 @@ class DeleteAccountUseCase @Inject constructor(
     private val commentRepository: CommentRepository,
     private val sessionRepository: SessionRepository,
     private val getCurrentUser: GetCurrentUserUseCase,
-    private val authRepository: AuthRepository
+    private val authRepository: AuthRepository,
+    private val deleteImages: DeleteImagesUseCase
 ) {
     /**
      * Elimina la cuenta del usuario actual con todo lo que le pertenece (incluidos sus eventos, sin importar su estado)
@@ -64,9 +66,12 @@ class DeleteAccountUseCase @Inject constructor(
             .filter { it.author.id == user.id || it.event.id in ownEventIds || it.parentComment?.author?.id == user.id }
             .forEach { commentRepository.delete(it.id) }
 
+        // Las URLs se leen antes de borrar los eventos; las imágenes se borran cuando ya no hay documentos que las usen
+        val imageUrls = ownEventIds.flatMap { eventRepository.findImageUrls(it) } + listOfNotNull(user.photo)
         ownEventIds.forEach { eventRepository.delete(it) }
 
         userRepository.delete(user.id)
+        deleteImages(imageUrls)
 
         // Al final la cuenta, porque cierra la sesión que necesitan los borrados anteriores
         try {

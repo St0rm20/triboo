@@ -34,6 +34,12 @@ class EventRepositoryImpl @Inject constructor() : EventRepository {
         return _events.value.firstOrNull { it.id == id }
     }
 
+    override suspend fun findImageUrls(eventId: String): List<String> {
+        val cover = _events.value.firstOrNull { it.id == eventId }?.imageUrl
+        val gallery = _images.value.filter { it.event.id == eventId }.sortedBy { it.order }.map { it.url }
+        return (listOfNotNull(cover) + gallery).distinct()
+    }
+
     override suspend fun update(event: Event, imageUrls: List<String>?) {
         if (_events.value.none { it.id == event.id }) return
         val stored = if (imageUrls == null) event else event.copy(imageUrl = imageUrls.firstOrNull())

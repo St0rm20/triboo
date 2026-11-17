@@ -1,5 +1,7 @@
 package edu.uniquindio.co.tribooo.domain.usecase.user
 
+import edu.uniquindio.co.tribooo.data.repository.memory.ImageRepositoryImpl
+import edu.uniquindio.co.tribooo.domain.usecase.image.DeleteImagesUseCase
 import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.SavedEventRepositoryImpl
@@ -42,7 +44,7 @@ class DeleteAccountUseCaseTest {
 
     private fun useCase(session: RecordingSession) = DeleteAccountUseCase(
         world.users, world.events, world.attendances, saved, world.waitlist, follows, comments, session,
-        GetCurrentUserUseCase(session, world.users), world.auth
+        GetCurrentUserUseCase(session, world.users), world.auth, DeleteImagesUseCase(ImageRepositoryImpl())
     )
 
     @Test
@@ -95,7 +97,7 @@ class DeleteAccountUseCaseTest {
         val session = RecordingSession(admin.id, UserRole.ADMIN)
         val delete = DeleteAccountUseCase(
             adminWorld.users, adminWorld.events, adminWorld.attendances, saved, adminWorld.waitlist, follows, comments, session,
-            GetCurrentUserUseCase(session, adminWorld.users), adminWorld.auth
+            GetCurrentUserUseCase(session, adminWorld.users), adminWorld.auth, DeleteImagesUseCase(ImageRepositoryImpl())
         )
 
         assertFalse(delete())
@@ -115,7 +117,7 @@ class DeleteAccountUseCaseTest {
         }
         val delete = DeleteAccountUseCase(
             world.users, world.events, world.attendances, saved, world.waitlist, follows, comments, session,
-            GetCurrentUserUseCase(session, world.users), world.auth
+            GetCurrentUserUseCase(session, world.users), world.auth, DeleteImagesUseCase(ImageRepositoryImpl())
         )
 
         assertFalse(delete())

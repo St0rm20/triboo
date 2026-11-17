@@ -14,6 +14,9 @@ interface EventRepository {
     suspend fun save(event: Event, imageUrls: List<String> = emptyList())
     suspend fun findById(id: String): Event?
 
+    /** URLs de las imágenes guardadas del evento: la portada primero y luego la galería en orden. */
+    suspend fun findImageUrls(eventId: String): List<String>
+
     /**
      * Reemplaza el evento que tiene el mismo id (no hace nada si no existe).
      * Con [imageUrls] también reemplaza las imágenes (la primera pasa a ser la portada); con null conserva las actuales.

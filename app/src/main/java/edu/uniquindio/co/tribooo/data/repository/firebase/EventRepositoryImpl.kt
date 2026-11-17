@@ -83,6 +83,16 @@ class EventRepositoryImpl @Inject constructor(
         }
     }
 
+    // Se consultan los documentos: la lista en memoria puede no estar al día
+    override suspend fun findImageUrls(eventId: String): List<String> = firestoreCall {
+        val cover = collection.document(eventId).get().await().getString("imageUrl")
+        val gallery = imagesCollection.whereEqualTo("eventId", eventId).get().await().documents
+            .mapNotNull { it.toObject(EventImageDto::class.java) }
+            .sortedBy { it.order }
+            .map { it.url }
+        (listOfNotNull(cover) + gallery).distinct()
+    }
+
     override suspend fun update(event: Event, imageUrls: List<String>?) = firestoreCall {
         val exists = events.value.any { it.id == event.id } || collection.document(event.id).get().await().exists()
         if (!exists) return@firestoreCall

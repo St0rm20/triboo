@@ -1,5 +1,7 @@
 package edu.uniquindio.co.tribooo.domain.usecase.comment
 
+import edu.uniquindio.co.tribooo.data.repository.memory.ImageRepositoryImpl
+import edu.uniquindio.co.tribooo.domain.usecase.image.DeleteImagesUseCase
 import edu.uniquindio.co.tribooo.data.repository.memory.NotificationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Category
@@ -45,6 +47,7 @@ class ReviewRepliesAndDeleteEventTest {
         override val images: StateFlow<List<ImageEvent>> = MutableStateFlow(emptyList())
         override suspend fun save(event: Event, imageUrls: List<String>) = _events.update { it + event }
         override suspend fun findById(id: String): Event? = _events.value.firstOrNull { it.id == id }
+        override suspend fun findImageUrls(eventId: String): List<String> = emptyList()
         override suspend fun update(event: Event, imageUrls: List<String>?) = Unit
         override suspend fun delete(eventId: String) = _events.update { list -> list.filterNot { it.id == eventId } }
     }
@@ -120,7 +123,7 @@ class ReviewRepliesAndDeleteEventTest {
                 event("o", EventStatus.PENDIENTE, organizer = other)
             )
         )
-        val delete = DeleteEventUseCase(repository, getCurrentUser)
+        val delete = DeleteEventUseCase(repository, getCurrentUser, DeleteImagesUseCase(ImageRepositoryImpl()))
 
         assertTrue(delete("p"))
         assertTrue(delete("r"))
