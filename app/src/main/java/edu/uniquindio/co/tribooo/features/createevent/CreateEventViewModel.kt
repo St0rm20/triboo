@@ -16,6 +16,7 @@ import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Contribution
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.ImageEvent
+import edu.uniquindio.co.tribooo.domain.model.ImageFolder
 import edu.uniquindio.co.tribooo.domain.model.Location
 import edu.uniquindio.co.tribooo.domain.model.PlaceSuggestion
 import edu.uniquindio.co.tribooo.domain.usecase.auth.GetCurrentUserUseCase
@@ -24,6 +25,8 @@ import edu.uniquindio.co.tribooo.domain.usecase.event.GetEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventImagesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ResubmitEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.UpdateEventUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.image.DeleteImagesUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.image.UploadImagesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetPlaceSuggestionsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.ObserveCurrentLocationUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.ResolvePlaceUseCase
@@ -39,6 +42,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.LocalTime
 import java.util.UUID
+import kotlin.coroutines.cancellation.CancellationException
 
 private const val MIN_CUPO = 5
 private const val CUPO_STEP = 5
@@ -131,6 +135,8 @@ class CreateEventViewModel @Inject constructor(
     private val updateEventUseCase: UpdateEventUseCase,
     private val resubmitEventUseCase: ResubmitEventUseCase,
     private val resolvePlaceUseCase: ResolvePlaceUseCase,
+    private val uploadImagesUseCase: UploadImagesUseCase,
+    private val deleteImagesUseCase: DeleteImagesUseCase,
     observeEventImages: ObserveEventImagesUseCase,
     observeCurrentLocation: ObserveCurrentLocationUseCase,
     savedStateHandle: SavedStateHandle,
@@ -146,6 +152,10 @@ class CreateEventViewModel @Inject constructor(
     }
 
     private val _uiState = MutableStateFlow(CreateEventUiState(mode = mode, isLoading = mode != null))
+
+    // Imágenes que el evento editado ya tenía guardadas; las que el usuario quite se borran al guardar.
+    // Al duplicar queda vacía: esas imágenes son del evento original
+    private var storedImageUrls: List<String> = emptyList()
     val uiState: StateFlow<CreateEventUiState> = _uiState.asStateFlow()
 
     // Se lee en cada uso: el catálogo puede llegar de Firestore después de abrir la pantalla
@@ -182,6 +192,7 @@ class CreateEventViewModel @Inject constructor(
         }
         val gallery = images.value.filter { it.event.id == eventId }.sortedBy { it.order }.map { it.url }
         val imageUris = (listOfNotNull(event.imageUrl) + gallery).distinct()
+        if (mode != EventFormMode.DUPLICATE) storedImageUrls = imageUris
         _uiState.update { event.toFormState(mode, imageUris, placeSuggestions, Instant.now()).copy(userLocation = it.userLocation) }
     }
 
@@ -350,16 +361,41 @@ class CreateEventViewModel @Inject constructor(
             category = category
         )
 
-        return when (mode) {
-            EventFormMode.EDIT -> updateEventUseCase(event, state.imageUris)
-            EventFormMode.RESUBMIT -> resubmitEventUseCase(event, state.imageUris)
+        // Firestore solo guarda URLs públicas: las imágenes se suben antes que el evento.
+        // Al duplicar se copian, para que borrar un evento no deje al otro sin imágenes
+        val imageUrls = uploadImagesUseCase(state.imageUris, ImageFolder.EVENTS, copy = mode == EventFormMode.DUPLICATE)
+        val uploaded = UploadImagesUseCase.newlyUploaded(state.imageUris, imageUrls)
+
+        val result = try {
+            saveEvent(event, imageUrls, state)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            deleteImagesUseCase(uploaded)
+            throw e
+        }
+
+        if (result is RequestResult.Failure) {
+            deleteImagesUseCase(uploaded)
+        } else if (mode == EventFormMode.EDIT || mode == EventFormMode.RESUBMIT) {
+            // Las que el usuario quitó ya no las usa ningún documento
+            deleteImagesUseCase(storedImageUrls - imageUrls.toSet())
+            storedImageUrls = imageUrls
+            _uiState.update { it.copy(imageUris = imageUrls) }
+        }
+        return result
+    }
+
+    private suspend fun saveEvent(event: Event, imageUrls: List<String>, state: CreateEventUiState): RequestResult =
+        when (mode) {
+            EventFormMode.EDIT -> updateEventUseCase(event, imageUrls)
+            EventFormMode.RESUBMIT -> resubmitEventUseCase(event, imageUrls)
             // El caso de uso lo envía a moderación antes de que aparezca en el feed
             else -> {
-                createEventUseCase(event, state.imageUris)
+                createEventUseCase(event, imageUrls)
                 RequestResult.Success(createdMessage(state))
             }
         }
-    }
 
     private fun createdMessage(state: CreateEventUiState) = when {
         mode == EventFormMode.DUPLICATE -> resources.getString(R.string.create_event_success_duplicate)
