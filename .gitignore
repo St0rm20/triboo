@@ -11,9 +11,10 @@ local.properties
 google-services.json
 firebase-adminsdk.json
 
-# Herramientas de Firestore (firestore/)
-node_modules/
+# Logs de Firebase CLI / MCP
 firebase-debug.log
 firestore-debug.log
-ui-debug.log
-service-account*.json
+
+# Configuración local de agentes de IA
+.claude/
+.agents/
