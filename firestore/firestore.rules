@@ -15,6 +15,8 @@ service cloud.firestore {
 
     // ---------- Utilidades ----------
 
+    // Las imágenes se suben a Cloudinary y aquí solo se guarda su URL pública (nunca una URI local del teléfono)
+
     function signedIn() {
       return request.auth != null;
     }
@@ -400,7 +402,7 @@ service cloud.firestore {
         && data.keys().hasOnly(['id', 'eventId', 'url', 'order'])
         && (data.id is string && data.id.size() >= 1)
         && (data.eventId is string && data.eventId.size() >= 1)
-        && (data.url is string && data.url.size() >= 1)
+        && (data.url is string && data.url.size() >= 1 && data.url.matches('^https://res[.]cloudinary[.]com/.*'))
         && (data.order is int && data.order >= 0);
     }
 
@@ -435,7 +437,7 @@ service cloud.firestore {
         && (data.publicationDate is timestamp)
         && (data.organizerId is string && data.organizerId.size() >= 1)
         && (data.categoryId is string && data.categoryId.size() >= 1)
-        && (!('imageUrl' in data) || (data.imageUrl == null || (data.imageUrl is string)));
+        && (!('imageUrl' in data) || (data.imageUrl == null || (data.imageUrl is string && data.imageUrl.matches('^https://res[.]cloudinary[.]com/.*'))));
     }
 
     // follows (follow.schema.json)
@@ -530,7 +532,7 @@ service cloud.firestore {
         && (data.city is string)
         && (data.neighborhood is string)
         && (!('bio' in data) || (data.bio == null || (data.bio is string)))
-        && (!('photo' in data) || (data.photo == null || (data.photo is string)))
+        && (!('photo' in data) || (data.photo == null || (data.photo is string && data.photo.matches('^https://.*'))))
         && (data.role is string && data.role in ['USER', 'ADMIN'])
         && (data.dateRegistered is timestamp);
     }

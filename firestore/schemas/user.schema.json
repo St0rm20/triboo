@@ -41,7 +41,8 @@
         "string",
         "null"
       ],
-      "description": "URL de la foto de perfil."
+      "description": "URL HTTPS de la foto de perfil: subida a Cloudinary o la de la cuenta de Google.",
+      "pattern": "^https://"
     },
     "role": {
       "type": "string",

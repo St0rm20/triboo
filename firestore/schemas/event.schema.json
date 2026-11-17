@@ -136,7 +136,8 @@
         "string",
         "null"
       ],
-      "description": "URL de la portada; el resto de imágenes vive en \"eventImages\"."
+      "description": "URL de la portada alojada en Cloudinary (secure_url); el resto de imágenes vive en \"eventImages\".",
+      "pattern": "^https://res\\.cloudinary\\.com/"
     }
   },
   "required": [
