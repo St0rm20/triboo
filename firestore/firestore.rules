@@ -1,14 +1,12 @@
-// ARCHIVO GENERADO: no lo edites a mano.
-// Permisos: firestore/rules/access.rules · Forma de los documentos: firestore/schemas/*.schema.json
-// Regenerar: npm run rules:gen (desde firestore/)
+// Reglas de Firestore de Tribooo. Se publican con el MCP de Firebase (firebase_deploy, only: firestore).
+// Las funciones isValid<Title> del final reflejan firestore/schemas/*.schema.json: si cambia un schema, actualízalas.
 rules_version = '2';
 
 // Permisos de Tribooo. La forma de cada documento la validan las funciones isValid<Title>,
-// generadas desde firestore/schemas; aquí solo se decide quién puede hacer qué.
+// equivalentes a firestore/schemas; el resto decide quién puede hacer qué.
 //
-// Nota: la app escucha colecciones completas (sin where), y las reglas no filtran resultados:
-// por eso la lectura se concede a cualquier usuario autenticado salvo en las colecciones
-// que solo usa la moderación. Para restringir más hay que filtrar también las consultas.
+// Las reglas no filtran resultados: notificaciones y reportes solo se leen porque la app
+// los consulta filtrados por usuario (whereEqualTo). Los perfiles no guardan el correo.
 
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -62,7 +60,7 @@ service cloud.firestore {
         && getAfter(path('events', eventId)).data.organizerId == uid();
     }
 
-    // ---------- Catálogos (solo lectura; se siembran con el Admin SDK: npm run seed) ----------
+    // ---------- Catálogos (solo lectura; se siembran desde la consola o el MCP de Firebase) ----------
 
     match /categories/{categoryId} {
       allow read: if true;
@@ -85,7 +83,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if signedIn();
 
-      // El rol ADMIN solo se asigna con el Admin SDK (npm run make-admin)
+      // El rol ADMIN solo se asigna desde la consola o el MCP de Firebase
       allow create: if signedIn()
         && userId == uid()
         && isValidUser(incoming())
@@ -95,7 +93,7 @@ service cloud.firestore {
       allow update: if signedIn()
         && userId == uid()
         && isValidUser(incoming())
-        && !changedKeys().hasAny(['id', 'role', 'email', 'dateRegistered']);
+        && !changedKeys().hasAny(['id', 'role', 'dateRegistered']);
 
       allow delete: if signedIn() && userId == uid();
     }
@@ -279,7 +277,8 @@ service cloud.firestore {
     // ---------- Notificaciones ----------
 
     match /notifications/{notificationId} {
-      allow read: if signedIn();
+      // La app consulta whereEqualTo("destinationUserId", uid)
+      allow read: if signedIn() && resource.data.destinationUserId == uid();
 
       // Las crea quien genera el aviso; las de moderación solo un administrador
       allow create: if signedIn()
@@ -308,7 +307,8 @@ service cloud.firestore {
     // ---------- Reportes y moderación ----------
 
     match /reports/{reportId} {
-      allow read: if signedIn();
+      // El admin los consulta todos; los demás, whereEqualTo("reporterId", uid)
+      allow read: if signedIn() && (resource.data.reporterId == uid() || isAdmin());
 
       allow create: if signedIn()
         && isValidReport(incoming())
@@ -354,7 +354,7 @@ service cloud.firestore {
 
     // ---------- Todo lo demás queda cerrado ----------
 
-    // ---------- Validadores generados desde los JSON Schema ----------
+    // ---------- Validadores (uno por JSON Schema) ----------
 
     // attendances (attendance.schema.json)
     function isValidAttendance(data) {
@@ -524,11 +524,10 @@ service cloud.firestore {
 
     // users (user.schema.json)
     function isValidUser(data) {
-      return data.keys().hasAll(['id', 'name', 'email', 'city', 'neighborhood', 'role', 'dateRegistered'])
-        && data.keys().hasOnly(['id', 'name', 'email', 'city', 'neighborhood', 'bio', 'photo', 'role', 'dateRegistered'])
+      return data.keys().hasAll(['id', 'name', 'city', 'neighborhood', 'role', 'dateRegistered'])
+        && data.keys().hasOnly(['id', 'name', 'city', 'neighborhood', 'bio', 'photo', 'role', 'dateRegistered'])
         && (data.id is string && data.id.size() >= 1)
         && (data.name is string && data.name.size() >= 1)
-        && (data.email is string && data.email.matches('^[^@\\s]+@[^@\\s]+$'))
         && (data.city is string)
         && (data.neighborhood is string)
         && (!('bio' in data) || (data.bio == null || (data.bio is string)))
