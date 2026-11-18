@@ -25,6 +25,8 @@ import edu.uniquindio.co.tribooo.domain.usecase.location.ObserveCurrentLocationU
 import edu.uniquindio.co.tribooo.domain.usecase.report.ObserveReportedEventIdsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.report.SubmitReportUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ObserveSavedEventsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.settings.FakeLanguageRepository
+import edu.uniquindio.co.tribooo.domain.usecase.settings.ObserveAppLanguageUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ToggleSavedEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ToggleFollowUseCase
@@ -74,6 +76,7 @@ class EventDetailViewModelTest {
             observeWaitlist = world.observeWaitlist,
             observeCurrentUser = world.observeCurrentUser,
             observeCurrentLocation = ObserveCurrentLocationUseCase(LocationRepositoryImpl()),
+            observeAppLanguage = ObserveAppLanguageUseCase(FakeLanguageRepository()),
             toggleAttendanceUseCase = world.toggleAttendance,
             toggleInterestUseCase = ToggleInterestUseCase(InterestRepositoryImpl(), world.getCurrentUser),
             toggleSavedEventUseCase = ToggleSavedEventUseCase(savedEvents, world.getCurrentUser),

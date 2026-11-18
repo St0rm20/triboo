@@ -1,10 +1,10 @@
 package edu.uniquindio.co.tribooo
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -16,7 +16,8 @@ import edu.uniquindio.co.tribooo.navigation.AppViewModel
 
 // Permite que Hilt inyecte dependencias (y los ViewModels) en esta Activity y sus pantallas
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+// AppCompatActivity: en API < 33 es la que aplica y recrea el idioma elegido con setApplicationLocales
+class MainActivity : AppCompatActivity() {
 
     // Mismo ViewModel que usa AppNavigation: guarda el tema elegido en Perfil
     private val appViewModel: AppViewModel by viewModels()

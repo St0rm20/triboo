@@ -53,6 +53,13 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
+    // Con el idioma por app, el usuario puede cambiar de idioma en cualquier momento: el bundle no
+    // debe separar los recursos por idioma (la app solo trae español e inglés)
+    bundle {
+        language {
+            enableSplit = false
+        }
+    }
     buildFeatures {
         compose = true
         resValues = true
@@ -66,6 +73,8 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.activity.compose)
+    // Idioma por app (AppCompatDelegate.setApplicationLocales): cambia el idioma sin salir de la app
+    implementation(libs.androidx.appcompat)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.graphics)

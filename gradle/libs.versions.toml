@@ -17,6 +17,7 @@ hiltAndroid = "2.60.1"
 hiltNavigationCompose = "1.4.0"
 dataStore = "1.2.1"
 coreSplashscreen = "1.2.0"
+appcompat = "1.7.1"
 ksp = "2.3.6" # Desde KSP 2.3.0 la versión ya no va atada a la versión de Kotlin
 mapbox = "11.22.0"
 googleGmsGoogleServices = "4.6.0"
@@ -50,6 +51,7 @@ androidx-hilt-navigation-compose = { module = "androidx.hilt:hilt-navigation-com
 hilt-android = { module = "com.google.dagger:hilt-android", version.ref = "hiltAndroid" }
 hilt-compiler = { module = "com.google.dagger:hilt-compiler", version.ref = "hiltAndroid" }
 data-store = { module = "androidx.datastore:datastore-preferences", version.ref = "dataStore" }
+androidx-appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "coreSplashscreen" }
 mapbox-android = { module = "com.mapbox.maps:android-ndk27", version.ref = "mapbox" }
 mapbox-compose = { module = "com.mapbox.extension:maps-compose-ndk27", version.ref = "mapbox" }

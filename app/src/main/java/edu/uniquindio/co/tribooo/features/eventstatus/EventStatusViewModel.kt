@@ -32,6 +32,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.comment.ReplyToReviewUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.DeleteEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.moderation.ObserveModerationReviewsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.settings.ObserveAppLanguageUseCase
 import edu.uniquindio.co.tribooo.navigation.MainRoutes
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -154,6 +155,7 @@ class EventStatusViewModel @Inject constructor(
     observeAttendances: ObserveAttendancesUseCase,
     observeComments: ObserveCommentsUseCase,
     observeCurrentUser: ObserveCurrentUserUseCase,
+    observeAppLanguage: ObserveAppLanguageUseCase,
     private val replyToReviewUseCase: ReplyToReviewUseCase,
     private val deleteReplyUseCase: DeleteReplyUseCase,
     private val deleteEventUseCase: DeleteEventUseCase,
@@ -173,11 +175,13 @@ class EventStatusViewModel @Inject constructor(
         ::EventStatusSources
     )
 
+    // El idioma entra al combine solo para recalcular los textos ya armados cuando cambia
     val uiState: StateFlow<EventStatusUiState> = combine(
         observeCurrentUser(),
         sources,
-        local
-    ) { currentUser, sources, local ->
+        local,
+        observeAppLanguage()
+    ) { currentUser, sources, local, _ ->
         buildEventStatusState(eventId, currentUser, sources, resources).copy(
             editingReviewId = local.editingReviewId,
             replyDraft = local.replyDraft,

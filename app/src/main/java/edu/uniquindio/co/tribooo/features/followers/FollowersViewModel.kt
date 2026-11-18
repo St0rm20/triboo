@@ -12,6 +12,7 @@ import edu.uniquindio.co.tribooo.core.util.initials
 import edu.uniquindio.co.tribooo.core.util.messageOrNull
 import edu.uniquindio.co.tribooo.core.util.runRequest
 import edu.uniquindio.co.tribooo.domain.model.User
+import edu.uniquindio.co.tribooo.domain.usecase.settings.ObserveAppLanguageUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.MyFollower
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveMyFollowersUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ToggleFollowUseCase
@@ -50,6 +51,7 @@ internal fun MyFollower.toItem(resources: ResourceProvider) = FollowerItem(
 @HiltViewModel
 class FollowersViewModel @Inject constructor(
     observeMyFollowers: ObserveMyFollowersUseCase,
+    observeAppLanguage: ObserveAppLanguageUseCase,
     private val toggleFollowUseCase: ToggleFollowUseCase,
     private val resources: ResourceProvider
 ) : ViewModel() {
@@ -59,7 +61,8 @@ class FollowersViewModel @Inject constructor(
     /** Resultado de la última petición y la persona a la que corresponde. */
     private val action = MutableStateFlow<Pair<String, RequestResult>?>(null)
 
-    val uiState: StateFlow<FollowersUiState> = combine(observeMyFollowers(), message, action) { followers, message, action ->
+    // El idioma entra al combine solo para recalcular los textos ya armados cuando cambia
+    val uiState: StateFlow<FollowersUiState> = combine(observeMyFollowers(), message, action, observeAppLanguage()) { followers, message, action, _ ->
         FollowersUiState(
             summary = followersSummary(resources, followers.size),
             followers = followers.map { it.toItem(resources) },

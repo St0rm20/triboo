@@ -1,6 +1,9 @@
 package edu.uniquindio.co.tribooo.core.util
 
 import android.content.Context
+import android.content.res.Configuration
+import android.os.LocaleList
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.annotation.ArrayRes
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
@@ -23,12 +26,24 @@ class ResourceProviderImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : ResourceProvider {
 
-    override fun getString(@StringRes id: Int, vararg args: Any): String = context.getString(id, *args)
+    // En API 28-32 AppCompat solo cambia el idioma de la Activity, no el del contexto de la aplicación:
+    // se resuelve en cada llamada con el idioma vigente para que los textos sigan el cambio
+    private val localizedContext: Context
+        get() {
+            val locales = AppCompatDelegate.getApplicationLocales()
+            if (locales.isEmpty) return context
+            val configuration = Configuration(context.resources.configuration).apply {
+                setLocales(LocaleList.forLanguageTags(locales.toLanguageTags()))
+            }
+            return context.createConfigurationContext(configuration)
+        }
+
+    override fun getString(@StringRes id: Int, vararg args: Any): String = localizedContext.getString(id, *args)
 
     override fun getQuantityString(@PluralsRes id: Int, quantity: Int, vararg args: Any): String =
-        context.resources.getQuantityString(id, quantity, *args)
+        localizedContext.resources.getQuantityString(id, quantity, *args)
 
-    override fun getStringArray(@ArrayRes id: Int): List<String> = context.resources.getStringArray(id).toList()
+    override fun getStringArray(@ArrayRes id: Int): List<String> = localizedContext.resources.getStringArray(id).toList()
 }
 
 /** [ResourceProvider] para composables; se recrea si cambia el contexto (p. ej. la configuración de idioma). */

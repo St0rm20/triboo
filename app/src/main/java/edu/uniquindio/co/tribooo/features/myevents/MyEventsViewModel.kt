@@ -20,6 +20,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUse
 import edu.uniquindio.co.tribooo.domain.usecase.comment.ObserveCommentsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveMyEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.moderation.ObserveModerationReviewsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.settings.ObserveAppLanguageUseCase
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -91,17 +92,21 @@ class MyEventsViewModel @Inject constructor(
     observeAttendances: ObserveAttendancesUseCase,
     observeComments: ObserveCommentsUseCase,
     observeModerationReviews: ObserveModerationReviewsUseCase,
+    observeAppLanguage: ObserveAppLanguageUseCase,
     resources: ResourceProvider
 ) : ViewModel() {
 
     private val selectedTab = MutableStateFlow(MyEventsTab.ACTIVOS)
+
+    // El idioma acompaña a la pestaña solo para recalcular los textos ya armados cuando cambia
+    private val tabAndLanguage = combine(selectedTab, observeAppLanguage()) { tab, _ -> tab }
 
     val uiState: StateFlow<MyEventsUiState> = combine(
         observeMyEvents(),
         observeAttendances(),
         observeComments(),
         observeModerationReviews(),
-        selectedTab
+        tabAndLanguage
     ) { events, attendances, comments, reviews, tab ->
         MyEventsUiState(
             selectedTab = tab,

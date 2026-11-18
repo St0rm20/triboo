@@ -19,6 +19,7 @@ import edu.uniquindio.co.tribooo.data.repository.firebase.ReportSummaryRepositor
 import edu.uniquindio.co.tribooo.data.repository.firebase.SavedEventRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.WaitlistRepositoryImpl
+import edu.uniquindio.co.tribooo.data.repository.local.LanguageRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.local.SessionRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.EventFilterRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.openrouter.ModerationAssistantRepositoryImpl
@@ -30,6 +31,7 @@ import edu.uniquindio.co.tribooo.domain.repository.EventRepository
 import edu.uniquindio.co.tribooo.domain.repository.EventVerdictRepository
 import edu.uniquindio.co.tribooo.domain.repository.FollowRepository
 import edu.uniquindio.co.tribooo.domain.repository.InterestRepository
+import edu.uniquindio.co.tribooo.domain.repository.LanguageRepository
 import edu.uniquindio.co.tribooo.domain.repository.LocationRepository
 import edu.uniquindio.co.tribooo.domain.repository.ModerationAssistantRepository
 import edu.uniquindio.co.tribooo.domain.repository.ModerationReviewRepository
@@ -85,6 +87,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindSessionRepository(impl: SessionRepositoryImpl): SessionRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLanguageRepository(impl: LanguageRepositoryImpl): LanguageRepository
 
     @Binds
     @Singleton

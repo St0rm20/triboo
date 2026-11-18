@@ -685,6 +685,9 @@
     <string name="profile_link_reports">Community reports</string>
     <string name="profile_link_rejected">Rejected posts</string>
     <string name="profile_dark_theme">Dark theme</string>
+    <string name="profile_language">Language</string>
+    <string name="profile_language_dialog_title">App language</string>
+    <string name="profile_language_system">System default</string>
     <string name="profile_edit_title">Edit personal details</string>
     <string name="profile_edit_intro">Your name and neighborhood are shown to neighbors on your events and comments.</string>
     <string name="profile_edit_photo_none">No photo: your initials are shown.</string>

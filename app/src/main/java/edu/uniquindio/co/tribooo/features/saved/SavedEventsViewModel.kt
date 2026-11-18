@@ -10,6 +10,7 @@ import edu.uniquindio.co.tribooo.core.util.runRequest
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ObserveMySavedEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ToggleSavedEventUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.settings.ObserveAppLanguageUseCase
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,6 +42,7 @@ fun savedSummary(resources: ResourceProvider, count: Int): String =
 @HiltViewModel
 class SavedEventsViewModel @Inject constructor(
     observeMySavedEvents: ObserveMySavedEventsUseCase,
+    observeAppLanguage: ObserveAppLanguageUseCase,
     private val toggleSavedEventUseCase: ToggleSavedEventUseCase,
     private val resources: ResourceProvider
 ) : ViewModel() {
@@ -50,7 +52,8 @@ class SavedEventsViewModel @Inject constructor(
     /** Resultado de la última petición y el evento al que corresponde. */
     private val action = MutableStateFlow<Pair<String, RequestResult>?>(null)
 
-    val uiState: StateFlow<SavedEventsUiState> = combine(observeMySavedEvents(), message, action) { events, message, action ->
+    // El idioma entra al combine solo para recalcular los textos ya armados cuando cambia
+    val uiState: StateFlow<SavedEventsUiState> = combine(observeMySavedEvents(), message, action, observeAppLanguage()) { events, message, action, _ ->
         SavedEventsUiState(
             summary = savedSummary(resources, events.size),
             events = events,

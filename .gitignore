@@ -17,3 +17,6 @@ firebase-debug.log
 firestore-debug.log
 ui-debug.log
 service-account*.json
+firestore/firebase.json
+firestore/firestore.rules
+firestore/rules/
