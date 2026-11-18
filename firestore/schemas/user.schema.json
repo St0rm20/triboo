@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "user.schema.json",
   "title": "User",
-  "description": "Perfil del usuario. Sin contraseña: las credenciales (email/contraseña y Google) las gestiona Firebase Authentication.",
+  "description": "Perfil del usuario. Sin contraseña ni correo: las credenciales y el correo los gestiona Firebase Authentication.",
   "x-firestore-collection": "users",
   "x-document-id": "uid de Firebase Authentication",
   "x-dto": "edu.uniquindio.co.tribooo.data.remote.user.UserDto",
@@ -16,10 +16,6 @@
     "name": {
       "type": "string",
       "minLength": 1
-    },
-    "email": {
-      "type": "string",
-      "format": "email"
     },
     "city": {
       "type": "string",
@@ -41,7 +37,8 @@
         "string",
         "null"
       ],
-      "description": "URL de la foto de perfil."
+      "description": "URL HTTPS de la foto de perfil: subida a Cloudinary o la de la cuenta de Google.",
+      "pattern": "^https://"
     },
     "role": {
       "type": "string",
@@ -61,7 +58,6 @@
   "required": [
     "id",
     "name",
-    "email",
     "city",
     "neighborhood",
     "role",

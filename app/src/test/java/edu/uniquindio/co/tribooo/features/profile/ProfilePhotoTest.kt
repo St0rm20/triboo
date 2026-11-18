@@ -1,5 +1,8 @@
 package edu.uniquindio.co.tribooo.features.profile
 
+import edu.uniquindio.co.tribooo.data.repository.memory.ImageRepositoryImpl
+import edu.uniquindio.co.tribooo.domain.usecase.image.DeleteImagesUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.image.UploadImageUseCase
 import edu.uniquindio.co.tribooo.core.util.testResources
 import edu.uniquindio.co.tribooo.data.repository.memory.CommentRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.FollowRepositoryImpl
@@ -29,7 +32,9 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 
@@ -37,6 +42,7 @@ import org.junit.Test
 class ProfilePhotoTest {
 
     private lateinit var world: TestWorld
+    private val images = ImageRepositoryImpl()
 
     @Before
     fun setUp() {
@@ -66,8 +72,10 @@ class ProfilePhotoTest {
             logoutUseCase = LogoutUseCase(world.auth, world.session),
             deleteAccountUseCase = DeleteAccountUseCase(
                 world.users, world.events, world.attendances, SavedEventRepositoryImpl(), world.waitlist,
-                FollowRepositoryImpl(), CommentRepositoryImpl(), world.session, world.getCurrentUser, world.auth
+                FollowRepositoryImpl(), CommentRepositoryImpl(), world.session, world.getCurrentUser, world.auth, DeleteImagesUseCase(images)
             ),
+            uploadImageUseCase = UploadImageUseCase(images),
+            deleteImagesUseCase = DeleteImagesUseCase(images),
             resources = testResources
         )
         backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { vm.uiState.collect {} }
@@ -77,7 +85,7 @@ class ProfilePhotoTest {
     private fun savedPhoto() = world.users.users.value.first { it.id == world.me.id }.photo
 
     @Test
-    fun savingPersistsThePickedPhotoOnTheUser() = runTest {
+    fun savingUploadsThePickedPhotoAndPersistsItsUrl() = runTest {
         val vm = viewModel()
         vm.onEditClick()
         assertNull(vm.uiState.value.editPhoto)
@@ -86,24 +94,60 @@ class ProfilePhotoTest {
         assertNull(savedPhoto())
         vm.onSaveEdit()
 
-        assertEquals("content://media/picker/1", savedPhoto())
-        assertEquals("content://media/picker/1", vm.uiState.value.user?.photo)
+        val url = images.hosted.value.single()
+        assertTrue(url.startsWith(ImageRepositoryImpl.HOST))
+        assertEquals(url, savedPhoto())
+        assertEquals(url, vm.uiState.value.user?.photo)
     }
 
     @Test
-    fun removingThePhotoSavesNull() = runTest {
+    fun savingWithoutChangingThePhotoDoesNotUploadAgain() = runTest {
+        val vm = viewModel()
+        vm.onEditClick()
+        vm.onPhotoSelected("content://media/picker/1")
+        vm.onSaveEdit()
+        val url = savedPhoto()
+
+        vm.onEditClick()
+        vm.onNameChange("Otro Nombre")
+        vm.onSaveEdit()
+
+        assertEquals(url, savedPhoto())
+        assertEquals(setOf(url), images.hosted.value)
+    }
+
+    @Test
+    fun replacingThePhotoDeletesThePreviousOne() = runTest {
+        val vm = viewModel()
+        vm.onEditClick()
+        vm.onPhotoSelected("content://media/picker/1")
+        vm.onSaveEdit()
+        val first = savedPhoto()
+
+        vm.onEditClick()
+        vm.onPhotoSelected("content://media/picker/2")
+        vm.onSaveEdit()
+
+        val second = images.hosted.value.single()
+        assertNotEquals(first, second)
+        assertEquals(second, savedPhoto())
+    }
+
+    @Test
+    fun removingThePhotoSavesNullAndDeletesIt() = runTest {
         val vm = viewModel()
         vm.onEditClick()
         vm.onPhotoSelected("content://media/picker/1")
         vm.onSaveEdit()
 
         vm.onEditClick()
-        assertEquals("content://media/picker/1", vm.uiState.value.editPhoto)
+        assertEquals(savedPhoto(), vm.uiState.value.editPhoto)
         vm.onPhotoRemoved()
         assertNull(vm.uiState.value.editPhoto)
         vm.onSaveEdit()
 
         assertNull(savedPhoto())
+        assertTrue(images.hosted.value.isEmpty())
     }
 
     @Test
@@ -117,5 +161,6 @@ class ProfilePhotoTest {
 
         assertNull(vm.uiState.value.editPhoto)
         assertNull(savedPhoto())
+        assertTrue(images.hosted.value.isEmpty())
     }
 }

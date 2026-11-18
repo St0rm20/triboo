@@ -20,7 +20,9 @@
     },
     "url": {
       "type": "string",
-      "minLength": 1
+      "minLength": 1,
+      "description": "URL de la imagen alojada en Cloudinary (secure_url).",
+      "pattern": "^https://res\\.cloudinary\\.com/"
     },
     "order": {
       "type": "integer",

@@ -37,6 +37,11 @@ android {
         resValue("string", "google_web_client_id", localProperties.getProperty("GOOGLE_WEB_CLIENT_ID", ""))
         // API key de OpenRouter (asistente de moderación); también se lee de local.properties
         buildConfigField("String", "OPENROUTER_API_KEY", "\"${localProperties.getProperty("OPENROUTER_API_KEY", "")}\"")
+        // Cloudinary (imágenes que suben los usuarios); también se leen de local.properties.
+        // El secret queda dentro del APK: cualquiera que lo descompile puede administrar la cuenta
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties.getProperty("CLOUDINARY_CLOUD_NAME", "")}\"")
+        buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProperties.getProperty("CLOUDINARY_API_KEY", "")}\"")
+        buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProperties.getProperty("CLOUDINARY_API_SECRET", "")}\"")
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
 
@@ -112,7 +117,7 @@ dependencies {
     // --- Splash screen (API 12+ con compatibilidad hacia atrás) ---
     implementation(libs.androidx.core.splashscreen)
 
-    // --- Red (OpenRouter con Retrofit + kotlinx.serialization) ---
+    // --- Red (OpenRouter y Cloudinary con Retrofit + kotlinx.serialization) ---
     implementation(libs.retrofit)
     implementation(libs.retrofit.converter.kotlinx.serialization)
     implementation(libs.okhttp.logging.interceptor)

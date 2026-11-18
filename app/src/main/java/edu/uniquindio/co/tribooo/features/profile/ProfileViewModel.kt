@@ -13,6 +13,7 @@ import edu.uniquindio.co.tribooo.domain.model.Comment
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
 import edu.uniquindio.co.tribooo.domain.model.Follow
+import edu.uniquindio.co.tribooo.domain.model.ImageFolder
 import edu.uniquindio.co.tribooo.domain.model.Saved
 import edu.uniquindio.co.tribooo.domain.model.User
 import edu.uniquindio.co.tribooo.domain.model.UserRole
@@ -21,6 +22,8 @@ import edu.uniquindio.co.tribooo.domain.usecase.auth.LogoutUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.auth.ObserveCurrentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.comment.ObserveCommentsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.image.DeleteImagesUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.image.UploadImageUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetCitiesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.moderation.ObserveModerationCountsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveUnreadNotificationsCountUseCase
@@ -39,6 +42,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.Locale
+import kotlin.coroutines.cancellation.CancellationException
 
 /** Cifras del perfil; según el rol se muestran las de usuario o las de moderación. */
 data class ProfileStats(
@@ -104,7 +108,7 @@ data class ProfileUiState(
     val editCity: String = "",
     val editNeighborhood: String = "",
     val editBio: String = "",
-    /** Foto del borrador (URI del selector del sistema); null si no hay. Se guarda con "Guardar cambios". */
+    /** Foto del borrador: URI del selector del sistema o URL de la ya guardada; null si no hay. Se sube y guarda con "Guardar cambios". */
     val editPhoto: String? = null,
     val editTouched: Set<EditProfileField> = emptySet(),
     val editSubmitAttempted: Boolean = false,
@@ -164,6 +168,8 @@ class ProfileViewModel @Inject constructor(
     private val updateProfileUseCase: UpdateProfileUseCase,
     private val logoutUseCase: LogoutUseCase,
     private val deleteAccountUseCase: DeleteAccountUseCase,
+    private val uploadImageUseCase: UploadImageUseCase,
+    private val deleteImagesUseCase: DeleteImagesUseCase,
     private val resources: ResourceProvider
 ) : ViewModel() {
 
@@ -265,7 +271,7 @@ class ProfileViewModel @Inject constructor(
             local.update { it.copy(saveResult = RequestResult.Loading) }
             val result = runRequest(resources, onSuccess = { _: Unit ->
                 RequestResult.Success(resources.getString(R.string.profile_updated))
-            }) { updateProfileUseCase(user, form.editName, form.editCity, form.editNeighborhood, form.editBio, form.editPhoto) }
+            }) { saveProfile(user, form) }
             // Si falla, el formulario sigue abierto con lo escrito para reintentar
             local.update {
                 when (result) {
@@ -275,6 +281,25 @@ class ProfileViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    /**
+     * Sube la foto solo si el usuario eligió una nueva (la que ya tenía, o la de Google, se guarda tal cual).
+     * Si el perfil no se guarda se borra la recién subida; si se guarda, la anterior.
+     */
+    private suspend fun saveProfile(user: User, form: ProfileUiState) {
+        val photo = form.editPhoto?.takeIf { it != user.photo }?.let { uploadImageUseCase(it, ImageFolder.PROFILES) }
+            ?: form.editPhoto
+        val uploaded = photo.takeIf { it != form.editPhoto }
+        try {
+            updateProfileUseCase(user, form.editName, form.editCity, form.editNeighborhood, form.editBio, photo)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            deleteImagesUseCase(listOfNotNull(uploaded))
+            throw e
+        }
+        if (user.photo != photo) deleteImagesUseCase(listOfNotNull(user.photo))
     }
 
     // Cerrar sesión

@@ -1,20 +1,6 @@
-*.iml
-.gradle
-/local.properties
-.idea/
-.DS_Store
-/build
-/captures
-.externalNativeBuild
-.cxx
-local.properties
-google-services.json
-firebase-adminsdk.json
-
-# Herramientas de Firestore (firestore/)
-node_modules/
-firebase-debug.log
-firestore-debug.log
+# Configuración local de agentes de IA
+.claude/
+.agents/
 ui-debug.log
 service-account*.json
 firestore/firebase.json

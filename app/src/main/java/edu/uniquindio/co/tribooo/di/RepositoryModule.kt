@@ -4,6 +4,7 @@ import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
 import dagger.hilt.components.SingletonComponent
+import edu.uniquindio.co.tribooo.data.repository.cloudinary.ImageRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.AttendanceRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.AuthRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.firebase.CommentRepositoryImpl
@@ -30,6 +31,7 @@ import edu.uniquindio.co.tribooo.domain.repository.EventFilterRepository
 import edu.uniquindio.co.tribooo.domain.repository.EventRepository
 import edu.uniquindio.co.tribooo.domain.repository.EventVerdictRepository
 import edu.uniquindio.co.tribooo.domain.repository.FollowRepository
+import edu.uniquindio.co.tribooo.domain.repository.ImageRepository
 import edu.uniquindio.co.tribooo.domain.repository.InterestRepository
 import edu.uniquindio.co.tribooo.domain.repository.LanguageRepository
 import edu.uniquindio.co.tribooo.domain.repository.LocationRepository
@@ -127,4 +129,8 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindReportSummaryRepository(impl: ReportSummaryRepositoryImpl): ReportSummaryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindImageRepository(impl: ImageRepositoryImpl): ImageRepository
 }

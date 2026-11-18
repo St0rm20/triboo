@@ -5,10 +5,12 @@ import androidx.lifecycle.SavedStateHandle
 import edu.uniquindio.co.tribooo.core.util.FormLimits
 import edu.uniquindio.co.tribooo.core.util.FormTexts
 import edu.uniquindio.co.tribooo.core.util.RequestResult
+import edu.uniquindio.co.tribooo.data.repository.memory.ImageRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.UserRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.MockData
 import edu.uniquindio.co.tribooo.domain.model.EventStatus
+import edu.uniquindio.co.tribooo.domain.model.ImageFolder
 import edu.uniquindio.co.tribooo.domain.model.Location
 import edu.uniquindio.co.tribooo.domain.model.User
 import edu.uniquindio.co.tribooo.domain.repository.EventRepository
@@ -20,6 +22,9 @@ import edu.uniquindio.co.tribooo.domain.usecase.event.UpdateEventUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.currentUserUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.emptyEventRepository
 import edu.uniquindio.co.tribooo.domain.usecase.event.testEvent
+import edu.uniquindio.co.tribooo.domain.usecase.image.DeleteImagesUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.image.UploadImageUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.image.UploadImagesUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.GetPlaceSuggestionsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.ObserveCurrentLocationUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.location.ResolvePlaceUseCase
@@ -47,6 +52,7 @@ class CreateEventViewModelTest {
     private val me: User = runBlocking { UserRepositoryImpl().findById("u-daniela")!! }
     private val other = User("x", "Otra Persona", "x@mail.co", "Armenia", "Centro")
     private lateinit var repository: EventRepository
+    private val images = ImageRepositoryImpl()
 
     @Before
     fun setUp() {
@@ -80,6 +86,8 @@ class CreateEventViewModelTest {
             updateEventUseCase = UpdateEventUseCase(repository, user, testResources),
             resubmitEventUseCase = ResubmitEventUseCase(repository, user, testResources),
             resolvePlaceUseCase = ResolvePlaceUseCase(LocationRepositoryImpl(), user),
+            uploadImagesUseCase = UploadImagesUseCase(UploadImageUseCase(images), DeleteImagesUseCase(images)),
+            deleteImagesUseCase = DeleteImagesUseCase(images),
             observeEventImages = ObserveEventImagesUseCase(repository),
             observeCurrentLocation = ObserveCurrentLocationUseCase(LocationRepositoryImpl()),
             savedStateHandle = SavedStateHandle(args),
@@ -110,6 +118,61 @@ class CreateEventViewModelTest {
         assertEquals(RequestResult.Success("Cambios guardados. El evento sigue en revisión."), vm.uiState.value.publishResult)
         assertEquals("Editado", repository.findById("pend")!!.title)
         assertEquals(4, repository.events.value.size)
+    }
+
+    /** Evento pendiente cuyas dos imágenes ya están alojadas; retorna sus URLs. */
+    private suspend fun saveEventWithHostedImages(id: String): List<String> {
+        val urls = listOf(images.upload("content://1", ImageFolder.EVENTS), images.upload("content://2", ImageFolder.EVENTS))
+        repository.save(testEvent(id, me, EventStatus.PENDIENTE, title = "Con fotos"), urls)
+        return urls
+    }
+
+    @Test
+    fun createUploadsTheImagesAndSavesTheirUrls() = runTest {
+        val vm = viewModel()
+        vm.onTitleChange("Con imágenes")
+        vm.onCategorySelected(vm.categories.first())
+        vm.onPlaceConfirmed(vm.placeSuggestions.first().name, vm.placeSuggestions.first().neighborhood)
+        vm.onImagesSelected(listOf("content://portada", "content://galeria"))
+
+        vm.publish()
+
+        assertTrue(vm.uiState.value.publishResult is RequestResult.Success)
+        val created = repository.events.value.single { it.title == "Con imágenes" }
+        val saved = repository.findImageUrls(created.id)
+        assertEquals(2, saved.size)
+        assertEquals(images.hosted.value, saved.toSet())
+    }
+
+    @Test
+    fun editUploadsNewImagesAndDeletesTheRemovedOnes() = runTest {
+        val (kept, removed) = saveEventWithHostedImages("fotos")
+        val vm = viewModel("fotos", EventFormMode.EDIT)
+        assertEquals(listOf(kept, removed), vm.uiState.value.imageUris)
+
+        vm.onImagesSelected(listOf(kept, "content://nueva"))
+        vm.publish()
+
+        val saved = repository.findImageUrls("fotos")
+        assertEquals(kept, saved.first())
+        assertTrue(images.isHosted(saved.last()))
+        assertEquals(saved.toSet(), images.hosted.value)
+        assertFalse(removed in images.hosted.value)
+    }
+
+    @Test
+    fun duplicateCopiesTheImagesAndLeavesTheOriginalOnes() = runTest {
+        val originals = saveEventWithHostedImages("fotos")
+        val vm = viewModel("fotos", EventFormMode.DUPLICATE)
+
+        vm.publish()
+
+        val copy = repository.events.value.single { it.id != "fotos" && it.title == "Con fotos" }
+        val copied = repository.findImageUrls(copy.id)
+        assertEquals(2, copied.size)
+        assertTrue(copied.none { it in originals })
+        assertEquals(originals, repository.findImageUrls("fotos"))
+        assertEquals((originals + copied).toSet(), images.hosted.value)
     }
 
     @Test
