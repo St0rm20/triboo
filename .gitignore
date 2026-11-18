@@ -1,8 +1,29 @@
 # Configuración local de agentes de IA
 .claude/
 .agents/
-ui-debug.log
+
+# Android Studio / Gradle
+*.iml
+.gradle/
+.idea/
+.DS_Store
+build/
+/captures
+.externalNativeBuild
+.cxx
+
+# Secretos y configuración local (nunca se suben)
+local.properties
+google-services.json
+firebase-adminsdk*.json
 service-account*.json
-firestore/firebase.json
-firestore/firestore.rules
-firestore/rules/
+
+# Firebase: copias sueltas en app/ (la configuración real vive en firestore/)
+/app/firebase.json
+/app/firestore.rules
+
+# Herramientas de Firestore (firestore/)
+node_modules/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
