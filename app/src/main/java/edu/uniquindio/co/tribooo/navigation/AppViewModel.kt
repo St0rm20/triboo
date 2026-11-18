@@ -3,7 +3,10 @@ package edu.uniquindio.co.tribooo.navigation
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import edu.uniquindio.co.tribooo.domain.model.AppLanguage
 import edu.uniquindio.co.tribooo.domain.usecase.auth.GetCurrentUserUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.settings.ObserveAppLanguageUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.settings.SetAppLanguageUseCase
 import jakarta.inject.Inject
 import kotlin.coroutines.cancellation.CancellationException
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +23,9 @@ private const val MIN_SPLASH_MILLIS = 700L
 
 @HiltViewModel
 class AppViewModel @Inject constructor(
-    getCurrentUser: GetCurrentUserUseCase
+    getCurrentUser: GetCurrentUserUseCase,
+    observeAppLanguage: ObserveAppLanguageUseCase,
+    private val setAppLanguage: SetAppLanguageUseCase
 ) : ViewModel() {
 
     /** Primera pantalla según la sesión guardada; null mientras se muestra el splash. */
@@ -33,6 +38,13 @@ class AppViewModel @Inject constructor(
 
     fun setDarkTheme(enabled: Boolean) {
         _darkTheme.value = enabled
+    }
+
+    /** Idioma elegido en Perfil; AppCompat lo guarda y recrea la pantalla al cambiarlo. */
+    val language: StateFlow<AppLanguage> = observeAppLanguage()
+
+    fun setLanguage(language: AppLanguage) {
+        setAppLanguage(language)
     }
 
     init {

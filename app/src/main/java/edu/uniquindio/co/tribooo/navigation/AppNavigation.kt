@@ -47,6 +47,7 @@ fun AppNavigation(
     val navController = rememberNavController()
     val startDestination by appViewModel.startDestination.collectAsStateWithLifecycle()
     val darkTheme by appViewModel.darkTheme.collectAsStateWithLifecycle()
+    val language by appViewModel.language.collectAsStateWithLifecycle()
 
     Surface(
         modifier = Modifier.fillMaxSize()
@@ -204,6 +205,8 @@ fun AppNavigation(
                     },
                     darkTheme = darkTheme ?: isSystemInDarkTheme(),
                     onDarkThemeChange = appViewModel::setDarkTheme,
+                    language = language,
+                    onLanguageChange = appViewModel::setLanguage,
                     snackbarMessage = message,
                     onSnackbarShown = {
                         savedStateHandle[FEED_MESSAGE_KEY] = null

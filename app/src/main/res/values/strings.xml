@@ -685,6 +685,12 @@
     <string name="profile_link_reports">Reportes de la comunidad</string>
     <string name="profile_link_rejected">Publicaciones rechazadas</string>
     <string name="profile_dark_theme">Tema oscuro</string>
+    <string name="profile_language">Idioma</string>
+    <string name="profile_language_dialog_title">Idioma de la app</string>
+    <string name="profile_language_system">Predeterminado del sistema</string>
+    <!-- Cada idioma se muestra con su propio nombre, igual en toda la app -->
+    <string name="language_name_es" translatable="false">Español</string>
+    <string name="language_name_en" translatable="false">English</string>
     <string name="profile_edit_title">Editar datos personales</string>
     <string name="profile_edit_intro">Tu nombre y tu barrio se muestran a los vecinos en tus eventos y comentarios.</string>
     <string name="profile_edit_photo_none">Sin foto: se muestran tus iniciales.</string>

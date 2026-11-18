@@ -1,6 +1,7 @@
 package edu.uniquindio.co.tribooo.features.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -26,15 +29,18 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Event
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Language
 import androidx.compose.material.icons.rounded.LocationCity
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.Place
 import androidx.compose.material.icons.rounded.Shield
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -45,13 +51,17 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -65,6 +75,7 @@ import edu.uniquindio.co.tribooo.core.component.MainTab
 import edu.uniquindio.co.tribooo.core.component.avatarColors
 import edu.uniquindio.co.tribooo.core.util.atAppZone
 import edu.uniquindio.co.tribooo.core.util.initials
+import edu.uniquindio.co.tribooo.domain.model.AppLanguage
 import edu.uniquindio.co.tribooo.domain.model.User
 import edu.uniquindio.co.tribooo.domain.usecase.user.Badge
 
@@ -84,6 +95,8 @@ fun ProfileScreen(
     onNavigateToRejected: () -> Unit,
     darkTheme: Boolean,
     onDarkThemeChange: (Boolean) -> Unit,
+    language: AppLanguage,
+    onLanguageChange: (AppLanguage) -> Unit,
     snackbarMessage: String?,
     onSnackbarShown: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
@@ -153,6 +166,8 @@ fun ProfileScreen(
                 }
 
                 ThemeRow(darkTheme = darkTheme, onDarkThemeChange = onDarkThemeChange)
+
+                LanguageRow(language = language, onLanguageChange = onLanguageChange)
 
                 Button(
                     onClick = viewModel::onDeleteAccountClick,
@@ -495,5 +510,71 @@ private fun ThemeRow(darkTheme: Boolean, onDarkThemeChange: (Boolean) -> Unit) {
             Text(stringResource(R.string.profile_dark_theme), fontSize = 15.sp, color = colors.onSurface, modifier = Modifier.weight(1f))
             Switch(checked = darkTheme, onCheckedChange = onDarkThemeChange)
         }
+    }
+}
+
+@Composable
+private fun languageName(language: AppLanguage): String = stringResource(
+    when (language) {
+        AppLanguage.SYSTEM -> R.string.profile_language_system
+        AppLanguage.SPANISH -> R.string.language_name_es
+        AppLanguage.ENGLISH -> R.string.language_name_en
+    }
+)
+
+@Composable
+private fun LanguageRow(language: AppLanguage, onLanguageChange: (AppLanguage) -> Unit) {
+    val colors = MaterialTheme.colorScheme
+    var showDialog by rememberSaveable { mutableStateOf(false) }
+
+    LinksCard {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(role = Role.Button) { showDialog = true }
+                .padding(horizontal = 18.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Icon(Icons.Rounded.Language, contentDescription = null, tint = colors.primary, modifier = Modifier.size(22.dp))
+            Text(stringResource(R.string.profile_language), fontSize = 15.sp, color = colors.onSurface, modifier = Modifier.weight(1f))
+            Text(languageName(language), fontSize = 14.sp, color = colors.onSurfaceVariant)
+        }
+    }
+
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(stringResource(R.string.profile_language_dialog_title)) },
+            text = {
+                Column(Modifier.selectableGroup()) {
+                    AppLanguage.entries.forEach { option ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .selectable(
+                                    selected = option == language,
+                                    onClick = {
+                                        showDialog = false
+                                        onLanguageChange(option)
+                                    },
+                                    role = Role.RadioButton
+                                )
+                                .padding(vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // El Row ya es selectable: el RadioButton solo muestra el estado
+                            RadioButton(selected = option == language, onClick = null)
+                            Text(languageName(option), fontSize = 15.sp, color = colors.onSurface)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.common_cancel)) }
+            }
+        )
     }
 }

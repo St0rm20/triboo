@@ -14,6 +14,7 @@ import edu.uniquindio.co.tribooo.core.util.selectedDayLabel
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.usecase.agenda.AgendaData
 import edu.uniquindio.co.tribooo.domain.usecase.agenda.ObserveAgendaUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.settings.ObserveAppLanguageUseCase
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -99,6 +100,7 @@ internal fun buildAgendaState(
 @HiltViewModel
 class AgendaViewModel @Inject constructor(
     observeAgenda: ObserveAgendaUseCase,
+    observeAppLanguage: ObserveAppLanguageUseCase,
     resources: ResourceProvider
 ) : ViewModel() {
 
@@ -107,7 +109,8 @@ class AgendaViewModel @Inject constructor(
 
     private val selection = MutableStateFlow(AgendaSelection.of(today))
 
-    val uiState: StateFlow<AgendaUiState> = combine(observeAgenda(), selection) { data, selection ->
+    // El idioma entra al combine solo para recalcular los textos ya armados cuando cambia
+    val uiState: StateFlow<AgendaUiState> = combine(observeAgenda(), selection, observeAppLanguage()) { data, selection, _ ->
         buildAgendaState(data, selection, today, resources)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AgendaUiState())
 

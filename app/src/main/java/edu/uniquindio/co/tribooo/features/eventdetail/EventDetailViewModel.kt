@@ -48,6 +48,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.report.SubmitReportResult
 import edu.uniquindio.co.tribooo.domain.usecase.report.SubmitReportUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ObserveSavedEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.saved.ToggleSavedEventUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.settings.ObserveAppLanguageUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ToggleFollowUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.waitlist.JoinWaitlistUseCase
@@ -240,6 +241,7 @@ class EventDetailViewModel @Inject constructor(
     observeWaitlist: ObserveWaitlistUseCase,
     observeCurrentUser: ObserveCurrentUserUseCase,
     observeCurrentLocation: ObserveCurrentLocationUseCase,
+    observeAppLanguage: ObserveAppLanguageUseCase,
     private val toggleAttendanceUseCase: ToggleAttendanceUseCase,
     private val toggleInterestUseCase: ToggleInterestUseCase,
     private val toggleSavedEventUseCase: ToggleSavedEventUseCase,
@@ -271,7 +273,9 @@ class EventDetailViewModel @Inject constructor(
     )
 
     /** Quién está viendo el detalle y desde dónde. */
-    private val viewer: Flow<Pair<User?, Location>> = combine(observeCurrentUser(), observeCurrentLocation(), ::Pair)
+    private val viewer: Flow<Pair<User?, Location>> =
+        // El idioma entra al combine solo para recalcular los textos ya armados ("Tú") cuando cambia
+        combine(observeCurrentUser(), observeCurrentLocation(), observeAppLanguage()) { user, location, _ -> user to location }
 
     private val attendancesAndWaitlist: Flow<Pair<List<Attendance>, List<WaitlistEntry>>> =
         combine(observeAttendances(), observeWaitlist(), ::Pair)

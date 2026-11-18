@@ -19,6 +19,7 @@ import edu.uniquindio.co.tribooo.domain.usecase.event.ObserveEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.notification.MarkAllNotificationsReadUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.notification.MarkNotificationReadUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.notification.ObserveNotificationsUseCase
+import edu.uniquindio.co.tribooo.domain.usecase.settings.ObserveAppLanguageUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.user.ObserveFollowsUseCase
 import jakarta.inject.Inject
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,6 +80,7 @@ class NotificationsViewModel @Inject constructor(
     observeComments: ObserveCommentsUseCase,
     observeFollows: ObserveFollowsUseCase,
     observeEvents: ObserveEventsUseCase,
+    observeAppLanguage: ObserveAppLanguageUseCase,
     private val markNotificationRead: MarkNotificationReadUseCase,
     private val markAllNotificationsRead: MarkAllNotificationsReadUseCase,
     private val resources: ResourceProvider
@@ -92,9 +94,10 @@ class NotificationsViewModel @Inject constructor(
 
     private val message = MutableStateFlow<String?>(null)
 
+    // El idioma entra al combine solo para recalcular los textos ya armados cuando cambia
     val uiState: StateFlow<NotificationsUiState> = combine(
-        observeNotifications(), sources, markAllResult, message
-    ) { notifications, sources, markAllResult, message ->
+        observeNotifications(), sources, markAllResult, message, observeAppLanguage()
+    ) { notifications, sources, markAllResult, message, _ ->
         NotificationsUiState(
             items = notifications.mapNotNull { it.toItem(sources, resources) },
             unreadCount = notifications.count { !it.read },

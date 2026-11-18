@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <style name="Theme.Tribooo" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Tribooo" parent="Theme.AppCompat.Light.NoActionBar" />
 
     <!-- Splash del sistema: solo el color primario, sin ícono, para empalmar con el splash de Compose -->
     <style name="Theme.Tribooo.Starting" parent="Theme.SplashScreen">

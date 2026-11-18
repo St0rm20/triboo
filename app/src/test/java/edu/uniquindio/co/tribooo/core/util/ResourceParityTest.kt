@@ -6,7 +6,10 @@ import org.junit.Test
 import org.w3c.dom.Element
 import javax.xml.parsers.DocumentBuilderFactory
 
-/** El inglés debe traducir exactamente lo que el español define: mismas claves y mismos marcadores. */
+/**
+ * El inglés debe traducir exactamente lo que el español define: mismas claves y mismos marcadores.
+ * Las claves con `translatable="false"` solo viven en el español y no se comparan.
+ */
 class ResourceParityTest {
 
     /** Textos de una carpeta de recursos por clave (`string:x`, `plurals:x`, `array:x`), cada uno con sus partes. */
@@ -16,6 +19,7 @@ class ResourceParityTest {
         for (i in 0 until root.childNodes.length) {
             val node = root.childNodes.item(i) as? Element ?: continue
             val name = node.getAttribute("name")
+            if (node.getAttribute("translatable") == "false") continue
             val parts = (0 until node.childNodes.length).mapNotNull { node.childNodes.item(it) as? Element }
             when (node.tagName) {
                 "string" -> result["string:$name"] = listOf(node.textContent)
@@ -29,6 +33,22 @@ class ResourceParityTest {
     private val placeholder = Regex("%(\\d+)\\$[sd]")
 
     private fun placeholders(text: String): Set<String> = placeholder.findAll(text).map { it.value }.toSet()
+
+    @Test
+    fun nonTranslatableKeysAreNotRedefinedInEnglish() {
+        val untranslatable = nonTranslatableNames("values")
+        assertTrue("Debe haber claves no traducibles", untranslatable.isNotEmpty())
+        val englishNames = nonTranslatableNames("values-en") + english.keys.map { it.substringAfter(':') }
+        assertTrue("Redefinidas en inglés: ${untranslatable.intersect(englishNames)}", untranslatable.intersect(englishNames).isEmpty())
+    }
+
+    private fun nonTranslatableNames(folder: String): Set<String> {
+        val root = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(resourceFile(folder)).documentElement
+        return (0 until root.childNodes.length).mapNotNull { root.childNodes.item(it) as? Element }
+            .filter { it.getAttribute("translatable") == "false" }
+            .map { it.getAttribute("name") }
+            .toSet()
+    }
 
     private val spanish = load("values")
     private val english = load("values-en")
