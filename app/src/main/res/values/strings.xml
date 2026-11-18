@@ -371,6 +371,9 @@
     <string name="explore_attending">Ya voy</string>
     <string name="explore_attend">Voy</string>
     <string name="explore_empty_title">No hay eventos con estos filtros</string>
+    <string name="explore_empty_range_title">No hay eventos cerca</string>
+    <string name="explore_empty_range_message">No encontramos eventos a menos de %1$d km de tu ubicación</string>
+    <string name="explore_widen_distance">Ampliar distancia</string>
     <string name="decimal_separator">,</string>
 
     <!-- Agenda -->

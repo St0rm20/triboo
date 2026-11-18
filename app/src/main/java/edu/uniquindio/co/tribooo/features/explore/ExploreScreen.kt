@@ -28,6 +28,7 @@ import androidx.compose.material.icons.rounded.MyLocation
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Badge
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
@@ -70,6 +71,7 @@ import edu.uniquindio.co.tribooo.core.util.eventWhenLabel
 import edu.uniquindio.co.tribooo.core.util.kmLabel
 import edu.uniquindio.co.tribooo.core.util.rememberResourceProvider
 import edu.uniquindio.co.tribooo.core.util.waitlistLabel
+import edu.uniquindio.co.tribooo.domain.model.MAX_DISTANCE_KM
 
 @Composable
 fun ExploreScreen(
@@ -127,7 +129,12 @@ fun ExploreScreen(
                     TopBar(state, viewModel, modifier = Modifier.align(Alignment.TopCenter))
                     val selected = state.selected
                     if (selected == null) {
-                        EmptyResults(onClearFilters = viewModel::clearFilters, modifier = Modifier.align(Alignment.Center))
+                        EmptyResults(
+                            state = state,
+                            onClearFilters = viewModel::clearFilters,
+                            onWidenDistance = viewModel::onWidenDistance,
+                            modifier = Modifier.align(Alignment.Center)
+                        )
                     } else {
                         Column(modifier = Modifier.align(Alignment.BottomCenter), horizontalAlignment = Alignment.End) {
                             RecenterButton(onClick = viewModel::onRecenter)
@@ -143,10 +150,11 @@ fun ExploreScreen(
                 ExploreView.LIST -> Column(modifier = Modifier.fillMaxSize()) {
                     TopBar(state, viewModel, modifier = Modifier)
                     EventList(
-                        events = state.events,
+                        state = state,
                         onEventClick = onNavigateToEventDetail,
                         onToggleAttendance = viewModel::toggleAttendance,
                         onClearFilters = viewModel::clearFilters,
+                        onWidenDistance = viewModel::onWidenDistance,
                         loadingEventId = state.loadingEventId
                     )
                 }
@@ -359,12 +367,14 @@ private fun AttendanceButton(item: FeedEventItem, onClick: () -> Unit, isLoading
 
 @Composable
 private fun EventList(
-    events: List<FeedEventItem>,
+    state: ExploreUiState,
     onEventClick: (String) -> Unit,
     onToggleAttendance: (FeedEventItem) -> Unit,
     onClearFilters: () -> Unit,
+    onWidenDistance: () -> Unit,
     loadingEventId: String?
 ) {
+    val events = state.events
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
@@ -387,25 +397,58 @@ private fun EventList(
             )
         }
         if (events.isEmpty()) {
-            item { EmptyResults(onClearFilters = onClearFilters, modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp)) }
+            item {
+                EmptyResults(
+                    state = state,
+                    onClearFilters = onClearFilters,
+                    onWidenDistance = onWidenDistance,
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 40.dp)
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun EmptyResults(onClearFilters: () -> Unit, modifier: Modifier) {
+private fun EmptyResults(state: ExploreUiState, onClearFilters: () -> Unit, onWidenDistance: () -> Unit, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
+    val maxDistanceKm = state.filters.maxDistanceKm
 
     Column(modifier = modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(Icons.Rounded.EventBusy, contentDescription = null, tint = colors.outline, modifier = Modifier.size(44.dp))
-        Text(
-            stringResource(R.string.explore_empty_title),
-            fontSize = 17.sp,
-            fontWeight = FontWeight.Medium,
-            color = colors.onSurface,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(top = 12.dp, bottom = 16.dp)
-        )
-        OutlinedButton(onClick = onClearFilters, shape = RoundedCornerShape(14.dp)) { Text(stringResource(R.string.feed_clear_filters)) }
+        if (state.noEventsInRange) {
+            // Hay eventos, pero todos más lejos del radio: se explica y se ofrece ampliarlo
+            Text(
+                stringResource(R.string.explore_empty_range_title),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.onSurface,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
+            )
+            Text(
+                stringResource(R.string.explore_empty_range_message, maxDistanceKm),
+                fontSize = 14.sp,
+                color = colors.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            // En el máximo del filtro ya no hay a dónde ampliar
+            if (maxDistanceKm < MAX_DISTANCE_KM) {
+                Button(onClick = onWidenDistance, shape = RoundedCornerShape(14.dp)) {
+                    Text(stringResource(R.string.explore_widen_distance))
+                }
+            }
+        } else {
+            Text(
+                stringResource(R.string.explore_empty_title),
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Medium,
+                color = colors.onSurface,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(top = 12.dp, bottom = 16.dp)
+            )
+            OutlinedButton(onClick = onClearFilters, shape = RoundedCornerShape(14.dp)) { Text(stringResource(R.string.feed_clear_filters)) }
+        }
     }
 }

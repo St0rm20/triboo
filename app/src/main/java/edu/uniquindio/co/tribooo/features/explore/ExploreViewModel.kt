@@ -16,6 +16,7 @@ import edu.uniquindio.co.tribooo.domain.model.Category
 import edu.uniquindio.co.tribooo.domain.model.Event
 import edu.uniquindio.co.tribooo.domain.model.EventFilters
 import edu.uniquindio.co.tribooo.domain.model.Location
+import edu.uniquindio.co.tribooo.domain.model.MAX_DISTANCE_KM
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.FindScheduleConflictUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.ObserveAttendancesUseCase
@@ -49,6 +50,8 @@ data class ExploreUiState(
     /** Eventos que cumplen los filtros, del más cercano al más lejano. */
     val events: List<FeedEventItem> = emptyList(),
     val pins: List<MapPin> = emptyList(),
+    /** Hay eventos publicados que cumplen los demás filtros, pero todos quedan fuera del radio de distancia. */
+    val noEventsInRange: Boolean = false,
     /** Evento de la hoja inferior del mapa; null si no hay eventos. */
     val selected: FeedEventItem? = null,
     val filters: EventFilters = EventFilters(),
@@ -78,6 +81,7 @@ internal data class ExploreLocal(
 internal data class ExploreContent(
     val events: List<FeedEventItem>,
     val pins: List<MapPin>,
+    val noEventsInRange: Boolean,
     val filters: EventFilters
 )
 
@@ -124,6 +128,9 @@ class ExploreViewModel @Inject constructor(
         ExploreContent(
             events = toCardItems(filtered, attendances, waitlist, user?.id, location),
             pins = filtered.map { MapPin(it.id, it.category, it.location) },
+            // Solo si quitar la distancia devuelve eventos, la distancia es lo que deja todo vacío
+            noEventsInRange = filtered.isEmpty() &&
+                filterEvents(published, attendeesByEvent, location, filters, applyDistance = false).isNotEmpty(),
             filters = filters
         )
     }
@@ -133,6 +140,7 @@ class ExploreViewModel @Inject constructor(
             view = local.view,
             events = content.events,
             pins = content.pins,
+            noEventsInRange = content.noEventsInRange,
             selected = resolveSelected(content.events, local.selectedId),
             filters = content.filters,
             showFilters = local.showFilters,
@@ -159,6 +167,9 @@ class ExploreViewModel @Inject constructor(
     fun onQueryChange(value: String) = updateFilters { it.copy(query = value) }
 
     fun clearFilters() = clearFiltersUseCase()
+
+    /** "Ampliar distancia": duplica el radio sin pasar del máximo que permite el filtro. */
+    fun onWidenDistance() = updateFilters { it.copy(maxDistanceKm = (it.maxDistanceKm * 2).coerceAtMost(MAX_DISTANCE_KM)) }
 
     fun onOpenFilters() = local.update { it.copy(showFilters = true) }
 

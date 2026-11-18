@@ -21,13 +21,15 @@ class FilterEventsUseCase @Inject constructor() {
     /**
      * Eventos de [events] que cumplen [filters], del más cercano a [location] al más lejano.
      * [attendeesByEvent] trae los asistentes por id de evento; [today] es la fecha de referencia de "Cuándo".
+     * Con [applyDistance] en false no se descarta por distancia (el feed): solo se ordena por cercanía.
      */
     operator fun invoke(
         events: List<Event>,
         attendeesByEvent: Map<String, Int>,
         location: Location,
         filters: EventFilters,
-        today: LocalDate = LocalDate.now(APP_ZONE)
+        today: LocalDate = LocalDate.now(APP_ZONE),
+        applyDistance: Boolean = true
     ): List<Event> {
         val text = filters.query.trim().lowercase()
 
@@ -36,7 +38,7 @@ class FilterEventsUseCase @Inject constructor() {
             .filter { text.isEmpty() || "${it.title} ${it.place} ${it.neighborhood}".lowercase().contains(text) }
             .filter { !filters.onlyAvailable || !it.isFull(attendeesByEvent[it.id] ?: 0) }
             .filter { startsWithin(it, filters.whenFilter, today) }
-            .filter { location.distanceKmTo(it.location) <= filters.maxDistanceKm }
+            .filter { !applyDistance || location.distanceKmTo(it.location) <= filters.maxDistanceKm }
             .sortedBy { location.distanceKmTo(it.location) }
     }
 

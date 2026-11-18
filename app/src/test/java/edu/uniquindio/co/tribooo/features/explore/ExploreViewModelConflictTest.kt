@@ -7,6 +7,7 @@ import edu.uniquindio.co.tribooo.core.component.MapPin
 import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.MockData
 import edu.uniquindio.co.tribooo.domain.model.Location
+import edu.uniquindio.co.tribooo.domain.model.MAX_DISTANCE_KM
 import edu.uniquindio.co.tribooo.domain.model.Contribution
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObservePublishedEventsUseCase
@@ -84,6 +85,50 @@ class ExploreViewModelConflictTest {
         val vm = viewModel()
 
         assertEquals(listOf(MapPin("a", event.category, event.location)), vm.uiState.value.pins)
+    }
+
+    private val farAway = Location(37.42, -122.08)
+
+    @Test
+    fun farDeviceWithPublishedEventsReportsNoEventsInRange() = runTest {
+        world.publish("a", 10, 12)
+        val vm = viewModel()
+
+        vm.onUserLocation(farAway)
+
+        assertTrue(vm.uiState.value.events.isEmpty())
+        assertTrue(vm.uiState.value.noEventsInRange)
+    }
+
+    @Test
+    fun noPublishedEventsIsNotAnOutOfRangeCase() = runTest {
+        val vm = viewModel()
+
+        vm.onUserLocation(farAway)
+
+        assertFalse(vm.uiState.value.noEventsInRange)
+    }
+
+    @Test
+    fun otherFiltersEmptyingTheListIsNotAnOutOfRangeCase() = runTest {
+        world.publish("a", 10, 12)
+        val vm = viewModel()
+
+        vm.onQueryChange("nada que coincida")
+
+        assertTrue(vm.uiState.value.events.isEmpty())
+        assertFalse(vm.uiState.value.noEventsInRange)
+    }
+
+    @Test
+    fun widenDistanceDoublesTheRadiusUpToTheMaximum() = runTest {
+        val vm = viewModel()
+
+        vm.onWidenDistance()
+        assertEquals(MAX_DISTANCE_KM, vm.uiState.value.filters.maxDistanceKm)
+
+        vm.onWidenDistance()
+        assertEquals(MAX_DISTANCE_KM, vm.uiState.value.filters.maxDistanceKm)
     }
 
     @Test

@@ -371,6 +371,9 @@
     <string name="explore_attending">I\'m going</string>
     <string name="explore_attend">Go</string>
     <string name="explore_empty_title">No events match these filters</string>
+    <string name="explore_empty_range_title">No events nearby</string>
+    <string name="explore_empty_range_message">We couldn\'t find events within %1$d km of your location</string>
+    <string name="explore_widen_distance">Widen distance</string>
     <string name="decimal_separator">.</string>
 
     <!-- Schedule -->

@@ -38,8 +38,12 @@ class FilterEventsUseCaseTest {
         cupo = cupo, organizer = organizer, category = category
     )
 
-    private fun run(events: List<Event>, filters: EventFilters = EventFilters(), attendees: Map<String, Int> = emptyMap()) =
-        filter(events, attendees, here, filters, today).map { it.id }
+    private fun run(
+        events: List<Event>,
+        filters: EventFilters = EventFilters(),
+        attendees: Map<String, Int> = emptyMap(),
+        applyDistance: Boolean = true
+    ) = filter(events, attendees, here, filters, today, applyDistance).map { it.id }
 
     @Test
     fun noFiltersKeepsEverythingSortedByDistance() {
@@ -102,6 +106,26 @@ class FilterEventsUseCaseTest {
         assertEquals(listOf("a", "b"), run(events))
         assertEquals(listOf("a"), run(events, EventFilters(maxDistanceKm = 3)))
         assertEquals(listOf("a", "b", "c"), run(events, EventFilters(maxDistanceKm = 15)))
+    }
+
+    @Test
+    fun withoutDistanceFilterFarEventsStayButAreSortedByDistance() {
+        val events = listOf(event("lejísimos", km = 900.0), event("cerca", km = 2.0), event("lejos", km = 40.0))
+
+        assertEquals(listOf("cerca"), run(events))
+        assertEquals(listOf("cerca", "lejos", "lejísimos"), run(events, applyDistance = false))
+    }
+
+    @Test
+    fun withoutDistanceFilterTheOtherFiltersStillApply() {
+        val events = listOf(
+            event("ok", category = Category.DEPORTES, km = 50.0),
+            event("otra", category = Category.CULTURA, km = 50.0),
+            event("tarde", category = Category.DEPORTES, daysAhead = 20, km = 50.0)
+        )
+        val filters = EventFilters(categories = setOf("deportes"), whenFilter = WhenFilter.WEEK, maxDistanceKm = 1)
+
+        assertEquals(listOf("ok"), run(events, filters, applyDistance = false))
     }
 
     @Test

@@ -8,6 +8,7 @@ import edu.uniquindio.co.tribooo.data.repository.memory.LocationRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.ModerationReviewRepositoryImpl
 import edu.uniquindio.co.tribooo.data.repository.memory.NotificationRepositoryImpl
 import edu.uniquindio.co.tribooo.domain.model.Contribution
+import edu.uniquindio.co.tribooo.domain.model.Location
 import edu.uniquindio.co.tribooo.domain.usecase.attendance.AttendanceStep
 import edu.uniquindio.co.tribooo.domain.usecase.event.ObservePublishedEventsUseCase
 import edu.uniquindio.co.tribooo.domain.usecase.event.TestWorld
@@ -51,13 +52,15 @@ class FeedViewModelTest {
         Dispatchers.resetMain()
     }
 
+    private val locations = LocationRepositoryImpl()
+
     private fun TestScope.viewModel(): FeedViewModel {
         val filters = EventFilterRepositoryImpl()
         val vm = FeedViewModel(
             observePublishedEvents = ObservePublishedEventsUseCase(world.events),
             observeAttendances = world.observeAttendances,
             observeCurrentUser = world.observeCurrentUser,
-            observeCurrentLocation = ObserveCurrentLocationUseCase(LocationRepositoryImpl()),
+            observeCurrentLocation = ObserveCurrentLocationUseCase(locations),
             observeUnreadNotifications = ObserveUnreadNotificationsCountUseCase(
                 ObserveNotificationsUseCase(NotificationRepositoryImpl(), world.observeCurrentUser)
             ),
@@ -81,6 +84,16 @@ class FeedViewModelTest {
     private fun FeedViewModel.item(id: String): FeedEventItem = uiState.value.events.first { it.event.id == id }
 
     private fun stepOf(vm: FeedViewModel) = vm.uiState.value.attendanceStep
+
+    @Test
+    fun feedKeepsEventsFarFromTheDeviceInsteadOfEmptyingTheList() = runTest {
+        val near = world.publish("cerca", 10, 12)
+        val vm = viewModel()
+        // Dispositivo muy lejos de los eventos (p. ej. el emulador en California)
+        locations.updateCurrentLocation(Location(37.42, -122.08))
+
+        assertEquals(listOf(near.id), vm.uiState.value.events.map { it.event.id })
+    }
 
     @Test
     fun freeEventAsksToConfirmThenAttendsOnAccept() = runTest {

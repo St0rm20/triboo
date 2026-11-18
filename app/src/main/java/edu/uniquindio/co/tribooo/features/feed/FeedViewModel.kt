@@ -106,7 +106,8 @@ class FeedViewModel @Inject constructor(
         observeCurrentLocation()
     ) { events, (attendances, waitlist), filters, currentUser, location ->
         val attendeesByEvent = attendances.groupingBy { it.event.id }.eachCount()
-        val filtered = filterEvents(events, attendeesByEvent, location, filters)
+        // El feed ordena por cercanía pero no descarta por distancia: si el dispositivo está lejos no queda vacío
+        val filtered = filterEvents(events, attendeesByEvent, location, filters, applyDistance = false)
 
         FeedUiState(
             query = filters.query,
