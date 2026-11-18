@@ -467,13 +467,27 @@ fun AppNavigation(
     }
 }
 
-/** Cambia de pestaña (Inicio/Perfil) sin apilar pantallas y conservando el estado de cada una. */
+/**
+ * Cambia de pestaña sin apilar pantallas. Las pestañas distintas de Inicio conservan su estado;
+ * al Feed se vuelve limpio.
+ */
 private fun NavHostController.navigateToTab(route: MainRoutes) {
+    // Al Feed se vuelve limpio: si se restaurara su pila, podría reaparecer
+    // una pantalla abierta encima (como Moderación), incluso de otra cuenta
+    val toFeed = route == MainRoutes.Feed
     navigate(route) {
-        popUpTo(MainRoutes.Feed) { saveState = true }
+        popUpTo(MainRoutes.Feed) { saveState = !toFeed }
         launchSingleTop = true
-        restoreState = true
+        restoreState = !toFeed
     }
+}
+
+/**
+ * Descarta las pilas que navigateToTab guardó de las pestañas. Cerrar sesión no las borra solo,
+ * y la siguiente cuenta podría recuperar pantallas de la anterior (como Moderación de un ADMIN).
+ */
+private fun NavHostController.clearSavedTabs() {
+    listOf(MainRoutes.Feed, MainRoutes.Explore, MainRoutes.Agenda, MainRoutes.Profile).forEach { clearBackStack(it) }
 }
 
 /** Solo la pantalla visible y activa puede salir: durante la animación de salida un segundo toque no debe sacar otra entrada. */
@@ -490,6 +504,7 @@ private fun NavHostController.safePopBackStack(entry: NavBackStackEntry) {
 
 /** Entra al feed y elimina del historial la guía y las pantallas de autenticación. */
 private fun NavHostController.navigateToFeed() {
+    clearSavedTabs()
     navigate(MainRoutes.Feed) {
         popUpTo(graph.id) { inclusive = true }
     }
@@ -500,6 +515,8 @@ private fun NavHostController.navigateToFeed() {
  * "atrás" desde cualquiera de ellas sale de la app, como en el prototipo.
  */
 private fun NavHostController.replaceWith(route: MainRoutes) {
+    // Se llega aquí al cerrar sesión: la siguiente cuenta empieza con la navegación limpia
+    clearSavedTabs()
     navigate(route) {
         popUpTo(graph.id) { inclusive = true }
         launchSingleTop = true
